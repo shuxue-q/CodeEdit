@@ -181,7 +181,11 @@ final class LSPCompletionTests: XCTestCase {
         document.languageServerObjects.textCoordinator.destroy()
         try await client.closeDocument(file.lspURI)
     }
+}
 
+// MARK: - Completion Item Mapping & Heuristics
+
+extension LSPCompletionTests {
     @MainActor
     func testCompletionItemKindIconsAndColors() {
         let functionEntry = LSPCompletionEntry(item: CompletionItem(label: "myFunc", kind: .function))
@@ -253,5 +257,62 @@ final class LSPCompletionTests: XCTestCase {
         XCTAssertEqual(fallbackEntry.category, .other)
         XCTAssertEqual(fallbackEntry.iconName, "cube")
         XCTAssertEqual(fallbackEntry.imageColor, .secondary)
+    }
+
+    @MainActor
+    func testTypeAliasAndInterfaceClassification() {
+        let usingEntry = LSPCompletionEntry(
+            item: CompletionItem(label: "IntAlias", kind: .interface, detail: "using IntAlias = int;")
+        )
+        XCTAssertEqual(usingEntry.category, .typeAlias)
+        XCTAssertEqual(usingEntry.iconName, "character.cursor.ibeam")
+        XCTAssertEqual(usingEntry.imageColor, .orange)
+
+        let typedefEntry = LSPCompletionEntry(
+            item: CompletionItem(label: "MyType", kind: .interface, detail: "typedef int MyType")
+        )
+        XCTAssertEqual(typedefEntry.category, .typeAlias)
+        XCTAssertEqual(typedefEntry.iconName, "character.cursor.ibeam")
+        XCTAssertEqual(typedefEntry.imageColor, .orange)
+
+        let archetypeEntry = LSPCompletionEntry(item: CompletionItem(label: "Archetype", kind: .interface))
+        XCTAssertEqual(archetypeEntry.category, .interface)
+        XCTAssertEqual(archetypeEntry.iconName, "point.3.connected.trianglepath.dot.ted")
+        XCTAssertEqual(archetypeEntry.imageColor, .indigo)
+
+        let dataTypeEntry = LSPCompletionEntry(item: CompletionItem(label: "DataType", kind: .interface))
+        XCTAssertEqual(dataTypeEntry.category, .interface)
+        XCTAssertEqual(dataTypeEntry.iconName, "point.3.connected.trianglepath.dot.ted")
+        XCTAssertEqual(dataTypeEntry.imageColor, .indigo)
+
+        let conceptEntry = LSPCompletionEntry(
+            item: CompletionItem(label: "MyConcept", kind: .interface, detail: "concept MyConcept")
+        )
+        XCTAssertEqual(conceptEntry.category, .interface)
+        XCTAssertEqual(conceptEntry.iconName, "point.3.connected.trianglepath.dot.ted")
+        XCTAssertEqual(conceptEntry.imageColor, .indigo)
+
+        let typeParamEntry = LSPCompletionEntry(item: CompletionItem(label: "T", kind: .typeParameter))
+        XCTAssertEqual(typeParamEntry.category, .typeAlias)
+        XCTAssertEqual(typeParamEntry.iconName, "character.cursor.ibeam")
+        XCTAssertEqual(typeParamEntry.imageColor, .orange)
+    }
+
+    @MainActor
+    func testCompletionItemDeprecation() {
+        let deprecatedEntry = LSPCompletionEntry(
+            item: CompletionItem(label: "legacyFunc", kind: .function, deprecated: true)
+        )
+        XCTAssertTrue(deprecatedEntry.deprecated)
+
+        let activeEntry = LSPCompletionEntry(
+            item: CompletionItem(label: "activeFunc", kind: .function, deprecated: false)
+        )
+        XCTAssertFalse(activeEntry.deprecated)
+
+        let defaultEntry = LSPCompletionEntry(
+            item: CompletionItem(label: "defaultFunc", kind: .function)
+        )
+        XCTAssertFalse(defaultEntry.deprecated)
     }
 }

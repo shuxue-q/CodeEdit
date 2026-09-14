@@ -139,10 +139,17 @@ struct LSPCompletionEntry: CodeSuggestionEntry {
     ]
 
     private static func isTypeAlias(item: CompletionItem) -> Bool {
-        let keywords = ["typedef", "using", "alias", "type"]
-        let detail = item.detail?.lowercased() ?? ""
+        if let detail = item.detail?.lowercased() {
+            if detail.contains("concept") {
+                return false
+            }
+            let keywords = ["typedef", "using", "alias"]
+            if keywords.contains(where: { detail.contains($0) }) {
+                return true
+            }
+        }
         let label = item.label.lowercased()
-        return keywords.contains { detail.contains($0) || label.contains($0) }
+        return label.hasPrefix("typedef ") || label.hasPrefix("using ") || label.hasPrefix("typealias ")
     }
 
     /// Determines the symbol category for a given completion item.
