@@ -6,7 +6,6 @@
 //
 
 import AppKit
-import AsyncAlgorithms
 import CodeEditSourceEditor
 import CodeEditTextView
 import LanguageServerProtocol
@@ -17,8 +16,8 @@ import LanguageServerProtocol
 /// ``CodeFileDocument`` since the language server does all it's document management using instances of that type.
 ///
 /// Language servers expect edits to be sent in chunks (and it helps reduce processing overhead). To do this, this class
-/// keeps an async stream around for the duration of its lifetime. The stream is sent edit notifications, which are then
-/// chunked into 250ms timed groups before being sent to the ``LanguageServer``.
+/// batches edits for 250ms before sending them to the ``LanguageServer``. Interactive requests can flush that batch
+/// immediately so the server sees the same document as the editor.
 class LSPContentCoordinator<DocumentType: LanguageServerDocument>: TextViewCoordinator, TextViewDelegate {
     // Required to avoid a large_tuple lint error
     private struct SequenceElement: Sendable {
@@ -28,18 +27,17 @@ class LSPContentCoordinator<DocumentType: LanguageServerDocument>: TextViewCoord
     }
 
     private var editedRange: LSPRange?
-    private var sequenceContinuation: AsyncStream<SequenceElement>.Continuation?
+    private var pendingChanges: [SequenceElement] = []
     private var task: Task<Void, Never>?
+    private var sendingTask: Task<Void, Error>?
 
     weak var languageServer: LanguageServer<DocumentType>?
     var documentURI: String?
 
-    /// Initializes a content coordinator, and begins an async stream of updates
+    /// Initializes a content coordinator.
     init(documentURI: String? = nil, languageServer: LanguageServer<DocumentType>? = nil) {
         self.documentURI = documentURI
         self.languageServer = languageServer
-
-        setUpUpdatesTask()
     }
 
     func setUp(server: LanguageServer<DocumentType>, document: DocumentType) {
@@ -49,25 +47,37 @@ class LSPContentCoordinator<DocumentType: LanguageServerDocument>: TextViewCoord
 
     func setUpUpdatesTask() {
         task?.cancel()
-        // Create this stream here so it's always set up when the text view is set up, rather than only once on init.
-        let stream = AsyncStream { continuation in
-            self.sequenceContinuation = continuation
-        }
-
-        task = Task.detached { [weak self] in
-            // Send edit events every 250ms
-            for await events in stream.chunked(by: .repeating(every: .milliseconds(250), clock: .continuous)) {
-                guard !Task.isCancelled, self != nil else { return }
-                guard !events.isEmpty, let uri = events.first?.uri else { continue }
-                // Errors thrown here are already logged, not much else to do right now.
-                try? await self?.languageServer?.documentChanged(
-                    uri: uri,
-                    changes: events.map {
-                        LanguageServer.DocumentChange(replacingContentsIn: $0.range, with: $0.string)
-                    }
-                )
+        task = nil
+        guard !pendingChanges.isEmpty else { return }
+        task = Task { @MainActor [weak self] in
+            do {
+                try await Task.sleep(for: .milliseconds(250))
+                try await self?.flushPendingChanges()
+            } catch {
+                // Cancellation is expected; documentChanged logs transport errors.
             }
         }
+    }
+
+    /// Sends queued edits and waits for earlier batches before an interactive LSP request.
+    @MainActor
+    func flushPendingChanges() async throws {
+        task?.cancel()
+        task = nil
+        if let languageServer, let uri = pendingChanges.first?.uri {
+            let changes = pendingChanges.map {
+                LanguageServer<DocumentType>.DocumentChange(replacingContentsIn: $0.range, with: $0.string)
+            }
+            pendingChanges.removeAll()
+            let previousTask = sendingTask
+            sendingTask = Task {
+                // Keep incremental edits ordered even when another flush arrives during a send.
+                _ = try? await previousTask?.value
+                try Task.checkCancellation()
+                try await languageServer.documentChanged(uri: uri, changes: changes)
+            }
+        }
+        try await sendingTask?.value
     }
 
     func prepareCoordinator(controller: TextViewController) {
@@ -85,14 +95,18 @@ class LSPContentCoordinator<DocumentType: LanguageServerDocument>: TextViewCoord
             return
         }
         self.editedRange = nil
-        self.sequenceContinuation?.yield(SequenceElement(uri: documentURI, range: lspRange, string: string))
+        pendingChanges.append(SequenceElement(uri: documentURI, range: lspRange, string: string))
+        if task == nil {
+            setUpUpdatesTask()
+        }
     }
 
     func destroy() {
         task?.cancel()
         task = nil
-        sequenceContinuation?.finish()
-        sequenceContinuation = nil
+        sendingTask?.cancel()
+        sendingTask = nil
+        pendingChanges.removeAll()
     }
 
     deinit {

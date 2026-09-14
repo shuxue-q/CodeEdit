@@ -81,7 +81,7 @@ struct UtilityAreaOutputSourcePicker: View {
                 }
                 return nil
             }
-            .sorted(by: { $0.languageId.rawValue < $1.languageId.rawValue })
+            .sorted(by: { $0.languageId < $1.languageId })
         if selectedSource == nil, let client = languageServerClients.first {
             selectedSource = Sources.languageServer(client.logContainer)
         }

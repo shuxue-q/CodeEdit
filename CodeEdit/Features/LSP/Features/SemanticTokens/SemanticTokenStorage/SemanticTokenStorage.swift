@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import os.log
 import LanguageServerProtocol
 import CodeEditSourceEditor
 
@@ -37,6 +38,9 @@ final class SemanticTokenStorage: GenericSemanticTokenStorage {
     }
 
     var state: CurrentState?
+
+    /// Logs malformed data received from language servers. Server data is untrusted input.
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "", category: "SemanticTokenStorage")
 
     /// Create an empty storage object.
     init() {
@@ -90,6 +94,14 @@ final class SemanticTokenStorage: GenericSemanticTokenStorage {
 
         // Apply in reverse order (end to start)
         for edit in deltas.edits.sorted(by: { $0.start > $1.start }) {
+            // Language servers are untrusted external processes. Discard malformed edits
+            // instead of crashing on out-of-bounds indices.
+            guard isValidEdit(edit, currentDataCount: tokenData.count) else {
+                // swiftlint:disable:next line_length
+                logger.warning("Discarding malformed semantic tokens edit (start: \(edit.start), deleteCount: \(edit.deleteCount), data: \(edit.data?.count ?? 0) elements) for data length \(tokenData.count)")
+                continue
+            }
+
             invalidatedSet.append(
                 contentsOf: invalidatedRanges(startIdx: edit.start, length: edit.deleteCount, data: tokenData[...])
             )
@@ -118,6 +130,23 @@ final class SemanticTokenStorage: GenericSemanticTokenStorage {
         return invalidatedSet
     }
 
+    /// Validate a delta edit against the current compressed token data.
+    ///
+    /// Edits replace whole tokens, so `start`, `deleteCount` and the length of any inserted `data` must be
+    /// multiples of 5 (the number of packed elements per token), and the edited range must lie within the
+    /// current data. Data from a language server is untrusted; edits violating these constraints are discarded.
+    /// - Parameters:
+    ///   - edit: The edit to validate.
+    ///   - currentDataCount: The current length of the compressed token data.
+    /// - Returns: `true` if the edit can be applied without reading or writing out of bounds.
+    private func isValidEdit(_ edit: SemanticTokensEdit, currentDataCount: Int) -> Bool {
+        let count = UInt(currentDataCount)
+        guard edit.start <= count, edit.deleteCount <= count - edit.start else {
+            return false
+        }
+        return edit.start % 5 == 0 && edit.deleteCount % 5 == 0 && (edit.data?.count ?? 0) % 5 == 0
+    }
+
     // MARK: - Invalidated Indices
 
     /// Calculate what document ranges are invalidated due to changes in the compressed token data.
@@ -131,9 +160,18 @@ final class SemanticTokenStorage: GenericSemanticTokenStorage {
     ///   - data: A reference to the compressed token data.
     /// - Returns: All token ranges included in the range of the edit.
     func invalidatedRanges(startIdx: UInt, length: UInt, data: ArraySlice<UInt32>) -> [SemanticTokenRange] {
+        // Compressed data must contain whole tokens (5 elements each). Bail out on malformed data
+        // rather than risking an out-of-bounds read.
+        guard data.count % 5 == 0 else {
+            logger.warning("Discarding invalidated ranges: token data length \(data.count) is not a multiple of 5")
+            return []
+        }
         var ranges: [SemanticTokenRange] = []
+        let count = UInt(data.count)
         var idx = startIdx - (startIdx % 5)
         while idx < startIdx + length {
+            // Stop at the first index that would read past the end of the data.
+            guard idx + 2 < count else { break }
             ranges.append(
                 SemanticTokenRange(
                     line: data[Int(idx)],

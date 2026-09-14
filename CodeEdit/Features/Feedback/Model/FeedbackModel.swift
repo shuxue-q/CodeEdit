@@ -139,9 +139,23 @@ public class FeedbackModel: ObservableObject {
         actuallyHappened: String?
     ) {
         let gitAccounts = Settings[\.accounts].sourceControlAccounts.gitAccounts
-        let firstGitAccount = gitAccounts.first
 
-        let config = GitHubTokenConfiguration(keychain.get(firstGitAccount!.name))
+        guard let firstGitAccount = gitAccounts.first else {
+            // No git account is configured, so there is no token to
+            // authenticate with. Surface the failure instead of crashing.
+            self.failedToSubmit = true
+            return
+        }
+
+        // Fall back to legacy key formats for tokens stored before the
+        // provider-aware keychain key was introduced.
+        let token = keychain.get(firstGitAccount.keychainTokenKey)
+            ?? SourceControlAccount.legacyKeychainTokenKeys(username: firstGitAccount.name)
+                .lazy
+                .compactMap { self.keychain.get($0) }
+                .first
+
+        let config = GitHubTokenConfiguration(token)
         GitHubAccount(config).postIssue(
             owner: "CodeEditApp",
             repository: "CodeEdit",

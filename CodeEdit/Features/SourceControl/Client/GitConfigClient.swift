@@ -47,7 +47,7 @@ class GitConfigClient {
     ///   - global: Whether to retrieve the value globally or locally.
     /// - Returns: The value as a type conforming to `GitConfigRepresentable`, or `nil` if not found.
     func get<T: GitConfigRepresentable>(key: String, global: Bool = false) async throws -> T? {
-        let output = try await runConfigCommand(key, global: global)
+        let output = try await runConfigCommand(key.escapedShellArgument(), global: global)
         let trimmedOutput = output.trimmingCharacters(in: .whitespacesAndNewlines)
         return T(configValue: trimmedOutput)
     }
@@ -67,7 +67,9 @@ class GitConfigClient {
             shouldUnset = false
         }
 
-        let commandString = shouldUnset ? "--unset \(key)" : "\(key) \(value.asConfigValue)"
+        let commandString = shouldUnset
+            ? "--unset \(key.escapedShellArgument())"
+            : "\(key.escapedShellArgument()) \(value.asConfigValue.escapedShellArgument())"
 
         do {
             _ = try await runConfigCommand(commandString, global: global)

@@ -23,13 +23,13 @@ extension GitClient {
     /// - Parameter name: Name for remote
     /// - Parameter location: URL string for remote location
     func addRemote(name: String, location: String) async throws {
-        _ = try await run("remote add \(name) \(location)")
+        _ = try await run("remote add \(name.escapedShellArgument()) \(location.escapedShellArgument())")
     }
 
     /// Remove remote from local git
     /// - Parameter name: Name for remote to remove
     func removeRemote(name: String) async throws {
-        _ = try await run("remote rm \(name)")
+        _ = try await run("remote rm \(name.escapedShellArgument())")
     }
 
     /// Get the URL of the remote

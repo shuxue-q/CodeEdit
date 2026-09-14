@@ -7,6 +7,7 @@
 
 import AppKit
 import Combine
+import Observation
 
 @available(macOS 26, *)
 final class StopTaskToolbarItem: NSToolbarItem {
@@ -15,6 +16,10 @@ final class StopTaskToolbarItem: NSToolbarItem {
     private var taskManager: TaskManager? {
         workspace?.taskManager
     }
+
+    /// Whether a CMake build is running, tracked separately from task status because builds
+    /// are not represented as active tasks.
+    private var cmakeBuildRunning = false
 
     /// The listener that listens to the active task's status publisher. Is updated frequently as the active task
     /// changes.
@@ -47,6 +52,10 @@ final class StopTaskToolbarItem: NSToolbarItem {
         }
         .store(in: &otherListeners)
 
+        if let buildController = workspace.cmakeBuildController {
+            observeBuild(buildController)
+        }
+
         updateStatusListener(activeTasks: taskManager.activeTasks, selectedId: taskManager.selectedTaskID)
     }
 
@@ -65,8 +74,27 @@ final class StopTaskToolbarItem: NSToolbarItem {
     }
 
     private func updateForNewStatus(_ status: CETaskStatus) {
-        isEnabled = status == .running
+        isEnabled = status == .running || cmakeBuildRunning
         action = isEnabled ? #selector(stopTask) : nil
+    }
+
+    /// Tracks the build controller's `isBuilding` flag with observation tracking, since this
+    /// item is AppKit and cannot rely on SwiftUI observation.
+    private func observeBuild(_ controller: CMakeBuildController) {
+        withObservationTracking {
+            _ = controller.isBuilding
+        } onChange: { [weak self, weak controller] in
+            guard let self, let controller else { return }
+            DispatchQueue.main.async {
+                self.cmakeBuildRunning = controller.isBuilding
+                if let status = self.taskManager?.activeTasks[self.taskManager?.selectedTaskID ?? UUID()]?.status {
+                    self.updateForNewStatus(status)
+                } else {
+                    self.updateForNewStatus(.notRunning)
+                }
+                self.observeBuild(controller)
+            }
+        }
     }
 
     @objc

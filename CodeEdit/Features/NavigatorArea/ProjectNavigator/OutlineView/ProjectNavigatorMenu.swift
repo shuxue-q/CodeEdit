@@ -19,7 +19,11 @@ final class ProjectNavigatorMenu: NSMenu {
 
     /// The  `ProjectNavigatorViewController` is being called from.
     /// By sending it, we can access it's variables and functions.
-    var sender: ProjectNavigatorViewController
+    ///
+    /// Held weakly to avoid a retain cycle: the view controller owns the outline
+    /// view, which owns this menu. The menu never outlives the view controller's
+    /// view hierarchy, so all uses simply no-op once it is gone.
+    weak var sender: ProjectNavigatorViewController?
 
     init(_ sender: ProjectNavigatorViewController) {
         self.sender = sender

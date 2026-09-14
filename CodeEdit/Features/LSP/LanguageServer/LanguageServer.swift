@@ -19,7 +19,7 @@ class LanguageServer<DocumentType: LanguageServerDocument> {
     let logger: Logger
 
     /// Identifies which language the server belongs to
-    let languageId: LanguageIdentifier
+    let languageId: String
     /// Holds information about the language server binary
     let binary: LanguageServerBinary
     /// A cache to hold responses from the server, to minimize duplicate server requests
@@ -46,7 +46,7 @@ class LanguageServer<DocumentType: LanguageServerDocument> {
     private(set) var pid: pid_t
 
     init(
-        languageId: LanguageIdentifier,
+        languageId: String,
         binary: LanguageServerBinary,
         lspInstance: InitializingServer,
         lspPid: pid_t,
@@ -64,7 +64,7 @@ class LanguageServer<DocumentType: LanguageServerDocument> {
         self.logContainer = logContainer
         self.logger = Logger(
             subsystem: Bundle.main.bundleIdentifier ?? "",
-            category: "LanguageServer.\(languageId.rawValue)"
+            category: "LanguageServer.\(languageId)"
         )
         if let semanticTokensProvider = serverCapabilities.semanticTokensProvider {
             self.highlightMap = SemanticTokenMap(semanticCapability: semanticTokensProvider)
@@ -80,7 +80,7 @@ class LanguageServer<DocumentType: LanguageServerDocument> {
     ///   - workspacePath: The path of the workspace being opened.
     /// - Returns: An initialized language server.
     static func createServer(
-        for languageId: LanguageIdentifier,
+        for languageId: String,
         with binary: LanguageServerBinary,
         workspacePath: String
     ) async throws -> LanguageServer {
@@ -90,7 +90,7 @@ class LanguageServer<DocumentType: LanguageServerDocument> {
             environment: binary.env
         )
 
-        let logContainer = LanguageServerLogContainer(language: languageId)
+        let logContainer = LanguageServerLogContainer(languageId: languageId)
         let (connection, process) = try makeLocalServerConnection(
             languageId: languageId,
             executionParams: executionParams,
@@ -121,7 +121,7 @@ class LanguageServer<DocumentType: LanguageServerDocument> {
     ///   - executionParams: The parameters for executing the local process.
     /// - Returns: A new connection to the language server.
     static func makeLocalServerConnection(
-        languageId: LanguageIdentifier,
+        languageId: String,
         executionParams: Process.ExecutionParameters,
         logContainer: LanguageServerLogContainer
     ) throws -> (connection: JSONRPCServerConnection, process: Process) {
@@ -129,7 +129,7 @@ class LanguageServer<DocumentType: LanguageServerDocument> {
             let (channel, process) = try DataChannel.localProcessChannel(
                 parameters: executionParams,
                 terminationHandler: { [weak logContainer] in
-                    logger.debug("Terminated data channel for \(languageId.rawValue)")
+                    logger.debug("Terminated data channel for \(languageId)")
                     logContainer?.appendLog(
                         LogMessageParams(type: .error, message: "Data Channel Terminated Unexpectedly")
                     )
@@ -137,7 +137,7 @@ class LanguageServer<DocumentType: LanguageServerDocument> {
             )
             return (JSONRPCServerConnection(dataChannel: channel), process)
         } catch {
-            logger.warning("Failed to initialize data channel for \(languageId.rawValue)")
+            logger.warning("Failed to initialize data channel for \(languageId)")
             throw error
         }
     }
@@ -154,7 +154,7 @@ class LanguageServer<DocumentType: LanguageServerDocument> {
                     completionItem: CompletionClientCapabilities.CompletionItem(
                         snippetSupport: true,
                         commitCharactersSupport: true,
-                        documentationFormat: [MarkupKind.plaintext],
+                        documentationFormat: [MarkupKind.markdown, MarkupKind.plaintext],
                         deprecatedSupport: true,
                         preselectSupport: true,
                         tagSupport: ValueSet(valueSet: [CompletionItemTag.deprecated]),
@@ -165,12 +165,16 @@ class LanguageServer<DocumentType: LanguageServerDocument> {
                         insertTextModeSupport: ValueSet(valueSet: [InsertTextMode.adjustIndentation]),
                         labelDetailsSupport: true
                     ),
-                    completionItemKind: ValueSet(valueSet: [CompletionItemKind.text, CompletionItemKind.method]),
+                    completionItemKind: ValueSet(valueSet: CompletionItemKind.allCases),
                     contextSupport: true,
                     insertTextMode: InsertTextMode.asIs,
                     completionList: CompletionClientCapabilities.CompletionList(
                         itemDefaults: ["default1", "default2"]
                     )
+                ),
+                hover: HoverClientCapabilities(
+                    dynamicRegistration: false,
+                    contentFormat: [MarkupKind.markdown, MarkupKind.plaintext]
                 ),
                 // swiftlint:disable:next line_length
                 // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#semanticTokensClientCapabilities
@@ -258,7 +262,15 @@ class LanguageServer<DocumentType: LanguageServerDocument> {
     /// Shuts down the language server and exits it.
     public func shutdown() async throws {
         self.logger.info("Shutting down language server")
-        try await self.lspInstance.shutdownAndExit()
+        do {
+            try await self.lspInstance.shutdownAndExit()
+        } catch {
+            // Some servers (e.g. tower-lsp based servers like neocmakelsp) reject the explicit
+            // `params: null` sent with the shutdown request, even though they honor the shutdown.
+            // Make sure the exit notification is still sent so the process can terminate.
+            self.logger.warning("Shutdown request failed (\(error)), sending exit notification anyway")
+            try await self.lspInstance.sendNotification(.exit)
+        }
     }
 }
 

@@ -17,6 +17,11 @@ class TaskManager: ObservableObject {
 
     @ObservedObject var workspaceSettings: CEWorkspaceSettingsData
 
+    /// The workspace's CMake build controller. Set by the workspace document so the existing
+    /// start/stop controls can drive CMake builds in workspaces without configured tasks —
+    /// no separate build UI is added for this.
+    var cmakeBuildController: CMakeBuildController?
+
     private var workspaceURL: URL?
     private var settingsListener: AnyCancellable?
 
@@ -29,6 +34,12 @@ class TaskManager: ObservableObject {
             .sink { [weak self] _ in
                 self?.updateSelectedTaskID()
             }
+    }
+
+    /// Whether the start/stop controls run a CMake build: the workspace is a CMake project
+    /// (the document sets ``cmakeBuildController``) and no user-configured tasks exist.
+    var isCMakeBuildTarget: Bool {
+        workspaceSettings.tasks.isEmpty && cmakeBuildController != nil
     }
 
     var selectedTask: CETask? {
@@ -61,6 +72,10 @@ class TaskManager: ObservableObject {
     }
 
     func executeActiveTask() {
+        if isCMakeBuildTarget {
+            cmakeBuildController?.start()
+            return
+        }
         guard let task = workspaceSettings.tasks.first(where: { $0.id == selectedTaskID }) else { return }
         Task {
             await runTask(task: task)
@@ -88,6 +103,10 @@ class TaskManager: ObservableObject {
     }
 
     func terminateActiveTask() {
+        if isCMakeBuildTarget {
+            cmakeBuildController?.stop()
+            return
+        }
         guard let taskID = selectedTaskID else {
             return
         }

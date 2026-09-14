@@ -12,7 +12,7 @@ import LanguageServerProtocol
 extension LSPService {
     func startListeningToEvents(for key: ClientKey) {
         guard let languageClient = languageClients[key] else {
-            logger.error("Language client not found for \(key.languageId.rawValue)")
+            logger.error("Language client not found for \(key.languageId)")
             return
         }
 
@@ -41,9 +41,9 @@ extension LSPService {
         case let .request(_, request):
             handleRequest(request, client: client)
         case let .notification(notification):
-            handleNotification(notification, client: client)
+            handleNotification(notification, client: client, workspacePath: key.workspacePath)
         case let .error(error):
-            logger.warning("Error from server \(key.languageId.rawValue, privacy: .public): \(error)")
+            logger.warning("Error from server \(key.languageId, privacy: .public): \(error)")
         }
     }
 
@@ -75,15 +75,18 @@ extension LSPService {
         }
     }
 
-    private func handleNotification(_ notification: ServerNotification, client: LanguageServerType) {
-        // TODO: Handle Notifications
+    private func handleNotification(
+        _ notification: ServerNotification,
+        client: LanguageServerType,
+        workspacePath: String
+    ) {
         switch notification {
         case let .windowLogMessage(message):
             client.logContainer.appendLog(message)
+        case let .textDocumentPublishDiagnostics(params):
+            diagnosticsStore.update(params.diagnostics, for: params.uri, workspacePath: workspacePath)
 //        case let .windowShowMessage(params):
 //            print("windowShowMessage \(params.type)\n```\n\(params.message)\n```\n")
-            //        case let .textDocumentPublishDiagnostics(params):
-            //            print("textDocumentPublishDiagnostics: \(params)")
 //        case let .telemetryEvent(params):
 //            print("telemetryEvent: \(params)")
             //        case let .protocolCancelRequest(params):

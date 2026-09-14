@@ -50,8 +50,8 @@ struct SettingsData: Codable, Hashable {
     /// Search Settings
     var search: SearchSettings = .init()
 
-    /// Language Server Settings
-    var languageServers: LanguageServerSettings = .init()
+    /// The global settings for language server integration
+    var lsp: LSPSettings = .init()
 
     /// Developer settings for CodeEdit developers
     var developerSettings: DeveloperSettings = .init()
@@ -77,9 +77,7 @@ struct SettingsData: Codable, Hashable {
             KeybindingsSettings.self,
             forKey: .keybindings
         ) ?? .init()
-        self.languageServers = try container.decodeIfPresent(
-            LanguageServerSettings.self, forKey: .languageServers
-        ) ?? .init()
+        self.lsp = try container.decodeIfPresent(LSPSettings.self, forKey: .lsp) ?? .init()
         self.developerSettings = try container.decodeIfPresent(
             DeveloperSettings.self, forKey: .developerSettings
         ) ?? .init()
@@ -106,12 +104,10 @@ struct SettingsData: Codable, Hashable {
             search.searchKeys.forEach { settings.append(.init(name, isSetting: true, settingName: $0)) }
         case .sourceControl:
             sourceControl.searchKeys.forEach { settings.append(.init(name, isSetting: true, settingName: $0)) }
+        case .languageServers:
+            lsp.searchKeys.forEach { settings.append(.init(name, isSetting: true, settingName: $0)) }
         case .location:
             LocationsSettings().searchKeys.forEach { settings.append(.init(name, isSetting: true, settingName: $0)) }
-        case .languageServers:
-            LanguageServerSettings().searchKeys.forEach {
-                settings.append(.init(name, isSetting: true, settingName: $0))
-            }
         case .developer:
             developerSettings.searchKeys.forEach { settings.append(.init(name, isSetting: true, settingName: $0)) }
         case .behavior: return [.init(name, settingName: "Error")]

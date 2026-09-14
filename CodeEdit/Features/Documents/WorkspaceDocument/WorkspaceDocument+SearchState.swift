@@ -55,13 +55,11 @@ extension WorkspaceDocument {
 
         /// Represents the compare options to be used for find and replace.
         ///
-        /// The `replaceOptions` property is a lazy, computed property that dynamically calculates
-        /// the compare options based on the values of `selectedMode` and `ignoreCase`. It is used
-        /// for controlling string replacement behavior for the find and replace functions.
-        ///
-        /// - Note: This property is implemented as a lazy property in the main class body because
-        /// extensions cannot contain stored properties directly.
-        lazy var replaceOptions: NSString.CompareOptions = {
+        /// The `replaceOptions` property is a computed property that calculates
+        /// the compare options from the current values of `selectedMode` and `caseSensitive`
+        /// every time it is accessed. It is used for controlling string replacement behavior
+        /// for the find and replace functions, so it always reflects the latest search settings.
+        var replaceOptions: NSString.CompareOptions {
             var options: NSString.CompareOptions = []
 
             if selectedMode.second == .RegularExpression {
@@ -73,6 +71,6 @@ extension WorkspaceDocument {
             }
 
             return options
-        }()
+        }
     }
 }

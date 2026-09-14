@@ -82,8 +82,8 @@ class IgnorePatternModel: ObservableObject {
             queue: DispatchQueue.main
         )
 
-        source.setEventHandler {
-            Task { await self.loadPatterns() }
+        source.setEventHandler { [weak self] in
+            Task { await self?.loadPatterns() }
         }
 
         source.setCancelHandler {

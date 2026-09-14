@@ -225,7 +225,10 @@ struct AccountsSettingsSigninView: View {
             )
         )
 
-        keychain.set(personalAccessToken, forKey: "github_\(username)_enterprise")
+        keychain.set(
+            personalAccessToken,
+            forKey: SourceControlAccount.keychainTokenKey(provider: provider, username: username)
+        )
         dismiss()
     }
 
@@ -243,5 +246,36 @@ struct AccountsSettingsSigninView: View {
             signinErrorDetail = "Unknown Error"
         }
         signinErrorAlertIsPresented.toggle()
+    }
+}
+
+extension SourceControlAccount {
+    /// The keychain key under which the account's personal access token is stored.
+    ///
+    /// The key includes the provider so accounts with the same username on
+    /// different providers do not overwrite each other's tokens.
+    var keychainTokenKey: String {
+        Self.keychainTokenKey(provider: provider, username: name)
+    }
+
+    /// Builds the keychain key for an account's personal access token.
+    /// - Parameters:
+    ///   - provider: The source control provider the account belongs to.
+    ///   - username: The account's username.
+    /// - Returns: A key in the form `"<providerID>_<username>"`.
+    static func keychainTokenKey(provider: Provider, username: String) -> String {
+        "\(provider.id)_\(username)"
+    }
+
+    /// Keychain keys that were used to store an account's token before the
+    /// provider-aware ``keychainTokenKey(provider:username:)`` format existed.
+    ///
+    /// Tokens stored under these keys may still exist in the user's keychain,
+    /// so readers should fall back to them and account deletion should remove
+    /// them as well.
+    /// - Parameter username: The account's username.
+    /// - Returns: The legacy key candidates for the username.
+    static func legacyKeychainTokenKeys(username: String) -> [String] {
+        ["github_\(username)_enterprise", username]
     }
 }

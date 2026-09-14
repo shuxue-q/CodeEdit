@@ -194,7 +194,12 @@ final class CodeEditUtilsExtensionsUnitTests: XCTestCase {
 
     func testEscapedDirectory() {
         let path = #"/Hello World/ With Spaces/ And " Characters "#
-        XCTAssertEqual(path.escapedDirectory(), #""/Hello World/ With Spaces/ And \" Characters ""#)
+        XCTAssertEqual(path.escapedDirectory(), #"'/Hello World/ With Spaces/ And " Characters '"#)
+    }
+
+    func testEscapedDirectoryWithSingleQuote() {
+        let path = "/Hello World/John's Files"
+        XCTAssertEqual(path.escapedDirectory(), #"'/Hello World/John'\''s Files'"#)
     }
 
     // MARK: - URL + Contains

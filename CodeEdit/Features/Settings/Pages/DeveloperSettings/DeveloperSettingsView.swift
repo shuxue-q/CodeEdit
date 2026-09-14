@@ -16,6 +16,14 @@ struct DeveloperSettingsView: View {
     @AppSettings(\.developerSettings.showInternalDevelopmentInspector)
     var showInternalDevelopmentInspector
 
+    /// All valid LSP language identifiers, including auto-detected servers outside
+    /// of `LanguageIdentifier` (e.g. CMake).
+    private var validLanguageIds: [String] {
+        var seen = Set<String>()
+        return (LanguageIdentifier.allCases.map(\.rawValue) + LanguageServerDetector.supportedLanguageIds)
+            .filter { seen.insert($0).inserted }
+    }
+
     var body: some View {
         SettingsForm {
             Section {
@@ -25,7 +33,7 @@ struct DeveloperSettingsView: View {
             Section {
                 KeyValueTable(
                     items: $lspBinaries,
-                    validKeys: LanguageIdentifier.allCases.map { $0.rawValue },
+                    validKeys: validLanguageIds,
                     keyColumnName: "Language",
                     valueColumnName: "Language Server Path",
                     newItemInstruction: "Add a language server"

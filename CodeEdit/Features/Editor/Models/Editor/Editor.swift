@@ -136,35 +136,44 @@ final class Editor: ObservableObject, Identifiable {
     }
 
     /// Closes a tab in the editor.
-    /// This will also write any changes to the file on disk and will add the tab to the tab history.
+    /// If the document has unsaved changes, the user is asked to save them first and the tab is
+    /// closed once they answer (which may happen asynchronously). Adds the tab to the tab history.
+    ///
+    /// If the file is still open in another editor (e.g. another split), only the tab is removed:
+    /// the shared document is left open and no save panel is presented.
     /// - Parameters:
     ///   - file: The tab to close
     ///   - fromHistory: If `true`, does not clear tabs ahead of the ``historyOffset``
     ///                  Used when opening tabs from the history queue where tabs ahead of the ``historyOffset`` should
     ///                  not be removed.
     func closeTab(file: CEWorkspaceFile, fromHistory: Bool = false) {
-        guard canCloseTab(file: file) else { return }
+        let isOpenInOtherEditors = isFileOpenInOtherEditors(file)
+        canCloseTab(file: file, askToSave: !isOpenInOtherEditors) { [weak self] shouldClose in
+            guard let self, shouldClose else { return }
 
-        if temporaryTab?.file == file {
-            temporaryTab = nil
+            if temporaryTab?.file == file {
+                temporaryTab = nil
+            }
+            if !fromHistory {
+                clearFuture()
+            }
+            if file != selectedTab?.file {
+                addToHistory(EditorInstance(workspace: workspace, file: file))
+            }
+            removeTab(file)
+            if let selectedTab {
+                addToHistory(selectedTab)
+            }
+            // The document must stay alive while another editor still presents the file.
+            guard !isOpenInOtherEditors else { return }
+            // Reset change count to 0
+            file.fileDocument?.updateChangeCount(.changeCleared)
+            if let codeFile = file.fileDocument {
+                codeFile.close()
+            }
+            // remove file from memory
+            file.fileDocument = nil
         }
-        if !fromHistory {
-            clearFuture()
-        }
-        if file != selectedTab?.file {
-            addToHistory(EditorInstance(workspace: workspace, file: file))
-        }
-        removeTab(file)
-        if let selectedTab {
-            addToHistory(selectedTab)
-        }
-        // Reset change count to 0
-        file.fileDocument?.updateChangeCount(.changeCleared)
-        if let codeFile = file.fileDocument {
-            codeFile.close()
-        }
-        // remove file from memory
-        file.fileDocument = nil
     }
 
     /// Closes the currently opened tab in the tab group.
@@ -276,48 +285,73 @@ final class Editor: ObservableObject, Identifiable {
         try item.file.loadCodeFile()
     }
 
+    /// Checks whether the file is presented by a tab of any other editor of the workspace.
+    /// - Parameter file: The file to look for.
+    /// - Returns: `true` if another editor (e.g. another split) has the file open.
+    private func isFileOpenInOtherEditors(_ file: CEWorkspaceFile) -> Bool {
+        guard let editorManager = workspace?.editorManager else { return false }
+        return editorManager.getFlattened().contains { editor in
+            editor.id != id && editor.tabs.contains(where: { $0.file == file })
+        }
+    }
+
     /// Check if tab can be closed
     ///
     /// If document edited it will show dialog where user can save document before closing or cancel.
-    private func canCloseTab(file: CEWorkspaceFile) -> Bool {
-        guard let codeFile = file.fileDocument else { return true }
-
-        if codeFile.isDocumentEdited {
-            let shouldClose = UnsafeMutablePointer<Bool>.allocate(capacity: 1)
-            shouldClose.initialize(to: true)
-            defer {
-                _ = shouldClose.move()
-                shouldClose.deallocate()
-            }
-            codeFile.canClose(
-                withDelegate: self,
-                shouldClose: #selector(document(_:shouldClose:contextInfo:)),
-                contextInfo: shouldClose
-            )
-
-            return shouldClose.pointee
+    /// - Parameters:
+    ///   - file: The file to check.
+    ///   - askToSave: If `false`, no save dialog is presented for an edited document.
+    ///   - completion: Invoked with `true` if the tab can be closed, `false` if the user canceled.
+    ///                 Invoked asynchronously if a dialog had to be presented first.
+    private func canCloseTab(
+        file: CEWorkspaceFile,
+        askToSave: Bool = true,
+        completion: @escaping (Bool) -> Void
+    ) {
+        guard askToSave, let codeFile = file.fileDocument, codeFile.isDocumentEdited else {
+            completion(true)
+            return
         }
 
-        return true
+        // `canClose` may invoke the delegate callback asynchronously (e.g. when `autosavesInPlace`
+        // is enabled), so the context is retained until ``document(_:shouldClose:contextInfo:)``
+        // fires and releases it.
+        let context = CanCloseContext(completion: completion)
+        codeFile.canClose(
+            withDelegate: self,
+            shouldClose: #selector(document(_:shouldClose:contextInfo:)),
+            contextInfo: Unmanaged.passRetained(context).toOpaque()
+        )
     }
 
-    /// Receives result of `canClose` and then, set `shouldClose` to `contextInfo`'s `pointee`.
+    /// Box carrying a completion handler through `canClose(withDelegate:shouldClose:contextInfo:)`.
+    ///
+    /// Passed as a retained opaque `contextInfo` pointer; ``document(_:shouldClose:contextInfo:)``
+    /// takes over the retain when the delegate callback fires, exactly once, synchronously or not.
+    private final class CanCloseContext {
+        let completion: (Bool) -> Void
+
+        init(completion: @escaping (Bool) -> Void) {
+            self.completion = completion
+        }
+    }
+
+    /// Receives the result of `canClose` and forwards it to the completion handler in `contextInfo`.
     ///
     /// - Parameters:
-    ///   - document: The document may be closed.
+    ///   - document: The document which may be closed.
     ///   - shouldClose: The result of user selection.
-    ///      `shouldClose` becomes false if the user selects cancel, otherwise true.
-    ///   - contextInfo: The additional info which will be set `shouldClose`.
-    ///       `contextInfo` must be `UnsafeMutablePointer<Bool>`.
+    ///      `shouldClose` is false if the user selected cancel, otherwise true.
+    ///   - contextInfo: A retained ``CanCloseContext`` as an opaque pointer; this method takes over
+    ///       the retain.
     @objc
     func document(
         _ document: NSDocument,
         shouldClose: Bool,
         contextInfo: UnsafeMutableRawPointer
     ) {
-        let opaquePtr = OpaquePointer(contextInfo)
-        let mutablePointer = UnsafeMutablePointer<Bool>(opaquePtr)
-        mutablePointer.pointee = shouldClose
+        let context = Unmanaged<CanCloseContext>.fromOpaque(contextInfo).takeRetainedValue()
+        context.completion(shouldClose)
     }
 
     /// Remove the given file from tabs.

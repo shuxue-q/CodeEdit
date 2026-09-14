@@ -61,7 +61,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     }
 
     func applicationWillTerminate(_ aNotification: Notification) {
-
+        // Persist the latest settings immediately, bypassing the throttled
+        // auto-save so recent changes are not lost on quit.
+        Settings.shared.flushSettings()
     }
 
     func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool {

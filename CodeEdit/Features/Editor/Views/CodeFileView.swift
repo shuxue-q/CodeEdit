@@ -19,6 +19,9 @@ struct CodeFileView: View {
 
     @State private var treeSitterClient: TreeSitterClient = TreeSitterClient()
 
+    /// Shows language-server documentation when hovering over symbols.
+    @State private var hoverCoordinator: LSPHoverCoordinator
+
     /// Any coordinators passed to the view.
     private var textViewCoordinators: [TextViewCoordinator]
     private var highlightProviders: [any HighlightProviding] = []
@@ -82,10 +85,14 @@ struct CodeFileView: View {
         self._editorInstance = .init(wrappedValue: editorInstance)
         self._codeFile = .init(wrappedValue: codeFile)
 
+        let hoverCoordinator = LSPHoverCoordinator(document: codeFile)
+        self._hoverCoordinator = State(initialValue: hoverCoordinator)
+
         self.textViewCoordinators = textViewCoordinators
             + [editorInstance.rangeTranslator]
             + [codeFile.contentCoordinator]
             + [codeFile.languageServerObjects.textCoordinator]
+            + [hoverCoordinator]
         self.isEditable = isEditable
 
         if let openOptions = codeFile.openOptions {
@@ -94,6 +101,10 @@ struct CodeFileView: View {
         }
 
         highlightProviders = [codeFile.languageServerObjects.highlightProvider] + [treeSitterClient]
+
+        if codeFile.languageServerObjects.completionDelegate == nil {
+            codeFile.languageServerObjects.completionDelegate = LSPCompletionDelegate(document: codeFile)
+        }
 
         codeFile
             .contentCoordinator
@@ -145,7 +156,8 @@ struct CodeFileView: View {
                     showReformattingGuide: showReformattingGuide,
                     showFoldingRibbon: showFoldingRibbon,
                     invisibleCharactersConfiguration: invisibleCharactersConfiguration.textViewOption(),
-                    warningCharacters: Set(warningCharacters.characters.keys)
+                    warningCharacters: Set(warningCharacters.characters.keys),
+                    codeSuggestionTriggerCharacters: codeSuggestionTriggerCharacters
                 )
             ),
             state: Binding(
@@ -168,7 +180,8 @@ struct CodeFileView: View {
             ),
             highlightProviders: highlightProviders,
             undoManager: undoRegistration.manager(forFile: editorInstance.file),
-            coordinators: textViewCoordinators
+            coordinators: textViewCoordinators,
+            completionDelegate: codeFile.languageServerObjects.completionDelegate
         )
         // This view needs to refresh when the codefile changes. The file URL is too stable.
         .id(ObjectIdentifier(codeFile))
@@ -185,6 +198,15 @@ struct CodeFileView: View {
         .onChange(of: settingsFont) { _, newFontSetting in
             font = newFontSetting.current
         }
+    }
+
+    /// Characters that open the completion window as they're typed.
+    ///
+    /// Forwarded from the language server's advertised trigger characters (`.` for member access,
+    /// for example). `CodeEditSourceEditor` always triggers on letters and numbers, so the
+    /// completion window pops up while typing without requiring Escape or a key combination.
+    private var codeSuggestionTriggerCharacters: Set<String> {
+        codeFile.languageServerObjects.completionDelegate?.completionTriggerCharacters() ?? []
     }
 
     /// Determines the style of bracket emphasis based on the `bracketEmphasis` setting and the current theme.

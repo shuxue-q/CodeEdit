@@ -63,7 +63,7 @@ final class LanguageServerCodeFileDocumentTests: XCTestCase {
             )
         )
         let server = LanguageServerType(
-            languageId: .swift,
+            languageId: "swift",
             binary: .init(execPath: "", args: [], env: nil),
             lspInstance: InitializingServer(
                 server: bufferingConnection,
@@ -72,7 +72,7 @@ final class LanguageServerCodeFileDocumentTests: XCTestCase {
             lspPid: -1,
             serverCapabilities: capabilities,
             rootPath: tempTestDir,
-            logContainer: LanguageServerLogContainer(language: .swift)
+            logContainer: LanguageServerLogContainer(languageId: "swift")
         )
         _ = try await server.lspInstance.initializeIfNeeded()
         return (connection: bufferingConnection, server: server)
@@ -147,7 +147,7 @@ final class LanguageServerCodeFileDocumentTests: XCTestCase {
 
         // This service should receive the didOpen/didClose notifications
         let lspService = ServiceContainer.resolve(.singleton, LSPService.self)
-        await MainActor.run { lspService?.languageClients[.init(.swift, tempTestDir.path() + "/")] = server }
+        await MainActor.run { lspService?.languageClients[.init("swift", tempTestDir.path() + "/")] = server }
 
         // Set up workspace
         let (workspace, fileManager) = try makeTestWorkspace()

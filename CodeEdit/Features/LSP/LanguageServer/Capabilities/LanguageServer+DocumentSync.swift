@@ -124,7 +124,8 @@ extension LanguageServer {
               let content = document.content?.string else {
             return nil
         }
-        return DocumentContent(uri: uri, language: document.getLanguage().id.rawValue, string: content)
+        let language = document.lspLanguageId ?? document.getLanguage().id.rawValue
+        return DocumentContent(uri: uri, language: language, string: content)
     }
 
     @MainActor

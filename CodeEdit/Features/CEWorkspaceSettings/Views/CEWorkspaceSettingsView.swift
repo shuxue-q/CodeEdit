@@ -30,6 +30,10 @@ struct CEWorkspaceSettingsView: View {
                         .accessibilityHidden(true)
                 }
 
+                if let cmakeWorkspace = workspace.cmakeWorkspace {
+                    CMakeWorkspaceSettingsView(model: cmakeWorkspace)
+                }
+
                 Section {
                     CEWorkspaceSettingsTaskListView(
                         settings: workspaceSettingsManager.settings,
@@ -77,6 +81,9 @@ struct CEWorkspaceSettingsView: View {
             } else {
                 AddCETaskView()
             }
+        }
+        .task {
+            workspace.cmakeWorkspace?.reload()
         }
     }
 }

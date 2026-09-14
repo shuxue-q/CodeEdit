@@ -20,8 +20,8 @@ extension GitClient {
         fileLocalPath: String? = nil,
         showMergeCommits: Bool = false
     ) async throws -> [GitCommit] {
-        let branchString = branchName != nil ? "\"\(branchName ?? "")\"" : ""
-        let fileString = fileLocalPath != nil ? "\"\(fileLocalPath ?? "")\"" : ""
+        let branchString = branchName?.escapedShellArgument() ?? ""
+        let fileString = fileLocalPath?.escapedShellArgument() ?? ""
         let countString = maxCount != nil ? "-n \(maxCount ?? 0)" : ""
 
         let dateFormatter = DateFormatter()

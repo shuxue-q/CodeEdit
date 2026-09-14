@@ -8,9 +8,17 @@
 import Foundation
 
 extension String {
+    /// Escapes the string so it can be safely used as a single shell argument.
+    ///
+    /// The string is wrapped in single quotes and every embedded single quote is replaced
+    /// with the `'\''` idiom, which protects against `$()`, backticks, `;`, `"`, and spaces.
+    func escapedShellArgument() -> String {
+        "'" + replacingOccurrences(of: "'", with: #"'\''"#) + "'"
+    }
+
     /// Escapes the string so it's an always-valid directory
     func escapedDirectory() -> String {
-        "\"\(self.escapedQuotes())\""
+        escapedShellArgument()
     }
 
     /// Returns a new string, replacing all occurrences of ` ` with `\ ` if they aren't already escaped.

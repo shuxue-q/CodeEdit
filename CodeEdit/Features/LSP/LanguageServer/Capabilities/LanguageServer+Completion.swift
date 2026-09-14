@@ -9,14 +9,26 @@ import Foundation
 import LanguageServerProtocol
 
 extension LanguageServer {
-    func requestCompletion(for documentURI: String, position: Position) async throws -> CompletionResponse {
+    /// Requests completion items at a position in a document.
+    /// - Parameters:
+    ///   - documentURI: The URI of the document.
+    ///   - position: The position to request completions for.
+    ///   - bypassCache: Skips the response cache. The cache is keyed by URI and position only,
+    ///     so it can serve stale or partial (server warm-up) results after edits. Interactive
+    ///     completion should bypass it.
+    func requestCompletion(
+        for documentURI: String,
+        position: Position,
+        bypassCache: Bool = false
+    ) async throws -> CompletionResponse {
         do {
             let cacheKey = CacheKey(
                 uri: documentURI,
                 requestType: "completion",
                 extraData: position
             )
-            if let cachedResponse: CompletionResponse = lspCache.get(key: cacheKey, as: CompletionResponse.self) {
+            if !bypassCache,
+               let cachedResponse: CompletionResponse = lspCache.get(key: cacheKey, as: CompletionResponse.self) {
                 return cachedResponse
             }
             let completionParams = CompletionParams(
@@ -27,7 +39,9 @@ extension LanguageServer {
             )
             let response = try await lspInstance.completion(completionParams)
 
-            lspCache.set(key: cacheKey, value: response)
+            if !bypassCache {
+                lspCache.set(key: cacheKey, value: response)
+            }
             return response
         } catch {
             logger.warning("requestCompletion: Error \(error)")

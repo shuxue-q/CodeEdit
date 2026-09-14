@@ -43,7 +43,7 @@ final class LanguageServerDocumentObjectsTests: XCTestCase {
         capabilities.textDocumentSync = .optionA(.init(openClose: true, change: .full))
         capabilities.semanticTokensProvider = .optionA(.init(legend: .init(tokenTypes: [], tokenModifiers: [])))
         server = LanguageServerType(
-            languageId: .swift,
+            languageId: "swift",
             binary: .init(execPath: "", args: [], env: nil),
             lspInstance: InitializingServer(
                 server: BufferingServerConnection(),
@@ -52,7 +52,7 @@ final class LanguageServerDocumentObjectsTests: XCTestCase {
             lspPid: -1,
             serverCapabilities: capabilities,
             rootPath: URL(fileURLWithPath: ""),
-            logContainer: LanguageServerLogContainer(language: .swift)
+            logContainer: LanguageServerLogContainer(languageId: "swift")
         )
         _ = try await server.lspInstance.initializeIfNeeded()
         document = MockDocumentType()

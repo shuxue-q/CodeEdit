@@ -43,6 +43,8 @@ final class WorkspaceDocument: NSDocument, ObservableObject, NSToolbarDelegate {
 
     var taskManager: TaskManager?
     var workspaceSettingsManager: CEWorkspaceSettings?
+    var cmakeWorkspace: CMakeWorkspace?
+    var cmakeBuildController: CMakeBuildController?
     var taskNotificationHandler: TaskNotificationHandler = TaskNotificationHandler()
 
     var undoRegistration: UndoManagerRegistration = UndoManagerRegistration()
@@ -158,11 +160,27 @@ final class WorkspaceDocument: NSDocument, ObservableObject, NSToolbarDelegate {
         self.openQuicklyViewModel = .init(fileURL: url)
         self.commandsPaletteState = .init()
         self.workspaceSettingsManager = CEWorkspaceSettings(workspaceURL: url)
+        if CMakeProject.isCMakeProject(at: url) {
+            let cmakeWorkspace = CMakeWorkspace(sourceDirectory: url)
+            self.cmakeWorkspace = cmakeWorkspace
+            cmakeWorkspace.reload()
+            let buildController = CMakeBuildController(sourceDirectory: url, workspace: cmakeWorkspace)
+            buildController.onBuildFinished = { [weak self] success in
+                // Failed builds surface their diagnostics; a build the user stopped does not.
+                guard let self, !success, buildController.outcome != .cancelled else { return }
+                if self.utilityAreaModel?.isCollapsed == true {
+                    CommandManager.shared.executeCommand("open.drawer")
+                }
+                self.utilityAreaModel?.selectedTab = .problems
+            }
+            self.cmakeBuildController = buildController
+        }
         if let workspaceSettingsManager {
             self.taskManager = TaskManager(
                 workspaceSettings: workspaceSettingsManager.settings,
                 workspaceURL: url
             )
+            self.taskManager?.cmakeBuildController = cmakeBuildController
         }
         self.taskNotificationHandler.workspaceURL = url
 
@@ -186,6 +204,8 @@ final class WorkspaceDocument: NSDocument, ObservableObject, NSToolbarDelegate {
 
         cancellables.forEach({ $0.cancel() })
         statusBarViewModel = nil
+        // Release the cached terminal views, so they and their shell processes are deallocated.
+        utilityAreaModel?.terminals.forEach { TerminalCache.shared.removeCachedView($0.id) }
         utilityAreaModel = nil
         searchState = nil
         editorManager = nil
@@ -196,6 +216,10 @@ final class WorkspaceDocument: NSDocument, ObservableObject, NSToolbarDelegate {
         workspaceFileManager = nil
         workspaceSettingsManager?.cleanUp()
         workspaceSettingsManager = nil
+        cmakeWorkspace?.cancel()
+        cmakeWorkspace = nil
+        cmakeBuildController?.stop()
+        cmakeBuildController = nil
         taskManager = nil
     }
 
@@ -238,54 +262,86 @@ final class WorkspaceDocument: NSDocument, ObservableObject, NSToolbarDelegate {
             .compactMap(\.fileDocument)
             .filter(\.isDocumentEdited) ?? []
 
-        for editedCodeFile in editedCodeFiles {
-            let shouldClose = UnsafeMutablePointer<Bool>.allocate(capacity: 1)
-            shouldClose.initialize(to: true)
-            defer {
-                _ = shouldClose.move()
-                shouldClose.deallocate()
-            }
-            // Present a panel giving the user the choice of canceling, discarding changes, or saving.
-            editedCodeFile.canClose(
-                withDelegate: self,
-                shouldClose: #selector(document(_:shouldClose:contextInfo:)),
-                contextInfo: shouldClose
+        // Present a panel giving the user the choice of canceling, discarding changes, or saving,
+        // one document at a time. `canClose` may invoke its delegate callback asynchronously,
+        // so the iteration continues from the callback and ends by invoking `shouldCloseSelector`.
+        canCloseEditedDocuments(editedCodeFiles[...]) { [weak self] in
+            guard let self else { return }
+            // Invoke shouldCloseSelector at delegate
+            let implementation = object.method(for: shouldCloseSelector)
+            let function = unsafeBitCast(
+                implementation,
+                to: (@convention(c)(Any, Selector, Any, Bool, UnsafeMutableRawPointer?) -> Void).self
             )
-            // pointee becomes false when user select cancel
-            guard shouldClose.pointee else {
-                break
+            let areAllOpenedCodeFilesClean = editorManager?.editorLayout.gatherOpenFiles()
+                .compactMap(\.fileDocument)
+                .allSatisfy { !$0.isDocumentEdited } ?? false
+            function(object, shouldCloseSelector, self, areAllOpenedCodeFilesClean, contextInfo)
+        }
+    }
+
+    /// Iterates edited documents, presenting a panel for each, until all agree to close or the user cancels.
+    ///
+    /// `canClose(withDelegate:shouldClose:contextInfo:)` may invoke its delegate callback
+    /// asynchronously, so each step continues from ``document(_:shouldClose:contextInfo:)``.
+    ///
+    /// - Parameters:
+    ///   - documents: The edited documents that still need to be asked.
+    ///   - completion: Invoked exactly once, when the iteration is done.
+    private func canCloseEditedDocuments(
+        _ documents: ArraySlice<CodeFileDocument>,
+        completion: @escaping () -> Void
+    ) {
+        guard let editedCodeFile = documents.first else {
+            completion()
+            return
+        }
+        // The context is retained until the delegate callback fires and releases it.
+        let context = CanCloseContext { [weak self] shouldClose in
+            guard let self else { return }
+            if shouldClose {
+                canCloseEditedDocuments(documents.dropFirst(), completion: completion)
+            } else {
+                // The user canceled on the panel, iteration is broken.
+                completion()
             }
         }
-        // Invoke shouldCloseSelector at delegate
-        let implementation = object.method(for: shouldCloseSelector)
-        let function = unsafeBitCast(
-            implementation,
-            to: (@convention(c)(Any, Selector, Any, Bool, UnsafeMutableRawPointer?) -> Void).self
+        editedCodeFile.canClose(
+            withDelegate: self,
+            shouldClose: #selector(document(_:shouldClose:contextInfo:)),
+            contextInfo: Unmanaged.passRetained(context).toOpaque()
         )
-        let areAllOpenedCodeFilesClean = editorManager?.editorLayout.gatherOpenFiles()
-            .compactMap(\.fileDocument)
-            .allSatisfy { !$0.isDocumentEdited } ?? false
-        function(object, shouldCloseSelector, self, areAllOpenedCodeFilesClean, contextInfo)
+    }
+
+    /// Box carrying a completion handler through `canClose(withDelegate:shouldClose:contextInfo:)`.
+    ///
+    /// Passed as a retained opaque `contextInfo` pointer; ``document(_:shouldClose:contextInfo:)``
+    /// takes over the retain when the delegate callback fires, exactly once, synchronously or not.
+    private final class CanCloseContext {
+        let completion: (Bool) -> Void
+
+        init(completion: @escaping (Bool) -> Void) {
+            self.completion = completion
+        }
     }
 
     // MARK: NSDocument delegate
 
-    /// Receives result of `canClose` and then, set `shouldClose` to `contextInfo`'s `pointee`.
+    /// Receives the result of `canClose` and forwards it to the completion handler in `contextInfo`.
     ///
     /// - Parameters:
-    ///   - document: The document may be closed.
+    ///   - document: The document which may be closed.
     ///   - shouldClose: The result of user selection.
-    ///      `shouldClose` becomes false if the user selects cancel, otherwise true.
-    ///   - contextInfo: The additional info which will be set `shouldClose`.
-    ///       `contextInfo` must be `UnsafeMutablePointer<Bool>`.
+    ///      `shouldClose` is false if the user selects cancel, otherwise true.
+    ///   - contextInfo: A retained ``CanCloseContext`` as an opaque pointer; this method takes over
+    ///       the retain.
     @objc
     func document(
         _ document: NSDocument,
         shouldClose: Bool,
         contextInfo: UnsafeMutableRawPointer
     ) {
-        let opaquePtr = OpaquePointer(contextInfo)
-        let mutablePointer = UnsafeMutablePointer<Bool>(opaquePtr)
-        mutablePointer.pointee = shouldClose
+        let context = Unmanaged<CanCloseContext>.fromOpaque(contextInfo).takeRetainedValue()
+        context.completion(shouldClose)
     }
 }

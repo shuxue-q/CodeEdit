@@ -75,14 +75,14 @@ extension GitClient {
             return
         }
 
-        _ = try await run("branch -d \(branch.name)")
+        _ = try await run("branch -d \(branch.name.escapedShellArgument())")
     }
 
     /// Rename branch
     /// - Parameter from: Name of the branch to rename
     /// - Parameter to: New name for branch
     func renameBranch(oldName: String, newName: String) async throws {
-        _ = try await run("branch -m \(oldName) \(newName)")
+        _ = try await run("branch -m \(oldName.escapedShellArgument()) \(newName.escapedShellArgument())")
     }
 
     /// Checkout branch
@@ -96,9 +96,9 @@ extension GitClient {
             let sourceBranch = branch.isRemote
                 ? branch.longName.replacingOccurrences(of: "refs/remotes/", with: "")
                 : branch.name
-            command += "-b \(targetName) \(sourceBranch)"
+            command += "-b \(targetName.escapedShellArgument()) \(sourceBranch.escapedShellArgument())"
         } else {
-            command += targetName
+            command += targetName.escapedShellArgument()
         }
 
         do {

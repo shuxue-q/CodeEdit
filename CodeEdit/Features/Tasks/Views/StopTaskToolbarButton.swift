@@ -22,7 +22,7 @@ struct StopTaskToolbarButton: View {
 
     var body: some View {
         HStack {
-            if let currentSelectedStatus, currentSelectedStatus == .running {
+            if showsStop {
                     Button {
                         taskManager.terminateActiveTask()
                     } label: {
@@ -30,7 +30,7 @@ struct StopTaskToolbarButton: View {
                             .labelStyle(.iconOnly)
                             .opacity(activeState == .inactive ? 0.5 : 1.0)
                             .font(.system(size: 15, weight: .regular))
-                            .help("Stop selected task")
+                            .help(taskManager.isCMakeBuildTarget ? "Stop build" : "Stop selected task")
                             .frame(width: 28)
                             .offset(y: 1.5)
                     }
@@ -49,6 +49,11 @@ struct StopTaskToolbarButton: View {
         .onDisappear {
             statusListener?.cancel()
         }
+    }
+
+    /// The stop control is visible while the selected task runs or a CMake build is running.
+    private var showsStop: Bool {
+        currentSelectedStatus == .running || taskManager.cmakeBuildController?.isBuilding == true
     }
 
     /// Update the ``statusListener`` to listen to a potentially new active task.

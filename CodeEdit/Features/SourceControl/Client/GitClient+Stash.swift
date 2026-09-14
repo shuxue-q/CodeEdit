@@ -10,7 +10,12 @@ import Foundation
 extension GitClient {
     /// Add uncommited changes to stash
     func stash(message: String?) async throws {
-        let command = message != nil ? "stash save --message=\"\(message ?? "")\"" : "stash"
+        let command: String
+        if let message = message {
+            command = "stash push -m \(message.escapedShellArgument())"
+        } else {
+            command = "stash"
+        }
 
         _ = try await self.run(command)
     }

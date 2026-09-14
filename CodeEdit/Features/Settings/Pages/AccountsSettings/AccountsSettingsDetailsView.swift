@@ -30,6 +30,8 @@ struct AccountsSettingsDetailsView: View {
     /// Default instance of the `FileManager`
     private let filemanager = FileManager.default
 
+    private let keychain = CodeEditKeychain()
+
     func isPrivateSSHKey(_ contents: String) -> Bool {
         if contents.starts(with: "-----BEGIN OPENSSH PRIVATE KEY-----\n") &&
            contents.hasSuffix("\n-----END OPENSSH PRIVATE KEY-----\n") {
@@ -158,6 +160,13 @@ struct AccountsSettingsDetailsView: View {
         // Delete account by finding the position of the account and remove by position
         if let gitAccount = gitAccounts.firstIndex(of: account) {
             gitAccounts.remove(at: gitAccount)
+        }
+
+        // Remove the account's token from the keychain, including tokens
+        // stored under the legacy key formats.
+        keychain.delete(account.keychainTokenKey)
+        for legacyKey in SourceControlAccount.legacyKeychainTokenKeys(username: account.name) {
+            keychain.delete(legacyKey)
         }
     }
 }

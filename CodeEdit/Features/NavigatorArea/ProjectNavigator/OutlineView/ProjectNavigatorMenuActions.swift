@@ -11,6 +11,8 @@ import SwiftUI
 extension ProjectNavigatorMenu {
     /// - Returns: the currently selected `CEWorkspaceFile` items in the outline view.
     func selectedItems() -> Set<CEWorkspaceFile> {
+        guard let sender else { return [] }
+
         /// Selected items...
         let selectedItems = Set(sender.outlineView.selectedRowIndexes.compactMap {
             sender.outlineView.item(atRow: $0) as? CEWorkspaceFile
@@ -49,6 +51,8 @@ extension ProjectNavigatorMenu {
     /// Action that opens the item, identical to clicking it.
     @objc
     func openInTab() {
+        guard let sender else { return }
+
         /// Sort the selected items first by their parent and then by name.
         let sortedItems = selectedItems().sorted { (item1, item2) -> Bool in
             /// Get the parents of both items.
@@ -101,7 +105,7 @@ extension ProjectNavigatorMenu {
     /// Opens the rename file dialogue on the cell this was presented from.
     @objc
     func renameFile() {
-        guard let newFile = workspace?.listenerModel.highlightedFileItem else { return }
+        guard let sender, let newFile = workspace?.listenerModel.highlightedFileItem else { return }
         let row = sender.outlineView.row(forItem: newFile)
         guard row > 0,
               let cell = sender.outlineView.view(
@@ -190,7 +194,7 @@ extension ProjectNavigatorMenu {
         do {
             try selectedItems().forEach { item in
                 withAnimation {
-                    sender.editor?.closeTab(file: item)
+                    sender?.editor?.closeTab(file: item)
                 }
                 guard FileManager.default.fileExists(atPath: item.url.path) else {
                     // Was likely already trashed (eg selecting files in a folder and deleting the folder and files)
@@ -221,7 +225,7 @@ extension ProjectNavigatorMenu {
 
             withAnimation {
                 selectedItems.forEach { item in
-                    sender.editor?.closeTab(file: item)
+                    sender?.editor?.closeTab(file: item)
                 }
             }
 
@@ -285,7 +289,7 @@ extension ProjectNavigatorMenu {
     }
 
     private func reloadData() {
-        sender.outlineView.reloadData()
-        sender.filteredContentChildren.removeAll()
+        sender?.outlineView.reloadData()
+        sender?.filteredContentChildren.removeAll()
     }
 }

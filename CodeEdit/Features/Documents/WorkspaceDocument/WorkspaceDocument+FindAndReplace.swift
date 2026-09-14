@@ -139,10 +139,10 @@ extension WorkspaceDocument.SearchState {
 
         var replaceOptions = NSString.CompareOptions()
         if selectedMode.second == .RegularExpression {
-            replaceOptions = [.regularExpression]
+            replaceOptions.insert(.regularExpression)
         }
         if !caseSensitive {
-            replaceOptions = [.caseInsensitive]
+            replaceOptions.insert(.caseInsensitive)
         }
 
         let updatedContent = fileContent.replacingOccurrences(

@@ -71,6 +71,16 @@ final class Settings: ObservableObject {
         try prettyJSON.write(to: settingsURL, options: .atomic)
     }
 
+    /// Immediately writes the current ``SettingsData`` to disk, bypassing the
+    /// throttled auto-save.
+    ///
+    /// `preferences` always holds the latest value, so this also persists
+    /// changes the throttled save has not emitted yet. Called when the app
+    /// terminates so edits made within the throttle window are not lost.
+    func flushSettings() {
+        try? savePreferences(preferences)
+    }
+
     /// Default instance of the `FileManager`
     private let filemanager = FileManager.default
 

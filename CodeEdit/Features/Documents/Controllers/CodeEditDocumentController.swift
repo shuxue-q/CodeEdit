@@ -124,7 +124,10 @@ final class CodeEditDocumentController: NSDocumentController {
     override func removeDocument(_ document: NSDocument) {
         super.removeDocument(document)
 
-        if let workspace = document as? WorkspaceDocument, let path = workspace.fileURL?.absoluteURL.path() {
+        // Use the same decoded `absolutePath` form `LSPService.openDocument` builds its
+        // `ClientKey.workspacePath` with, so the workspace's language servers are found
+        // and shut down even when the path contains spaces or non-ASCII characters.
+        if let workspace = document as? WorkspaceDocument, let path = workspace.fileURL?.absolutePath {
             lspService.closeWorkspace(path)
         }
 

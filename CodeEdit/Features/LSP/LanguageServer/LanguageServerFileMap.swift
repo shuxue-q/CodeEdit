@@ -38,6 +38,12 @@ class LanguageServerFileMap<DocumentType: LanguageServerDocument> {
         return trackedDocuments.object(forKey: uri as NSString)
     }
 
+    /// All currently tracked documents. Documents are tracked weakly, so entries that have
+    /// been released in the meantime are skipped.
+    var documents: [DocumentType] {
+        trackedDocumentData.keys.compactMap { trackedDocuments.object(forKey: $0 as NSString) }
+    }
+
     func removeDocument(for document: DocumentType) {
         guard let uri = document.languageServerURI else { return }
         removeDocument(for: uri)

@@ -27,7 +27,7 @@ extension GitClient {
             if tags == true {
                 command += " --tags"
             }
-            command += " \(remote) \(branch)"
+            command += " \(remote.escapedShellArgument()) \(branch.escapedShellArgument())"
         }
 
         let output = try await self.run(command)

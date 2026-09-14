@@ -13,7 +13,7 @@ extension GitClient {
         var command = "pull \(rebase ? "--rebase" : "--no-rebase")"
 
         if let remote = remote, let branch = branch {
-            command += " \(remote) \(branch)"
+            command += " \(remote.escapedShellArgument()) \(branch.escapedShellArgument())"
         }
 
         _ = try await self.run(command)

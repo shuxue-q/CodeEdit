@@ -13,29 +13,28 @@ extension GitClient {
     /// - Parameters:
     ///   - message: Commit message
     func commit(message: String, details: String?) async throws {
-        let message = message.replacingOccurrences(of: #"""#, with: #"\""#)
-        let command: String
-
-        if let msgDetails = details {
-            command = "commit --message=\"\(message + (msgDetails.isEmpty ? "" : ("\n\n" + msgDetails)))\""
-        } else {
-            command = "commit --message=\"\(message)\""
+        var fullMessage = message
+        if let msgDetails = details, !msgDetails.isEmpty {
+            fullMessage += "\n\n" + msgDetails
         }
 
-        _ = try await run(command)
+        _ = try await run("commit --message=\(fullMessage.escapedShellArgument())")
     }
 
     /// Add file to git
     /// - Parameter file: File to add
     func add(_ files: [URL]) async throws {
-        let output = try await run("add \(files.map { "'\($0.path(percentEncoded: false))'" }.joined(separator: " "))")
-        print(output)
+        _ = try await run(
+            "add \(files.map { $0.path(percentEncoded: false).escapedShellArgument() }.joined(separator: " "))"
+        )
     }
 
     /// Add file to git
     /// - Parameter file: File to add
     func reset(_ files: [URL]) async throws {
-        _ = try await run("reset \(files.map { "'\($0.path(percentEncoded: false))'" }.joined(separator: " "))")
+        _ = try await run(
+            "reset \(files.map { $0.path(percentEncoded: false).escapedShellArgument() }.joined(separator: " "))"
+        )
     }
 
     /// Returns tuple of unsynced commits both ahead and behind

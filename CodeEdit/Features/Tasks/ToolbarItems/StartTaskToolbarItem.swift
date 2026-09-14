@@ -38,7 +38,7 @@ final class StartTaskToolbarItem: NSToolbarItem {
         if utilityAreaCollapsed {
             CommandManager.shared.executeCommand("open.drawer")
         }
-        workspace?.utilityAreaModel?.selectedTab = .debugConsole
+        workspace?.utilityAreaModel?.selectedTab = taskManager.isCMakeBuildTarget ? .problems : .debugConsole
         taskManager.taskShowingOutput = taskManager.selectedTaskID
     }
 }

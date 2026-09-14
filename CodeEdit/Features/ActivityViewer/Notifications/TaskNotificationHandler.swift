@@ -152,14 +152,10 @@ final class TaskNotificationHandler: ObservableObject {
         NotificationCenter.default
             .publisher(for: .taskNotification)
             .receive(on: DispatchQueue.main)
-            .sink { notification in
-                self.handleNotification(notification)
+            .sink { [weak self] notification in
+                self?.handleNotification(notification)
             }
             .store(in: &cancellables)
-    }
-
-    deinit {
-        NotificationCenter.default.removeObserver(self, name: .taskNotification, object: nil)
     }
 
     /// Handles notifications about task events.

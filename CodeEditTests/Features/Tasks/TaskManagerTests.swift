@@ -64,7 +64,7 @@ class TaskManagerTests {
         #expect(outputString.contains("Hello World"))
     }
 
-    @Test(.disabled("Not sure why but tasks run in shells seem to never receive signals."))
+    @Test
     func terminateSelectedTask() async throws {
         let task = CETask(name: "Test Task", command: "sleep 10")
         mockWorkspaceSettings.tasks.append(task)
@@ -90,7 +90,7 @@ class TaskManagerTests {
     // It ensures that suspend signals do not stack up,
     // meaning only one resume signal is required to resume the task,
     // regardless of the number of times `suspendTask()` is called.
-    @Test(.disabled("Not sure why but tasks run in shells seem to never receive signals."))
+    @Test
     func suspendAndResumeTask() async throws {
         let task = CETask(name: "Test Task", command: "sleep 5")
         mockWorkspaceSettings.tasks.append(task)

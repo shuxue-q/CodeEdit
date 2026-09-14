@@ -88,8 +88,8 @@ struct SettingsView: View {
         .init(
             SettingsPage(
                 .languageServers,
-                baseColor: Color(hex: "#6A69DC"), // Purple
-                icon: .system("cube.box.fill")
+                baseColor: .purple,
+                icon: .system("chevron.left.forwardslash.chevron.right")
             )
         ),
         .init(
@@ -199,7 +199,7 @@ struct SettingsView: View {
                 case .location:
                     LocationsSettingsView()
                 case .languageServers:
-                    LanguageServersView()
+                    LSPSettingsView()
                 case .developer:
                     DeveloperSettingsView()
                 default:

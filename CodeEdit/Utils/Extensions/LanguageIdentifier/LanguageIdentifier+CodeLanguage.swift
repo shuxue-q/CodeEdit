@@ -9,10 +9,12 @@ import LanguageServerProtocol
 import CodeEditLanguages
 
 extension CodeLanguage {
-    var lspLanguage: LanguageIdentifier? {
+    /// The LSP language identifier for this code language, or `nil` if no language server supports it.
+    var lspLanguageId: String? {
         switch self.id {
         case .agda,
                 .bash,
+                .cmake,
                 .haskell,
                 .julia,
                 .kotlin,
@@ -25,59 +27,59 @@ extension CodeLanguage {
                 .plainText:
             return nil
         case .c:
-            return .c
+            return LanguageIdentifier.c.rawValue
         case .cpp:
-            return .cpp
+            return LanguageIdentifier.cpp.rawValue
         case .cSharp:
-            return .csharp
+            return LanguageIdentifier.csharp.rawValue
         case .css:
-            return .css
+            return LanguageIdentifier.css.rawValue
         case .dart:
-            return .dart
+            return LanguageIdentifier.dart.rawValue
         case .dockerfile:
-            return .dockerfile
+            return LanguageIdentifier.dockerfile.rawValue
         case .elixir:
-            return .elixir
+            return LanguageIdentifier.elixir.rawValue
         case .go, .goMod:
-            return  .go
+            return LanguageIdentifier.go.rawValue
         case .html:
-            return .html
+            return LanguageIdentifier.html.rawValue
         case .java:
-            return .java
+            return LanguageIdentifier.java.rawValue
         case .javascript, .jsdoc:
-            return .javascript
+            return LanguageIdentifier.javascript.rawValue
         case .json:
-            return .json
+            return LanguageIdentifier.json.rawValue
         case .jsx:
-            return .javascriptreact
+            return LanguageIdentifier.javascriptreact.rawValue
         case .lua:
-            return .lua
+            return LanguageIdentifier.lua.rawValue
         case .markdown, .markdownInline:
-            return .markdown
+            return LanguageIdentifier.markdown.rawValue
         case .objc:
-            return .objc
+            return LanguageIdentifier.objc.rawValue
         case .perl:
-            return .perl
+            return LanguageIdentifier.perl.rawValue
         case .php:
-            return .php
+            return LanguageIdentifier.php.rawValue
         case .python:
-            return .python
+            return LanguageIdentifier.python.rawValue
         case .ruby:
-            return .ruby
+            return LanguageIdentifier.ruby.rawValue
         case .rust:
-            return .rust
+            return LanguageIdentifier.rust.rawValue
         case .scala:
-            return .scala
+            return LanguageIdentifier.scala.rawValue
         case .sql:
-            return .sql
+            return LanguageIdentifier.sql.rawValue
         case .swift:
-            return .swift
+            return LanguageIdentifier.swift.rawValue
         case .tsx:
-            return .typescriptreact
+            return LanguageIdentifier.typescriptreact.rawValue
         case .typescript:
-            return .typescript
+            return LanguageIdentifier.typescript.rawValue
         case .yaml:
-            return .yaml
+            return LanguageIdentifier.yaml.rawValue
         }
     }
 }
