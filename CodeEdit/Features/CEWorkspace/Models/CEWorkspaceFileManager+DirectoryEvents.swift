@@ -95,7 +95,7 @@ extension CEWorkspaceFileManager {
 
         // If changes were stashed, refresh stashed entries
         if gitStashChange != nil {
-            Task {
+            _ = Task {
                 try await self.sourceControlManager?.refreshStashEntries()
             }
         }
@@ -116,14 +116,14 @@ extension CEWorkspaceFileManager {
 
         // If git config changed, refresh remotes
         if gitConfigChange != nil {
-            Task {
+            _ = Task {
                 try await self.sourceControlManager?.refreshRemotes()
             }
         }
 
         // If .git folder was added or removed, check if repository is valid
         if gitFolderChange != nil {
-            Task {
+            _ = Task {
                 try await self.sourceControlManager?.validate()
             }
         }

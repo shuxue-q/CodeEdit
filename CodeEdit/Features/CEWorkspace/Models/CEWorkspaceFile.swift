@@ -70,6 +70,8 @@ final class CEWorkspaceFile: Codable, Comparable, Hashable, Identifiable, Editor
     var icon: Image {
         if let customImage = NSImage.symbol(named: systemImage) {
             return Image(nsImage: customImage)
+        } else if let assetImage = NSImage(named: systemImage) {
+            return Image(nsImage: assetImage)
         } else {
             return Image(systemName: systemImage)
         }
@@ -79,6 +81,8 @@ final class CEWorkspaceFile: Codable, Comparable, Hashable, Identifiable, Editor
     var nsIcon: NSImage {
         if let customImage = NSImage.symbol(named: systemImage) {
             return customImage
+        } else if let assetImage = NSImage(named: systemImage) {
+            return assetImage
         } else {
             return NSImage(systemSymbolName: systemImage, accessibilityDescription: systemImage)
                 ?? NSImage(systemSymbolName: "doc", accessibilityDescription: "doc")!

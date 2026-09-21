@@ -17,11 +17,16 @@ enum FileIcon {
         case avi
         case bash
         case c
+        case cc
         case cetheme
         case clj
         case cls
+        case cmake
+        case CMakeLists = "CMakeLists.txt"
+        case cpp
         case cs
         case css
+        case cxx
         case d
         case dart
         case elm
@@ -33,10 +38,14 @@ enum FileIcon {
         case fs
         case gitignore
         case go
+        case GNUmakefile
         case gs
         case h
+        case hh
+        case hpp
         case hs
         case html
+        case hxx
         case ico
         case java
         case jl
@@ -53,6 +62,7 @@ enum FileIcon {
         case lua
         case m
         case Makefile
+        case makefile
         case md
         case mid
         case mjs
@@ -147,7 +157,15 @@ enum FileIcon {
             return "s.square"
         case .mod:
             return "m.square"
-        case .bash, .sh, .Makefile, .zsh:
+        case .cmake, .CMakeLists:
+            return "cmake"
+        case .cpp, .cc, .cxx:
+            return "cpp"
+        case .hpp, .hh, .hxx:
+            return "hpp"
+        case .Makefile, .makefile, .GNUmakefile, .mk:
+            return "makefile"
+        case .bash, .sh, .zsh:
             return "terminal"
         case .rs:
             return "r.square"
@@ -162,7 +180,7 @@ enum FileIcon {
         case .cetheme:
             return "paintbrush"
         case .adb, .clj, .cls, .cs, .d, .dart, .elm, .ex, .f95, .fs, .gs, .hs,
-             .jl, .kt, .l, .lsp, .lua, .mk, .pas, .pl, .scm, .ss:
+             .jl, .kt, .l, .lsp, .lua, .pas, .pl, .scm, .ss:
             return "doc.plaintext"
         default:
             return "doc"
@@ -199,8 +217,14 @@ enum FileIcon {
             return Color(red: 0.02, green: 0.675, blue: 0.757, opacity: 1.0)
         case .sum, .mod:
             return Color(red: 0.925, green: 0.251, blue: 0.478, opacity: 1.0)
-        case .Makefile:
+        case .Makefile, .makefile, .GNUmakefile, .mk:
             return Color(red: 0.937, green: 0.325, blue: 0.314, opacity: 1.0)
+        case .cmake, .CMakeLists:
+            return Color(red: 0.024, green: 0.310, blue: 0.549, opacity: 1.0)
+        case .cpp, .cc, .cxx:
+            return Color(red: 0.0, green: 0.349, blue: 0.612, opacity: 1.0)
+        case .hpp, .hh, .hxx:
+            return Color(red: 0.396, green: 0.604, blue: 0.824, opacity: 1.0)
         case .rs:
             return .orange
         default:

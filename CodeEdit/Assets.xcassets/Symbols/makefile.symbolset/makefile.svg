@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE svg
+PUBLIC "-//W3C//DTD SVG 1.1//EN"
+       "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="3300" height="2200">
+ <!--glyph: "makefile", point size: 100.0, template writer version: "0"-->
+ <g id="Guides">
+  <g id="H-reference" style="fill:#27AAE1;stroke:none;" transform="matrix(1 0 0 1 339 696)">
+   <path d="M0.993654 0L3.63775 0L29.3281-67.1323L30.0303-67.1323L30.0303-70.459L28.1226-70.459ZM11.6885-24.4799L46.9815-24.4799L46.2315-26.7285L12.4385-26.7285ZM55.1196 0L57.7637 0L30.6382-70.459L29.4326-70.459L29.4326-67.1323Z"/>
+  </g>
+  <line id="Baseline-S" style="fill:none;stroke:#27AAE1;opacity:1;stroke-width:0.5;" x1="263" x2="3036" y1="696" y2="696"/>
+  <line id="Capline-S" style="fill:none;stroke:#27AAE1;opacity:1;stroke-width:0.5;" x1="263" x2="3036" y1="625.54" y2="625.54"/>
+  <g id="H-reference" style="fill:#27AAE1;stroke:none;" transform="matrix(1 0 0 1 339 1126)">
+   <path d="M0.993654 0L3.63775 0L29.3281-67.1323L30.0303-67.1323L30.0303-70.459L28.1226-70.459ZM11.6885-24.4799L46.9815-24.4799L46.2315-26.7285L12.4385-26.7285ZM55.1196 0L57.7637 0L30.6382-70.459L29.4326-70.459L29.4326-67.1323Z"/>
+  </g>
+  <line id="Baseline-M" style="fill:none;stroke:#27AAE1;opacity:1;stroke-width:0.5;" x1="263" x2="3036" y1="1126" y2="1126"/>
+  <line id="Capline-M" style="fill:none;stroke:#27AAE1;opacity:1;stroke-width:0.5;" x1="263" x2="3036" y1="1055.54" y2="1055.54"/>
+  <g id="H-reference" style="fill:#27AAE1;stroke:none;" transform="matrix(1 0 0 1 339 1556)">
+   <path d="M0.993654 0L3.63775 0L29.3281-67.1323L30.0303-67.1323L30.0303-70.459L28.1226-70.459ZM11.6885-24.4799L46.9815-24.4799L46.2315-26.7285L12.4385-26.7285ZM55.1196 0L57.7637 0L30.6382-70.459L29.4326-70.459L29.4326-67.1323Z"/>
+  </g>
+  <line id="Baseline-L" style="fill:none;stroke:#27AAE1;opacity:1;stroke-width:0.5;" x1="263" x2="3036" y1="1556" y2="1556"/>
+  <line id="Capline-L" style="fill:none;stroke:#27AAE1;opacity:1;stroke-width:0.5;" x1="263" x2="3036" y1="1485.54" y2="1485.54"/>
+  <line id="left-margin" style="fill:none;stroke:#00AEEF;stroke-width:0.5;opacity:1.0;" x1="1406.5" x2="1406.5" y1="1030.79" y2="1150.12"/>
+  <line id="right-margin" style="fill:none;stroke:#00AEEF;stroke-width:0.5;opacity:1.0;" x1="1493.18" x2="1493.18" y1="1030.79" y2="1150.12"/>
+ </g>
+ <g id="Symbols">
+  <g id="Black-L" transform="matrix(1 0 0 1 2933.4 1556)">
+   <path d="M-60.2 -34.15L-9.97 -84.38L16.62 -57.79L-33.61 -7.56Z"/>
+   <path d="M-6.28 -43.76L4.06 -54.1L60.2 2.04L49.86 12.38Z"/>
+  </g>
+  <g id="Heavy-L" transform="matrix(1 0 0 1 2636.69 1556)">
+   <path d="M-58.14 -34.22L-9.63 -82.73L16.05 -57.04L-32.46 -8.54Z"/>
+   <path d="M-6.06 -43.49L3.92 -53.48L58.14 0.74L48.15 10.73Z"/>
+  </g>
+  <g id="Bold-L" transform="matrix(1 0 0 1 2339.98 1556)">
+   <path d="M-56.08 -34.28L-9.29 -81.07L15.48 -56.3L-31.31 -9.51Z"/>
+   <path d="M-5.85 -43.23L3.78 -52.86L56.08 -0.56L46.45 9.07Z"/>
+  </g>
+  <g id="Semibold-L" transform="matrix(1 0 0 1 2043.27 1556)">
+   <path d="M-54.02 -34.34L-8.95 -79.42L14.91 -55.55L-30.16 -10.48Z"/>
+   <path d="M-5.63 -42.96L3.65 -52.24L54.02 -1.86L44.74 7.42Z"/>
+  </g>
+  <g id="Medium-L" transform="matrix(1 0 0 1 1746.56 1556)">
+   <path d="M-52.48 -34.39L-8.69 -78.18L14.49 -55L-29.3 -11.21Z"/>
+   <path d="M-5.47 -42.76L3.54 -51.78L52.48 -2.84L43.46 6.18Z"/>
+  </g>
+  <g id="Regular-L" transform="matrix(1 0 0 1 1449.84 1556)">
+   <path d="M-51.45 -34.42L-8.52 -77.35L14.2 -54.62L-28.72 -11.7Z"/>
+   <path d="M-5.37 -42.63L3.47 -51.47L51.45 -3.49L42.61 5.35Z"/>
+  </g>
+  <g id="Light-L" transform="matrix(1 0 0 1 1153.13 1556)">
+   <path d="M-50.42 -34.45L-8.35 -76.52L13.92 -54.25L-28.15 -12.18Z"/>
+   <path d="M-5.26 -42.5L3.4 -51.16L50.42 -4.14L41.76 4.52Z"/>
+  </g>
+  <g id="Thin-L" transform="matrix(1 0 0 1 856.422 1556)">
+   <path d="M-49.39 -34.48L-8.18 -75.7L13.64 -53.88L-27.57 -12.67Z"/>
+   <path d="M-5.15 -42.36L3.33 -50.85L49.39 -4.79L40.91 3.7Z"/>
+  </g>
+  <g id="Ultralight-L" transform="matrix(1 0 0 1 559.711 1556)">
+   <path d="M-48.36 -34.52L-8.01 -74.87L13.35 -53.51L-27 -13.15Z"/>
+   <path d="M-5.04 -42.23L3.26 -50.54L48.36 -5.44L40.06 2.87Z"/>
+  </g>
+  <g id="Black-M" transform="matrix(1 0 0 1 2933.4 1126)">
+   <path d="M-47.2 -34.55L-7.82 -73.93L13.03 -53.08L-26.35 -13.7Z"/>
+   <path d="M-4.92 -42.08L3.19 -50.19L47.2 -6.18L39.09 1.93Z"/>
+  </g>
+  <g id="Heavy-M" transform="matrix(1 0 0 1 2636.69 1126)">
+   <path d="M-45.58 -34.6L-7.55 -72.64L12.58 -52.5L-25.45 -14.47Z"/>
+   <path d="M-4.75 -41.87L3.08 -49.7L45.58 -7.19L37.75 0.64Z"/>
+  </g>
+  <g id="Bold-M" transform="matrix(1 0 0 1 2339.98 1126)">
+   <path d="M-43.97 -34.65L-7.28 -71.34L12.14 -51.92L-24.55 -15.23Z"/>
+   <path d="M-4.59 -41.66L2.97 -49.22L43.97 -8.21L36.42 -0.66Z"/>
+  </g>
+  <g id="Semibold-M" transform="matrix(1 0 0 1 2043.27 1126)">
+   <path d="M-42.36 -34.7L-7.02 -70.04L11.69 -51.33L-23.65 -15.99Z"/>
+   <path d="M-4.42 -41.46L2.86 -48.73L42.36 -9.23L35.08 -1.96Z"/>
+  </g>
+  <g id="Medium-M" transform="matrix(1 0 0 1 1746.56 1126)">
+   <path d="M-41.15 -34.74L-6.82 -69.07L11.36 -50.89L-22.97 -16.56Z"/>
+   <path d="M-4.29 -41.3L2.78 -48.37L41.15 -10L34.08 -2.93Z"/>
+  </g>
+  <g id="Regular-M" transform="matrix(1 0 0 1 1449.84 1126)">
+   <path d="M-40.34 -34.76L-6.68 -68.42L11.14 -50.6L-22.52 -16.94Z"/>
+   <path d="M-4.21 -41.2L2.72 -48.13L40.34 -10.51L33.41 -3.58Z"/>
+  </g>
+  <g id="Light-M" transform="matrix(1 0 0 1 1153.13 1126)">
+   <path d="M-39.53 -34.79L-6.55 -67.77L10.91 -50.31L-22.07 -17.32Z"/>
+   <path d="M-4.12 -41.09L2.67 -47.88L39.53 -11.02L32.74 -4.23Z"/>
+  </g>
+  <g id="Thin-M" transform="matrix(1 0 0 1 856.422 1126)">
+   <path d="M-38.73 -34.81L-6.41 -67.12L10.69 -50.02L-21.62 -17.71Z"/>
+   <path d="M-4.04 -40.99L2.61 -47.64L38.73 -11.53L32.07 -4.88Z"/>
+  </g>
+  <g id="Ultralight-M" transform="matrix(1 0 0 1 559.711 1126)">
+   <path d="M-37.92 -34.84L-6.28 -66.48L10.47 -49.73L-21.17 -18.09Z"/>
+   <path d="M-3.95 -40.89L2.56 -47.4L37.92 -12.04L31.41 -5.52Z"/>
+  </g>
+  <g id="Black-S" transform="matrix(1 0 0 1 2933.4 696)">
+   <path d="M-37.42 -34.85L-6.2 -66.07L10.33 -49.54L-20.89 -18.33Z"/>
+   <path d="M-3.9 -40.82L2.52 -47.25L37.42 -12.36L30.99 -5.93Z"/>
+  </g>
+  <g id="Heavy-S" transform="matrix(1 0 0 1 2636.69 696)">
+   <path d="M-36.14 -34.89L-5.99 -65.04L9.98 -49.08L-20.17 -18.93Z"/>
+   <path d="M-3.77 -40.66L2.44 -46.86L36.14 -13.17L29.93 -6.96Z"/>
+  </g>
+  <g id="Bold-S" transform="matrix(1 0 0 1 2339.98 696)">
+   <path d="M-34.86 -34.93L-5.77 -64.01L9.62 -48.62L-19.46 -19.53Z"/>
+   <path d="M-3.64 -40.49L2.35 -46.48L34.86 -13.97L28.87 -7.99Z"/>
+  </g>
+  <g id="Semibold-S" transform="matrix(1 0 0 1 2043.27 696)">
+   <path d="M-33.58 -34.97L-5.56 -62.99L9.27 -48.15L-18.75 -20.14Z"/>
+   <path d="M-3.5 -40.33L2.27 -46.09L33.58 -14.78L27.81 -9.01Z"/>
+  </g>
+  <g id="Medium-S" transform="matrix(1 0 0 1 1746.56 696)">
+   <path d="M-32.62 -35L-5.4 -62.22L9.01 -47.81L-18.21 -20.59Z"/>
+   <path d="M-3.4 -40.2L2.2 -45.81L32.62 -15.39L27.02 -9.78Z"/>
+  </g>
+  <g id="Regular-S" transform="matrix(1 0 0 1 1449.84 696)">
+   <path d="M-31.98 -35.02L-5.3 -61.7L8.83 -47.58L-17.85 -20.89Z"/>
+   <path d="M-3.34 -40.12L2.16 -45.61L31.98 -15.79L26.49 -10.3Z"/>
+  </g>
+  <g id="Light-S" transform="matrix(1 0 0 1 1153.13 696)">
+   <path d="M-31.34 -35.04L-5.19 -61.19L8.65 -47.34L-17.5 -21.2Z"/>
+   <path d="M-3.27 -40.04L2.11 -45.42L31.34 -16.2L25.96 -10.81Z"/>
+  </g>
+  <g id="Thin-S" transform="matrix(1 0 0 1 856.422 696)">
+   <path d="M-30.7 -35.06L-5.09 -60.67L8.48 -47.11L-17.14 -21.5Z"/>
+   <path d="M-3.2 -39.96L2.07 -45.23L30.7 -16.6L25.43 -11.33Z"/>
+  </g>
+  <g id="Ultralight-S" transform="matrix(1 0 0 1 559.711 696)">
+   <path d="M-30.06 -35.08L-4.98 -60.16L8.3 -46.88L-16.78 -21.8Z"/>
+   <path d="M-3.14 -39.87L2.03 -45.04L30.06 -17L24.9 -11.84Z"/>
+  </g>
+ </g>
+</svg>

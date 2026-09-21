@@ -78,7 +78,7 @@ final class CEWorkspaceFileManager {
             self?.fileSystemEventReceived(events: events)
         }
 
-        Task {
+        _ = Task {
             try await self.sourceControlManager?.validate()
         }
     }
