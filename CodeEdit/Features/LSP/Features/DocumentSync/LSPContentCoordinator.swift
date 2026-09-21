@@ -40,6 +40,7 @@ class LSPContentCoordinator<DocumentType: LanguageServerDocument>: TextViewCoord
         self.languageServer = languageServer
     }
 
+    @MainActor
     func setUp(server: LanguageServer<DocumentType>, document: DocumentType) {
         languageServer = server
         documentURI = document.languageServerURI
@@ -70,7 +71,7 @@ class LSPContentCoordinator<DocumentType: LanguageServerDocument>: TextViewCoord
             }
             pendingChanges.removeAll()
             let previousTask = sendingTask
-            sendingTask = Task {
+            sendingTask = Task { @MainActor in
                 // Keep incremental edits ordered even when another flush arrives during a send.
                 _ = try? await previousTask?.value
                 try Task.checkCancellation()

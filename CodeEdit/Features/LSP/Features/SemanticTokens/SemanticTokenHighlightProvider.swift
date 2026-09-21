@@ -56,6 +56,7 @@ final class SemanticTokenHighlightProvider<
         self.storage = Storage()
     }
 
+    @MainActor
     func setUp(server: LanguageServer<DocumentType>, document: DocumentType) {
         languageServer = server
         documentURI = document.languageServerURI
@@ -152,7 +153,7 @@ final class SemanticTokenHighlightProvider<
     func setUp(textView: TextView, codeLanguage: CodeLanguage) {
         // Send off a request to get the initial token data
         self.textView = textView
-        Task {
+        _ = Task { @MainActor in
             try await self.documentDidChange()
         }
     }

@@ -19,7 +19,7 @@ extension LanguageServer {
             }
             logger.debug("Opening Document \(content.uri, privacy: .private)")
 
-            openFiles.addDocument(document, for: self)
+            await openFiles.addDocument(document, for: self)
 
             let textDocument = TextDocumentItem(
                 uri: content.uri,
@@ -108,7 +108,8 @@ extension LanguageServer {
 
             // Let the semantic token provider know about the update.
             // Note for future: If a related LSP object need notifying about document changes, do it here.
-            try await document.languageServerObjects.highlightProvider.documentDidChange()
+            let highlightProvider = await getIsolatedHighlightProvider(document)
+            try await highlightProvider.documentDidChange()
         } catch {
             logger.warning("closeDocument: Error \(error)")
             throw error
@@ -131,6 +132,14 @@ extension LanguageServer {
     @MainActor
     private func updateIsolatedDocument(_ document: DocumentType) {
         document.languageServerObjects.setUp(server: self, document: document)
+    }
+
+    /// Helper function for grabbing a document's semantic token highlight provider from the main actor.
+    @MainActor
+    private func getIsolatedHighlightProvider(
+        _ document: DocumentType
+    ) -> SemanticTokenHighlightProvider<SemanticTokenStorage, DocumentType> {
+        document.languageServerObjects.highlightProvider
     }
 
     @MainActor

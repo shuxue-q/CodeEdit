@@ -187,6 +187,35 @@ final class LSPCompletionTests: XCTestCase {
 
 extension LSPCompletionTests {
     @MainActor
+    func testCompletionCategoryIconsExist() {
+        let categories: [LSPCompletionCategory] = [
+            .function, .variable, .class, .struct, .interface, .enum, .enumMember,
+            .macro, .namespace, .typeAlias, .keyword, .snippet, .file, .folder,
+            .text, .color, .reference, .event, .other
+        ]
+        for category in categories {
+            let name = LSPCompletionEntry.imageName(for: category)
+            XCTAssertNotNil(
+                NSImage(systemSymbolName: name, accessibilityDescription: nil),
+                "Missing SF Symbol for \(category): \(name)"
+            )
+        }
+    }
+
+    @MainActor
+    func testAllCompletionItemKindsMapped() {
+        for kind in CompletionItemKind.allCases {
+            let entry = LSPCompletionEntry(item: CompletionItem(label: "test", kind: kind))
+            let name = entry.iconName
+            XCTAssertNotNil(
+                NSImage(systemSymbolName: name, accessibilityDescription: nil),
+                "Missing SF Symbol for kind \(kind): \(name)"
+            )
+            XCTAssertFalse(name.isEmpty)
+        }
+    }
+
+    @MainActor
     func testCompletionItemKindIconsAndColors() {
         let functionEntry = LSPCompletionEntry(item: CompletionItem(label: "myFunc", kind: .function))
         XCTAssertEqual(functionEntry.iconName, "function")
@@ -205,7 +234,7 @@ extension LSPCompletionTests {
         XCTAssertEqual(structEntry.imageColor, .orange)
 
         let interfaceEntry = LSPCompletionEntry(item: CompletionItem(label: "MyConcept", kind: .interface))
-        XCTAssertEqual(interfaceEntry.iconName, "point.3.connected.trianglepath.dot.ted")
+        XCTAssertEqual(interfaceEntry.iconName, "point.3.connected.trianglepath.dotted")
         XCTAssertEqual(interfaceEntry.imageColor, .indigo)
 
         let typedefEntry = LSPCompletionEntry(
@@ -277,19 +306,19 @@ extension LSPCompletionTests {
 
         let archetypeEntry = LSPCompletionEntry(item: CompletionItem(label: "Archetype", kind: .interface))
         XCTAssertEqual(archetypeEntry.category, .interface)
-        XCTAssertEqual(archetypeEntry.iconName, "point.3.connected.trianglepath.dot.ted")
+        XCTAssertEqual(archetypeEntry.iconName, "point.3.connected.trianglepath.dotted")
         XCTAssertEqual(archetypeEntry.imageColor, .indigo)
 
         let dataTypeEntry = LSPCompletionEntry(item: CompletionItem(label: "DataType", kind: .interface))
         XCTAssertEqual(dataTypeEntry.category, .interface)
-        XCTAssertEqual(dataTypeEntry.iconName, "point.3.connected.trianglepath.dot.ted")
+        XCTAssertEqual(dataTypeEntry.iconName, "point.3.connected.trianglepath.dotted")
         XCTAssertEqual(dataTypeEntry.imageColor, .indigo)
 
         let conceptEntry = LSPCompletionEntry(
             item: CompletionItem(label: "MyConcept", kind: .interface, detail: "concept MyConcept")
         )
         XCTAssertEqual(conceptEntry.category, .interface)
-        XCTAssertEqual(conceptEntry.iconName, "point.3.connected.trianglepath.dot.ted")
+        XCTAssertEqual(conceptEntry.iconName, "point.3.connected.trianglepath.dotted")
         XCTAssertEqual(conceptEntry.imageColor, .indigo)
 
         let typeParamEntry = LSPCompletionEntry(item: CompletionItem(label: "T", kind: .typeParameter))

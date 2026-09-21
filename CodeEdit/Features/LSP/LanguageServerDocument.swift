@@ -26,7 +26,11 @@ struct LanguageServerDocumentObjects<DocumentType: LanguageServerDocument> {
 }
 
 /// A protocol that allows a language server to register objects on a text document.
-protocol LanguageServerDocument: AnyObject {
+///
+/// Documents are main-actor isolated (they are backed by `NSDocument`), so the protocol is
+/// `@MainActor` to make that isolation explicit to generic LSP infrastructure.
+@MainActor
+protocol LanguageServerDocument: AnyObject, Sendable {
     var content: NSTextStorage? { get }
     var languageServerURI: String? { get }
     var languageServerObjects: LanguageServerDocumentObjects<Self> { get set }

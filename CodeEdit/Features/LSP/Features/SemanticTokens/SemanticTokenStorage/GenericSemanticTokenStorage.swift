@@ -13,7 +13,7 @@ import CodeEditSourceEditor
 /// 
 /// There is only one concrete type that conforms to this in CE, but this protocol is useful in testing.
 /// See ``SemanticTokenStorage``.
-protocol GenericSemanticTokenStorage: AnyObject {
+protocol GenericSemanticTokenStorage: AnyObject, Sendable {
     var lastResultId: String? { get }
     var hasReceivedData: Bool { get }
 

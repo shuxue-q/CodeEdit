@@ -17,7 +17,7 @@ import CodeEditSourceEditor
 /// tokens and their decoded counterparts. It supports applying delta updates from the language server.
 ///
 /// See ``SemanticTokenHighlightProvider`` for it's connection to the editor view.
-final class SemanticTokenStorage: GenericSemanticTokenStorage {
+final class SemanticTokenStorage: @unchecked Sendable, GenericSemanticTokenStorage {
     /// Represents compressed semantic token data received from a language server.
     struct CurrentState {
         let resultId: String?

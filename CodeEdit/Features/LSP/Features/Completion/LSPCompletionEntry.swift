@@ -26,6 +26,11 @@ struct LSPCompletionEntry: CodeSuggestionEntry {
         case keyword
         case snippet
         case file
+        case folder
+        case text
+        case color
+        case reference
+        case event
         case other
     }
 
@@ -37,11 +42,54 @@ struct LSPCompletionEntry: CodeSuggestionEntry {
     }
 
     var label: String {
-        item.label
+        let trimmed = item.label.trimmingCharacters(in: .whitespaces)
+        if trimmed == "include" {
+            if isAngleInclude {
+                return "#include <insert>"
+            } else if isQuoteInclude {
+                return "#include \"insert\""
+            }
+        }
+        return item.label
     }
 
     var detail: String? {
-        item.detail
+        if let detail = item.detail, !detail.isEmpty {
+            return detail
+        }
+        let trimmed = item.label.trimmingCharacters(in: .whitespaces)
+        if trimmed == "include" || trimmed.hasPrefix("#include") {
+            if isAngleInclude {
+                return "Include system header"
+            } else if isQuoteInclude {
+                return "Include user header"
+            }
+        }
+        return item.detail
+    }
+
+    private var isAngleInclude: Bool {
+        if item.label.contains("<") { return true }
+        if let insertText = item.insertText, insertText.contains("<") { return true }
+        if let textEdit = item.textEdit {
+            switch textEdit {
+            case .optionA(let edit): return edit.newText.contains("<")
+            case .optionB(let edit): return edit.newText.contains("<")
+            }
+        }
+        return false
+    }
+
+    private var isQuoteInclude: Bool {
+        if item.label.contains("\"") { return true }
+        if let insertText = item.insertText, insertText.contains("\"") { return true }
+        if let textEdit = item.textEdit {
+            switch textEdit {
+            case .optionA(let edit): return edit.newText.contains("\"")
+            case .optionB(let edit): return edit.newText.contains("\"")
+            }
+        }
+        return false
     }
 
     var documentation: String? {
@@ -82,26 +130,31 @@ struct LSPCompletionEntry: CodeSuggestionEntry {
     // MARK: - Classification & Icons
 
     private static let kindCategories: [CompletionItemKind: Category] = [
-        .function: .function,
+        .text: .text,
         .method: .function,
+        .function: .function,
         .constructor: .function,
-        .variable: .variable,
         .field: .variable,
-        .property: .variable,
+        .variable: .variable,
         .class: .class,
-        .struct: .struct,
+        .interface: .interface,
+        .module: .namespace,
+        .property: .variable,
+        .unit: .macro,
+        .value: .macro,
         .enum: .enum,
+        .keyword: .keyword,
+        .snippet: .snippet,
+        .color: .color,
+        .file: .file,
+        .reference: .reference,
+        .folder: .folder,
         .enumMember: .enumMember,
         .constant: .macro,
-        .value: .macro,
-        .unit: .macro,
-        .module: .namespace,
-        .typeParameter: .typeAlias,
-        .keyword: .keyword,
+        .struct: .struct,
+        .event: .event,
         .operator: .keyword,
-        .snippet: .snippet,
-        .file: .file,
-        .folder: .file
+        .typeParameter: .typeAlias
     ]
 
     private static let categoryIconNames: [Category: String] = [
@@ -109,7 +162,7 @@ struct LSPCompletionEntry: CodeSuggestionEntry {
         .variable: "shippingbox",
         .class: "cube.fill",
         .struct: "square.3.layers.3d.down.right",
-        .interface: "point.3.connected.trianglepath.dot.ted",
+        .interface: "point.3.connected.trianglepath.dotted",
         .typeAlias: "character.cursor.ibeam",
         .enum: "list.bullet.rectangle",
         .enumMember: "numbersign",
@@ -118,6 +171,11 @@ struct LSPCompletionEntry: CodeSuggestionEntry {
         .keyword: "key",
         .snippet: "chevron.left.forwardslash.chevron.right",
         .file: "doc.text",
+        .folder: "folder",
+        .text: "text.alignleft",
+        .color: "paintpalette",
+        .reference: "link",
+        .event: "bolt",
         .other: "cube"
     ]
 
@@ -135,6 +193,11 @@ struct LSPCompletionEntry: CodeSuggestionEntry {
         .keyword: .pink,
         .snippet: .secondary,
         .file: .secondary,
+        .folder: .secondary,
+        .text: .secondary,
+        .color: .cyan,
+        .reference: .secondary,
+        .event: .yellow,
         .other: .secondary
     ]
 
@@ -156,6 +219,16 @@ struct LSPCompletionEntry: CodeSuggestionEntry {
 
     /// Determines the symbol category for a given completion item.
     static func category(for item: CompletionItem) -> Category {
+        let trimmed = item.label.trimmingCharacters(in: .whitespaces)
+        if trimmed.hasPrefix("#") {
+            if trimmed == "#include" || trimmed.hasPrefix("#include") {
+                return .snippet
+            }
+            return .macro
+        }
+        if trimmed == "include" || trimmed.hasPrefix("include") {
+            return .snippet
+        }
         guard let kind = item.kind else { return .other }
         if kind == .interface {
             return isTypeAlias(item: item) ? .typeAlias : .interface

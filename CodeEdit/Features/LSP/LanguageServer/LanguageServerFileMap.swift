@@ -27,6 +27,7 @@ class LanguageServerFileMap<DocumentType: LanguageServerDocument> {
 
     // MARK: - Track & Remove Documents
 
+    @MainActor
     func addDocument(_ document: DocumentType, for server: LanguageServer<DocumentType>) {
         guard let uri = document.languageServerURI else { return }
         trackedDocuments.setObject(document, forKey: uri as NSString)
@@ -44,6 +45,7 @@ class LanguageServerFileMap<DocumentType: LanguageServerDocument> {
         trackedDocumentData.keys.compactMap { trackedDocuments.object(forKey: $0 as NSString) }
     }
 
+    @MainActor
     func removeDocument(for document: DocumentType) {
         guard let uri = document.languageServerURI else { return }
         removeDocument(for: uri)
@@ -56,6 +58,7 @@ class LanguageServerFileMap<DocumentType: LanguageServerDocument> {
 
     // MARK: - Version Number Tracking
 
+    @MainActor
     func incrementVersion(for document: DocumentType) -> Int {
         guard let uri = document.languageServerURI else { return 0 }
         return incrementVersion(for: uri)
@@ -66,6 +69,7 @@ class LanguageServerFileMap<DocumentType: LanguageServerDocument> {
         return trackedDocumentData[uri]?.documentVersion ?? 0
     }
 
+    @MainActor
     func documentVersion(for document: DocumentType) -> Int? {
         guard let uri = document.languageServerURI else { return nil }
         return documentVersion(for: uri)
