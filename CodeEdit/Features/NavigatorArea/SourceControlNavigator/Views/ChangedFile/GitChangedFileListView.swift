@@ -30,7 +30,7 @@ struct GitChangedFileListView: View {
                 Toggle("", isOn: $staged)
                     .labelsHidden()
                     .onChange(of: staged) { _, newStaged in
-                        Task {
+                        _ = Task {
                             if changedFile.isStaged != newStaged {
                                 if newStaged {
                                     try await sourceControlManager.add([changedFile.fileURL])

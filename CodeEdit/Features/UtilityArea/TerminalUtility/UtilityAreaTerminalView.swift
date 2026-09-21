@@ -107,11 +107,11 @@ struct UtilityAreaTerminalView: View {
                                 url: selectedTerminal.url,
                                 terminalID: selectedTerminal.id,
                                 shellType: selectedTerminal.shell,
-                                onTitleChange: { [weak selectedTerminal] newTitle in
-                                    guard let id = selectedTerminal?.id else { return }
+                                onTitleChange: { newTitle in
+                                    let id = selectedTerminal.id
                                     // This can be called whenever, even in a view update so it needs to be dispatched.
-                                    DispatchQueue.main.async { [weak utilityAreaViewModel] in
-                                        utilityAreaViewModel?.updateTerminal(id, title: newTitle)
+                                    DispatchQueue.main.async {
+                                        utilityAreaViewModel.updateTerminal(id, title: newTitle)
                                     }
                                 }
                             )

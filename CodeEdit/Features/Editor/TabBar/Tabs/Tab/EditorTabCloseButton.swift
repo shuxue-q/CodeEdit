@@ -42,11 +42,7 @@ struct EditorTabCloseButton: View {
         .frame(width: buttonSize, height: buttonSize)
         .background(backgroundColor)
         .foregroundColor(isPressingClose ? .primary : .secondary)
-        .if(.tahoe) {
-            $0.clipShape(Circle())
-        } else: {
-            $0.clipShape(RoundedRectangle(cornerRadius: 2))
-        }
+        .clipShape(RoundedRectangle(cornerRadius: 2))
         .contentShape(Rectangle())
         .gesture(
             DragGesture(minimumDistance: 0)

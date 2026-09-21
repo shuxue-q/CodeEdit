@@ -66,7 +66,7 @@ struct SourceControlNavigatorTabs: View {
                  systemImage: "externaldrive.fill",
                  actions: {
                     Button("Initialize") {
-                        Task {
+                        _ = Task {
                             try await sourceControlManager.initiate()
                         }
                     }

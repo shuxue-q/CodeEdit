@@ -87,7 +87,7 @@ struct SourceControlNavigatorRepositoryView: View {
             if sourceControlManager.changedFiles.isEmpty {
                 Button("Apply") {
                     if let stashEntry = stashEntryToApply {
-                        Task {
+                        _ = Task {
                             try await sourceControlManager.applyStashEntry(stashEntry: stashEntry)
                             applyStashedChangesIsPresented = false
                             stashEntryToApply = nil
@@ -96,7 +96,7 @@ struct SourceControlNavigatorRepositoryView: View {
                 }
                 Button("Apply and Delete") {
                     if let stashEntry = stashEntryToApply {
-                        Task {
+                        _ = Task {
                             try await sourceControlManager.applyStashEntry(stashEntry: stashEntry)
                             try await sourceControlManager.deleteStashEntry(stashEntry: stashEntry)
                             applyStashedChangesIsPresented = false

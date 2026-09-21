@@ -239,7 +239,7 @@ final class NotificationPanelViewModel: ObservableObject {
                 let shouldShow = !self.visibleNotifications.isEmpty || NotificationManager.shared.unreadCount > 0
                 if shouldShow && toolbar.items.filter({ $0.itemIdentifier == .notificationItem }).first == nil {
                     guard let activityItemIdx = toolbar.items
-                        .firstIndex(where: { $0.itemIdentifier == .activityViewer }) else {
+                        .firstIndex(where: { $0.itemIdentifier == .activityViewerTrailing }) else {
                         return
                     }
                     toolbar.insertItem(withItemIdentifier: .space, at: activityItemIdx + 1)

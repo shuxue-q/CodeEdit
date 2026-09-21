@@ -20,13 +20,7 @@ struct TaskDropDownView: View {
     @State private var isHoveringTasks: Bool = false
 
     var body: some View {
-        Group {
-            if #available(macOS 26, *) {
-                tahoe
-            } else {
-                seqouia
-            }
-        }
+        seqouia
         .onHover { hovering in
             self.isHoveringTasks = hovering
         }
@@ -44,21 +38,6 @@ struct TaskDropDownView: View {
         .accessibilityHint("Open the active task menu")
         .accessibilityAction {
             isTaskPopOverPresented = true
-        }
-    }
-
-    @available(macOS 26, *)
-    @ViewBuilder private var tahoe: some View {
-        HStack(spacing: 4) {
-            label
-            chevronIcon
-                .opacity(isHoveringTasks || isTaskPopOverPresented ? 1.0 : 0.0)
-        }
-        .padding(6)
-        .background {
-            Color(nsColor: colorScheme == .dark ? .white : .black)
-                .opacity(isHoveringTasks || isTaskPopOverPresented ? 0.05 : 0)
-                .clipShape(Capsule())
         }
     }
 

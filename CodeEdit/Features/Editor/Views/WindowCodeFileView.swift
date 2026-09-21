@@ -15,6 +15,14 @@ struct WindowCodeFileView: View {
     @StateObject var undoRegistration: UndoManagerRegistration = UndoManagerRegistration()
     var codeFile: CodeFileDocument
 
+    @Environment(\.colorScheme)
+    private var colorScheme
+
+    @AppSettings(\.theme.matchAppearance)
+    var matchAppearance
+
+    @ObservedObject private var themeModel: ThemeModel = .shared
+
     init(codeFile: CodeFileDocument) {
         self._editorInstance = .init(
             wrappedValue: EditorInstance(
@@ -26,11 +34,30 @@ struct WindowCodeFileView: View {
     }
 
     var body: some View {
-        if let utType = codeFile.utType, utType.conforms(to: .text) {
-            CodeFileView(editorInstance: editorInstance, codeFile: codeFile)
-                .environmentObject(undoRegistration)
-        } else {
-            NonTextFileView(fileDocument: codeFile)
+        Group {
+            if let utType = codeFile.utType, utType.conforms(to: .text) {
+                CodeFileView(editorInstance: editorInstance, codeFile: codeFile)
+                    .environmentObject(undoRegistration)
+            } else {
+                NonTextFileView(fileDocument: codeFile)
+            }
+        }
+        .background(EffectView(.contentBackground))
+        .task {
+            themeModel.colorScheme = colorScheme
+            if matchAppearance {
+                themeModel.selectedTheme = colorScheme == .dark
+                ? themeModel.selectedDarkTheme
+                : themeModel.selectedLightTheme
+            }
+        }
+        .onChange(of: colorScheme) { _, newValue in
+            themeModel.colorScheme = newValue
+            if matchAppearance {
+                themeModel.selectedTheme = newValue == .dark
+                ? themeModel.selectedDarkTheme
+                : themeModel.selectedLightTheme
+            }
         }
     }
 }

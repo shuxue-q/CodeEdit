@@ -89,9 +89,6 @@ struct ToolbarBranchPicker: View {
                 await self.sourceControlManager?.refreshBranches()
             }
         }
-        .if(.tahoe) {
-            $0.padding(.leading, 10).frame(minWidth: 140)
-        }
     }
 
     private var inactiveColor: Color {

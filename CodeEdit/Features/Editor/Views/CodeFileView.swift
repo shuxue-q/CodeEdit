@@ -17,7 +17,7 @@ struct CodeFileView: View {
     @ObservedObject private var editorInstance: EditorInstance
     @ObservedObject private var codeFile: CodeFileDocument
 
-    @State private var treeSitterClient: TreeSitterClient = TreeSitterClient()
+    @State private var treeSitterClient: TreeSitterClient
 
     /// Shows language-server documentation when hovering over symbols.
     @State private var hoverCoordinator: LSPHoverCoordinator
@@ -70,8 +70,6 @@ struct CodeFileView: View {
 
     @ObservedObject private var themeModel: ThemeModel = .shared
 
-    @State private var treeSitter = TreeSitterClient()
-
     private var cancellables = Set<AnyCancellable>()
 
     private let isEditable: Bool
@@ -87,6 +85,9 @@ struct CodeFileView: View {
 
         let hoverCoordinator = LSPHoverCoordinator(document: codeFile)
         self._hoverCoordinator = State(initialValue: hoverCoordinator)
+
+        let treeSitterClient = TreeSitterClient()
+        self._treeSitterClient = State(initialValue: treeSitterClient)
 
         self.textViewCoordinators = textViewCoordinators
             + [editorInstance.rangeTranslator]
@@ -116,7 +117,12 @@ struct CodeFileView: View {
     }
 
     private var currentTheme: Theme {
-        themeModel.selectedTheme ?? themeModel.themes.first!
+        if matchAppearance {
+            return (colorScheme == .dark ? themeModel.selectedDarkTheme : themeModel.selectedLightTheme)
+                ?? themeModel.selectedTheme
+                ?? themeModel.themes.first!
+        }
+        return themeModel.selectedTheme ?? themeModel.themes.first!
     }
 
     @State private var font: NSFont = Settings[\.textEditing].font.current
@@ -135,7 +141,7 @@ struct CodeFileView: View {
                     font: font,
                     lineHeightMultiple: lineHeightMultiple,
                     letterSpacing: letterSpacing,
-                    wrapLines: wrapLinesToEditorWidth,
+                    wrapLines: codeFile.wrapLines ?? wrapLinesToEditorWidth,
                     useSystemCursor: useSystemCursor,
                     tabWidth: defaultTabWidth,
                     bracketPairEmphasis: getBracketPairEmphasis()
@@ -181,12 +187,14 @@ struct CodeFileView: View {
             highlightProviders: highlightProviders,
             undoManager: undoRegistration.manager(forFile: editorInstance.file),
             coordinators: textViewCoordinators,
-            completionDelegate: codeFile.languageServerObjects.completionDelegate
+            completionDelegate: codeFile.languageServerObjects.completionDelegate,
+            fileURL: codeFile.fileURL ?? editorInstance.file.url,
+            contextMenuDelegate: contextMenuDelegate
         )
         // This view needs to refresh when the codefile changes. The file URL is too stable.
         .id(ObjectIdentifier(codeFile))
         .background {
-            if colorScheme == .dark {
+            if currentTheme.appearance == .dark {
                 EffectView(.underPageBackground)
             } else {
                 EffectView(.contentBackground)
@@ -206,7 +214,7 @@ struct CodeFileView: View {
     /// for example). `CodeEditSourceEditor` always triggers on letters and numbers, so the
     /// completion window pops up while typing without requiring Escape or a key combination.
     private var codeSuggestionTriggerCharacters: Set<String> {
-        codeFile.languageServerObjects.completionDelegate?.completionTriggerCharacters() ?? []
+        (codeFile.languageServerObjects.completionDelegate?.completionTriggerCharacters() ?? []).union(["#"])
     }
 
     /// Determines the style of bracket emphasis based on the `bracketEmphasis` setting and the current theme.
@@ -228,6 +236,10 @@ struct CodeFileView: View {
         case .underline:
             return .underline(color: color)
         }
+    }
+
+    private var contextMenuDelegate: CodeFileContextMenuDelegate {
+        CodeFileContextMenuDelegate(codeFile: codeFile, editorInstance: editorInstance)
     }
 }
 
@@ -261,5 +273,63 @@ private extension SettingsData.TextEditingSettings.InvisibleCharactersConfig {
         config.lineSeparatorReplacement = self.lineSeparatorReplacement
 
         return config
+    }
+}
+
+/// Delegate for handling editor context menu actions in the workspace.
+final class CodeFileContextMenuDelegate: SourceEditorContextMenuDelegate {
+    weak var codeFile: CodeFileDocument?
+    weak var editorInstance: EditorInstance?
+
+    init(codeFile: CodeFileDocument?, editorInstance: EditorInstance?) {
+        self.codeFile = codeFile
+        self.editorInstance = editorInstance
+    }
+
+    func findInWorkspace(query: String?) {
+        NSApp.sendAction(#selector(CodeEditWindowController.openSearchNavigator(_:)), to: nil, from: nil)
+        if let query, !query.isEmpty {
+            DispatchQueue.main.async {
+                if let window = NSApp.keyWindow ?? NSApp.mainWindow,
+                   let windowController = window.windowController as? CodeEditWindowController {
+                    windowController.workspace?.searchState?.searchQuery = query
+                    Task {
+                        await windowController.workspace?.searchState?.search(query)
+                    }
+                }
+            }
+        }
+    }
+
+    func revealInProjectNavigator() {
+        NSApp.sendAction(#selector(ProjectNavigatorViewController.revealFile(_:)), to: nil, from: nil)
+    }
+
+    func showPreviousTab() {
+        if let window = NSApp.keyWindow ?? NSApp.mainWindow,
+           let windowController = window.windowController as? CodeEditWindowController {
+            windowController.workspace?.editorManager?.activeEditor.selectPreviousTab()
+        }
+    }
+
+    func showNextTab() {
+        if let window = NSApp.keyWindow ?? NSApp.mainWindow,
+           let windowController = window.windowController as? CodeEditWindowController {
+            windowController.workspace?.editorManager?.activeEditor.selectNextTab()
+        }
+    }
+
+    func navigateGoBack() {
+        if let window = NSApp.keyWindow ?? NSApp.mainWindow,
+           let windowController = window.windowController as? CodeEditWindowController {
+            windowController.workspace?.editorManager?.activeEditor.goBackInHistory()
+        }
+    }
+
+    func navigateGoForward() {
+        if let window = NSApp.keyWindow ?? NSApp.mainWindow,
+           let windowController = window.windowController as? CodeEditWindowController {
+            windowController.workspace?.editorManager?.activeEditor.goForwardInHistory()
+        }
     }
 }

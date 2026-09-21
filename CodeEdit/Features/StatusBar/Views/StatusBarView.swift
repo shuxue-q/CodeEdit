@@ -24,21 +24,7 @@ struct StatusBarView: View {
 
     @EnvironmentObject private var utilityAreaViewModel: UtilityAreaViewModel
 
-    static var height: CGFloat {
-        if #available(macOS 26, *) {
-            37.0
-        } else {
-            29.0
-        }
-    }
-
-    private var trailingPadding: CGFloat {
-        if #available(macOS 26, *) {
-            8
-        } else {
-            0
-        }
-    }
+    static var height: CGFloat { 29.0 }
 
     @Environment(\.colorScheme)
     private var colorScheme
@@ -71,7 +57,6 @@ struct StatusBarView: View {
             StatusBarToggleUtilityAreaButton()
         }
         .padding(.horizontal, 10)
-        .padding(.trailing, trailingPadding)
         .cursor(.resizeUpDown)
         .frame(height: Self.height - 1.0)
         .background(.bar)

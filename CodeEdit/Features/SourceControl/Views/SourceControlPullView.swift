@@ -40,7 +40,7 @@ struct SourceControlPullView: View {
             .scrollDisabled(true)
             .scrollContentBackground(.hidden)
             .onAppear {
-                Task {
+                _ = Task {
                     preferRebaseWhenPulling = try await gitConfig.get(key: "pull.rebase", global: true) ?? false
                     if preferRebaseWhenPulling {
                         sourceControlManager.operationRebase = true

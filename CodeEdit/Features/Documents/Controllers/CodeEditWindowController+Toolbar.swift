@@ -15,66 +15,31 @@ extension CodeEditWindowController {
         toolbar.delegate = self
         toolbar.showsBaselineSeparator = false
         self.window?.titleVisibility = toolbarCollapsed ? .visible : .hidden
-        if #available(macOS 26, *) {
-            self.window?.toolbarStyle = .automatic
-            toolbar.centeredItemIdentifiers = [.activityViewer, .notificationItem]
-            toolbar.displayMode = .iconOnly
-            self.window?.titlebarAppearsTransparent = true
-        } else {
-            self.window?.toolbarStyle = .unifiedCompact
-            toolbar.displayMode = .labelOnly
-        }
+        self.window?.toolbarStyle = .unified
+        toolbar.displayMode = .labelOnly
         self.window?.titlebarSeparatorStyle = .automatic
         self.window?.toolbar = toolbar
     }
 
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        var items: [NSToolbarItem.Identifier] = [
+        // Run controls share the navigator section with the sidebar toggle but are
+        // pushed against the tracking separator by a flexible space, so they sit at
+        // the trailing edge of the navigator area.
+        [
             .toggleFirstSidebarItem,
             .flexibleSpace,
-        ]
-
-        if #available(macOS 26, *) {
-            items += [.taskSidebarItem]
-        } else {
-            items += [
-                .stopTaskSidebarItem,
-                .startTaskSidebarItem,
-            ]
-        }
-
-        items += [
+            .runControlsItem,
             .sidebarTrackingSeparator,
-            .branchPicker,
+            .activityViewerLeading,
             .flexibleSpace,
+            .activityViewer,
+            .flexibleSpace,
+            .activityViewerTrailing,
         ]
-
-        if #available(macOS 26, *) {
-            items += [
-                .activityViewer,
-                .space,
-                .notificationItem,
-            ]
-        } else {
-            items += [
-                .activityViewer,
-                .notificationItem,
-                .flexibleSpace,
-            ]
-        }
-
-        items += [
-            .flexibleSpace,
-            .itemListTrackingSeparator,
-            .flexibleSpace,
-            .toggleLastSidebarItem
-        ]
-
-        return items
     }
 
     func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        var items: [NSToolbarItem.Identifier] = [
+        [
             .toggleFirstSidebarItem,
             .sidebarTrackingSeparator,
             .flexibleSpace,
@@ -82,21 +47,13 @@ extension CodeEditWindowController {
             .toggleLastSidebarItem,
             .branchPicker,
             .activityViewer,
+            .activityViewerLeading,
+            .activityViewerTrailing,
             .notificationItem,
+            .startTaskSidebarItem,
+            .stopTaskSidebarItem,
+            .runControlsItem,
         ]
-
-        if #available(macOS 26, *) {
-            items += [
-                .taskSidebarItem
-            ]
-        } else {
-            items += [
-                .startTaskSidebarItem,
-                .stopTaskSidebarItem
-            ]
-        }
-
-        return items
     }
 
     func toggleToolbar() {
@@ -135,7 +92,12 @@ extension CodeEditWindowController {
             let toolbarItem = NSToolbarItem(itemIdentifier: NSToolbarItem.Identifier.toggleFirstSidebarItem)
             toolbarItem.paletteLabel = " Navigator Sidebar"
             toolbarItem.toolTip = "Hide or show the Navigator"
-            toolbarItem.isBordered = true
+            // Bordered items receive Liquid Glass on macOS 26; keep the Sequoia chrome instead.
+            if #available(macOS 26, *) {
+                toolbarItem.isBordered = false
+            } else {
+                toolbarItem.isBordered = true
+            }
             toolbarItem.target = self
             toolbarItem.action = #selector(self.objcToggleFirstPanel)
             toolbarItem.image = NSImage(
@@ -148,7 +110,11 @@ extension CodeEditWindowController {
             let toolbarItem = NSToolbarItem(itemIdentifier: NSToolbarItem.Identifier.toggleLastSidebarItem)
             toolbarItem.paletteLabel = "Inspector Sidebar"
             toolbarItem.toolTip = "Hide or show the Inspectors"
-            toolbarItem.isBordered = true
+            if #available(macOS 26, *) {
+                toolbarItem.isBordered = false
+            } else {
+                toolbarItem.isBordered = true
+            }
             toolbarItem.target = self
             toolbarItem.action = #selector(self.objcToggleLastPanel)
             toolbarItem.image = NSImage(
@@ -161,6 +127,8 @@ extension CodeEditWindowController {
             return stopTaskSidebarItem()
         case .startTaskSidebarItem:
             return startTaskSidebarItem()
+        case .runControlsItem:
+            return runControlsItem()
         case .branchPicker:
             let toolbarItem = NSToolbarItem(itemIdentifier: .branchPicker)
             let view = NSHostingView(
@@ -173,25 +141,12 @@ extension CodeEditWindowController {
             return toolbarItem
         case .activityViewer:
             return activityViewerItem()
+        case .activityViewerLeading:
+            return activityViewerLeadingItem()
+        case .activityViewerTrailing:
+            return activityViewerTrailingItem()
         case .notificationItem:
             return notificationItem()
-        case .taskSidebarItem:
-            guard #available(macOS 26, *) else {
-                fatalError("Unified task sidebar item used on pre-tahoe platform.")
-            }
-            guard let workspace,
-                    let stop = StopTaskToolbarItem(workspace: workspace) else {
-                return nil
-            }
-            let start = StartTaskToolbarItem(workspace: workspace)
-
-            let group = NSToolbarItemGroup(itemIdentifier: .taskSidebarItem)
-            group.isBordered = true
-            group.controlRepresentation = .expanded
-            group.selectionMode = .momentary
-            group.subitems = [stop, start]
-
-            return group
         default:
             return NSToolbarItem(itemIdentifier: itemIdentifier)
         }
@@ -206,6 +161,7 @@ extension CodeEditWindowController {
             rootView: StopTaskToolbarButton(taskManager: taskManager)
         )
         toolbarItem.view = view
+        toolbarItem.isBordered = false
 
         return toolbarItem
     }
@@ -221,6 +177,26 @@ extension CodeEditWindowController {
                 .environmentObject(workspace)
         )
         toolbarItem.view = view
+        toolbarItem.isBordered = false
+
+        return toolbarItem
+    }
+
+    private func runControlsItem() -> NSToolbarItem? {
+        let toolbarItem = NSToolbarItem(itemIdentifier: .runControlsItem)
+        guard let taskManager = workspace?.taskManager, let workspace else { return nil }
+
+        let view = NSHostingView(
+            rootView: XcodeRunControlsCapsule(taskManager: taskManager)
+                .environmentObject(workspace)
+        )
+        toolbarItem.view = view
+        toolbarItem.isBordered = false
+        // Keep run controls out of the overflow menu: the activity viewer groups
+        // carry the default priority and are pushed into overflow first instead.
+        toolbarItem.visibilityPriority = .user
+        toolbarItem.paletteLabel = "Run/Stop"
+        toolbarItem.toolTip = "Start or stop the selected task"
 
         return toolbarItem
     }
@@ -230,6 +206,7 @@ extension CodeEditWindowController {
         guard let workspace = workspace else { return nil }
         let view = NSHostingView(rootView: NotificationToolbarItem().environmentObject(workspace))
         toolbarItem.view = view
+        toolbarItem.isBordered = false
         return toolbarItem
     }
 
@@ -237,30 +214,68 @@ extension CodeEditWindowController {
         let toolbarItem = NSToolbarItem(itemIdentifier: NSToolbarItem.Identifier.activityViewer)
         toolbarItem.visibilityPriority = .user
         guard let workspaceSettingsManager = workspace?.workspaceSettingsManager,
+              let taskManager = workspace?.taskManager
+        else { return nil }
+
+        let activityViewer = ActivityViewer(
+            workspaceFileManager: workspace?.workspaceFileManager,
+            workspaceSettingsManager: workspaceSettingsManager,
+            taskManager: taskManager,
+            workspace: workspace
+        )
+
+        toolbarItem.view = activityViewerHostingView(for: activityViewer)
+        toolbarItem.isBordered = false
+        return toolbarItem
+    }
+
+    private func activityViewerLeadingItem() -> NSToolbarItem? {
+        let toolbarItem = NSToolbarItem(itemIdentifier: NSToolbarItem.Identifier.activityViewerLeading)
+        guard let workspaceSettingsManager = workspace?.workspaceSettingsManager,
               let taskNotificationHandler = workspace?.taskNotificationHandler,
               let taskManager = workspace?.taskManager
         else { return nil }
 
-        let view = NSHostingView(
-            rootView: ActivityViewer(
-                workspaceFileManager: workspace?.workspaceFileManager,
-                workspaceSettingsManager: workspaceSettingsManager,
-                taskNotificationHandler: taskNotificationHandler,
-                taskManager: taskManager
-            )
+        let activityViewerLeading = ActivityViewerLeading(
+            workspaceFileManager: workspace?.workspaceFileManager,
+            taskNotificationHandler: taskNotificationHandler,
+            workspaceSettingsManager: workspaceSettingsManager,
+            taskManager: taskManager,
+            workspace: workspace
         )
 
-        let weakWidth = view.widthAnchor.constraint(equalToConstant: 650)
-        weakWidth.priority = .defaultLow
-        let strongWidth = view.widthAnchor.constraint(greaterThanOrEqualToConstant: 200)
-        strongWidth.priority = .defaultHigh
-
-        NSLayoutConstraint.activate([
-            weakWidth,
-            strongWidth
-        ])
-
-        toolbarItem.view = view
+        toolbarItem.view = activityViewerHostingView(for: activityViewerLeading)
+        toolbarItem.isBordered = false
         return toolbarItem
+    }
+
+    private func activityViewerTrailingItem() -> NSToolbarItem? {
+        let toolbarItem = NSToolbarItem(itemIdentifier: NSToolbarItem.Identifier.activityViewerTrailing)
+        toolbarItem.view = activityViewerHostingView(for: ActivityViewerTrailing(workspace: workspace))
+        toolbarItem.isBordered = false
+        return toolbarItem
+    }
+
+    /// Wraps a toolbar SwiftUI view in a hosting view with the workspace and editor
+    /// environment objects that are available injected, matching the activity viewer's
+    /// previous single-item environment setup.
+    private func activityViewerHostingView<Content: View>(for content: Content) -> NSHostingView<AnyView> {
+        let rootView: AnyView
+        if let workspace = workspace, let editorManager = workspace.editorManager {
+            rootView = AnyView(
+                content
+                    .environmentObject(workspace)
+                    .environmentObject(editorManager)
+            )
+        } else if let workspace = workspace {
+            rootView = AnyView(
+                content
+                    .environmentObject(workspace)
+            )
+        } else {
+            rootView = AnyView(content)
+        }
+
+        return NSHostingView(rootView: rootView)
     }
 }

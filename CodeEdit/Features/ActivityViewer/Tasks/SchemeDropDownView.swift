@@ -32,13 +32,7 @@ struct SchemeDropDownView: View {
     }
 
     var body: some View {
-        Group {
-            if #available(macOS 26, *) {
-                tahoe
-            } else {
-                seqouia
-            }
-        }
+        seqouia
         .onHover(perform: { hovering in
             self.isHoveringScheme = hovering
         })
@@ -56,31 +50,6 @@ struct SchemeDropDownView: View {
         .accessibilityHint("Open the active scheme menu")
         .accessibilityAction {
             isSchemePopOverPresented.toggle()
-        }
-    }
-
-    @available(macOS 26, *)
-    @ViewBuilder private var tahoe: some View {
-        HStack(spacing: 4) {
-            label
-            chevron
-                .offset(x: 2)
-                .opacity(isHoveringScheme || isSchemePopOverPresented ? 0.0 : 1.0)
-        }
-        .background {
-            if isHoveringScheme || isSchemePopOverPresented {
-                HStack {
-                    Spacer()
-                    chevronDown
-                }
-            }
-        }
-        .padding(6)
-        .padding(.leading, 2) // apparently this is cummulative?
-        .background {
-            Color(nsColor: colorScheme == .dark ? .white : .black)
-                .opacity(isHoveringScheme || isSchemePopOverPresented ? 0.05 : 0)
-                .clipShape(Capsule())
         }
     }
 

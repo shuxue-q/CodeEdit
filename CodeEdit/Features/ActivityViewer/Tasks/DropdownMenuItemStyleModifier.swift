@@ -27,13 +27,7 @@ struct DropdownMenuItemStyleModifier: ViewModifier {
                     : AnyView(Color.clear)
             )
             .foregroundColor(isHovering ? Color(NSColor.white) : .primary)
-            .if(.tahoe) {
-                if #available(macOS 26, *) {
-                    $0.clipShape(ContainerRelativeShape())
-                }
-            } else: {
-                $0.clipShape(RoundedRectangle(cornerRadius: 5))
-            }
+            .clipShape(RoundedRectangle(cornerRadius: 5))
             .onHover(perform: { hovering in
                 self.isHovering = hovering
             })

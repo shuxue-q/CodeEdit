@@ -116,12 +116,7 @@ extension WorkspaceDocument.SearchState {
 
                 evaluateSearchQueue.async(group: evaluateResultGroup) {
                     evaluateResultGroup.enter()
-                    Task { [weak self] in
-                        guard let self else {
-                            evaluateResultGroup.leave()
-                            return
-                        }
-
+                    Task {
                         let result = await self.evaluateSearchResult(
                             fileURL: fileURL,
                             fileScore: fileScore,
@@ -138,8 +133,8 @@ extension WorkspaceDocument.SearchState {
         }
 
         evaluateResultGroup.notify(queue: evaluateSearchQueue) {
-            Task { @MainActor [weak self] in
-                self?.setSearchResults()
+            Task { @MainActor in
+                self.setSearchResults()
             }
         }
     }

@@ -18,28 +18,33 @@ struct EditorTabsOverflowShadow: View {
     @Environment(\.controlActiveState)
     private var activeState
 
+    private var gradientOpacity: Double {
+        colorScheme == .dark
+        ? activeState == .inactive ? 0.25882353 : 1
+        : activeState == .inactive ? 0.09803922 : 0.25882353
+    }
+
+    private var gradient: some View {
+        LinearGradient(
+            gradient: Gradient(
+                stops: [
+                    Gradient.Stop(color: .black.opacity(0.75), location: 0),
+                    Gradient.Stop(color: .black.opacity(0.25), location: 0.5),
+                    Gradient.Stop(color: .black.opacity(0), location: 1)
+                ]
+            ),
+            startPoint: startPoint,
+            endPoint: endPoint
+        )
+    }
+
     var body: some View {
         Rectangle()
             .frame(maxHeight: .infinity)
             .frame(width: width)
             .foregroundColor(.clear)
             .background(
-                LinearGradient(
-                    gradient: Gradient(
-                        stops: [
-                            Gradient.Stop(color: .black.opacity(0.75), location: 0),
-                            Gradient.Stop(color: .black.opacity(0.25), location: 0.5),
-                            Gradient.Stop(color: .black.opacity(0), location: 1)
-                        ]
-                    ),
-                    startPoint: startPoint,
-                    endPoint: endPoint
-                )
-                .opacity(
-                    colorScheme == .dark
-                    ? activeState == .inactive ? 0.25882353 : 1
-                    : activeState == .inactive ? 0.09803922 : 0.25882353
-                )
+                gradient.opacity(gradientOpacity)
             )
             .allowsHitTesting(false)
     }

@@ -18,11 +18,7 @@ extension WorkspacePanelTabBar {
         @Binding var selection: Tab?
 
         var symbolVariant: SymbolVariants {
-            if #unavailable(macOS 26), selection == tab {
-                .fill
-            } else {
-                .none
-            }
+            selection == tab ? .fill : .none
         }
 
         var body: some View {
@@ -35,11 +31,7 @@ extension WorkspacePanelTabBar {
                     .help(tab.title)
                     .frame(maxWidth: .infinity)
             }
-            .if(.tahoe) {
-                $0.buttonStyle(capsuleButtonStyle)
-            } else: {
-                $0.buttonStyle(buttonStyle)
-            }
+            .buttonStyle(buttonStyle)
             .focusable(false)
             .accessibilityIdentifier("WorkspacePanelTab-\(tab.title)")
             .accessibilityLabel(tab.title)
@@ -51,24 +43,6 @@ extension WorkspacePanelTabBar {
                 return Image(systemName: named)
             } else {
                 return Image(symbol: named)
-            }
-        }
-
-        private var capsuleButtonStyle: CapsuleButtonStyle {
-            if #available(macOS 26, *) {
-                if position == .side {
-                    .capsuleIcon(
-                        isActive: tab == selection,
-                        size: CGSize(width: 26, height: 40)
-                    )
-                } else {
-                    .capsuleIcon(
-                        isActive: tab == selection,
-                        height: 28
-                    )
-                }
-            } else {
-                fatalError("Used on non tahoe platform")
             }
         }
 

@@ -70,6 +70,11 @@ struct WorkspaceView: View {
 
                     .task {
                         themeModel.colorScheme = colorScheme
+                        if matchAppearance {
+                            themeModel.selectedTheme = colorScheme == .dark
+                            ? themeModel.selectedDarkTheme
+                            : themeModel.selectedLightTheme
+                        }
                     }
                     .onChange(of: colorScheme) { _, newValue in
                         themeModel.colorScheme = newValue

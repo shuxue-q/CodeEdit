@@ -81,12 +81,7 @@ final class ProjectNavigatorViewController: NSViewController {
 
         scrollView.documentView = outlineView
         scrollView.contentView.automaticallyAdjustsContentInsets = false
-        if #available(macOS 26, *) {
-            scrollView.clipsToBounds = false
-            scrollView.contentView.clipsToBounds = false
-        } else {
-            scrollView.contentView.contentInsets = .init(top: 10, left: 0, bottom: 0, right: 0)
-        }
+        scrollView.contentView.contentInsets = .init(top: 10, left: 0, bottom: 0, right: 0)
         scrollView.scrollerStyle = .overlay
         scrollView.hasVerticalScroller = true
         scrollView.hasHorizontalScroller = false
@@ -117,10 +112,6 @@ final class ProjectNavigatorViewController: NSViewController {
     }
 
     private func configureOutlineView() {
-        if #available(macOS 26, *) {
-            self.outlineView.style = .inset
-            self.outlineView.clipsToBounds = false
-        }
         self.outlineView.dataSource = self
         self.outlineView.delegate = self
         self.outlineView.autosaveExpandedItems = true

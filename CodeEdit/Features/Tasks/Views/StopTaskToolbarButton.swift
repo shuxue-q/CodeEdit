@@ -21,27 +21,11 @@ struct StopTaskToolbarButton: View {
     @State private var statusListener: AnyCancellable?
 
     var body: some View {
-        HStack {
-            if showsStop {
-                    Button {
-                        taskManager.terminateActiveTask()
-                    } label: {
-                        Label("Stop", systemImage: "stop.fill")
-                            .labelStyle(.iconOnly)
-                            .opacity(activeState == .inactive ? 0.5 : 1.0)
-                            .font(.system(size: 15, weight: .regular))
-                            .help(taskManager.isCMakeBuildTarget ? "Stop build" : "Stop selected task")
-                            .frame(width: 28)
-                            .offset(y: 1.5)
-                    }
-                    .frame(height: 22)
-                    .transition(.opacity.combined(with: .move(edge: .trailing)))
-            }
-        }
-        .frame(width: 38, height: 22)
-        .animation(
-            .easeInOut(duration: 0.3),
-            value: currentSelectedStatus
+        StopTaskButtonContent(
+            taskManager: taskManager,
+            currentSelectedStatus: currentSelectedStatus,
+            cmake: taskManager.cmakeBuildController,
+            activeState: activeState
         )
         .onChange(of: taskManager.selectedTaskID) { _, _ in updateStatusListener() }
         .onChange(of: taskManager.activeTasks) { _, _ in updateStatusListener() }
@@ -51,9 +35,9 @@ struct StopTaskToolbarButton: View {
         }
     }
 
-    /// The stop control is visible while the selected task runs or a CMake build is running.
-    private var showsStop: Bool {
-        currentSelectedStatus == .running || taskManager.cmakeBuildController?.isBuilding == true
+    /// Whether stop can terminate the selected task or an in-flight CMake build.
+    static func isStopEnabled(selectedStatus: CETaskStatus?, cmakeIsBuilding: Bool) -> Bool {
+        selectedStatus == .running || cmakeIsBuilding
     }
 
     /// Update the ``statusListener`` to listen to a potentially new active task.
@@ -64,5 +48,37 @@ struct StopTaskToolbarButton: View {
         statusListener = taskManager.activeTasks[id]?.$status.sink { newValue in
             currentSelectedStatus = newValue
         }
+    }
+}
+
+/// Renders the stop control and observes CMake ``isBuilding`` through the `@Observable` controller.
+private struct StopTaskButtonContent: View {
+    @ObservedObject var taskManager: TaskManager
+    var currentSelectedStatus: CETaskStatus?
+    var cmake: CMakeBuildController?
+    var activeState: ControlActiveState
+
+    private var isEnabled: Bool {
+        StopTaskToolbarButton.isStopEnabled(
+            selectedStatus: currentSelectedStatus,
+            cmakeIsBuilding: cmake?.isBuilding == true
+        )
+    }
+
+    var body: some View {
+        Button {
+            taskManager.terminateActiveTask()
+        } label: {
+            Label("Stop", systemImage: "stop.fill")
+                .labelStyle(.iconOnly)
+                .font(.system(size: 17, weight: .regular))
+                .toolbarPillFeedback()
+                .opacity(activeState == .inactive ? 0.5 : 1.0)
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+        .opacity(isEnabled ? 1.0 : 0.35)
+        .help(taskManager.isCMakeBuildTarget ? "Stop the running build" : "Stop the running task")
+        .accessibilityLabel("Stop")
     }
 }

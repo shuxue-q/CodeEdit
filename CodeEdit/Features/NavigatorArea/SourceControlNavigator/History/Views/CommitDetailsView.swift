@@ -63,7 +63,7 @@ struct CommitDetailsView: View {
             }
         }
         .onAppear {
-            Task {
+            _ = Task {
                 try await updateCommitChanges()
             }
         }

@@ -7,6 +7,7 @@
 
 import SwiftUI
 import UniformTypeIdentifiers
+import Combine
 
 /// The Theme View Model. Accessible via the singleton "``ThemeModel/shared``".
 ///
@@ -17,6 +18,8 @@ import UniformTypeIdentifiers
 /// ```
 final class ThemeModel: ObservableObject {
     static let shared: ThemeModel = .init()
+
+    private var cancellables = Set<AnyCancellable>()
 
     @AppSettings(\.theme)
     var settings
@@ -109,6 +112,55 @@ final class ThemeModel: ObservableObject {
         } catch {
             print(error)
         }
+
+        NSApplication.shared.publisher(for: \.effectiveAppearance)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] newAppearance in
+                guard let self = self else { return }
+                let isDark = newAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+                let newScheme: ColorScheme = isDark ? .dark : .light
+                if self.colorScheme != newScheme {
+                    self.colorScheme = newScheme
+                }
+                if self.settings.matchAppearance {
+                    let matchingTheme = isDark ? self.selectedDarkTheme : self.selectedLightTheme
+                    if self.selectedTheme != matchingTheme {
+                        self.selectedTheme = matchingTheme
+                    }
+                }
+            }
+            .store(in: &cancellables)
+
+        Settings.shared.$preferences
+            .map(\.theme.matchAppearance)
+            .removeDuplicates()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] matchAppearance in
+                guard let self = self, matchAppearance else { return }
+                let isDark = self.colorScheme == .dark
+                let matchingTheme = isDark ? self.selectedDarkTheme : self.selectedLightTheme
+                if self.selectedTheme != matchingTheme {
+                    self.selectedTheme = matchingTheme
+                }
+            }
+            .store(in: &cancellables)
+    }
+
+    /// Whether the system or application is currently in dark appearance.
+    static var isSystemInDarkMode: Bool {
+        let appAppearance = Settings.shared.preferences.general.appAppearance
+        if appAppearance == .dark {
+            return true
+        } else if appAppearance == .light {
+            return false
+        }
+        if Thread.isMainThread {
+            return NSApplication.shared.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+        } else {
+            return DispatchQueue.main.sync {
+                NSApplication.shared.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+            }
+        }
     }
 
     /// This function stores  'dark' and 'light' themes into `ThemePreferences` if user happens to select a theme
@@ -130,7 +182,7 @@ final class ThemeModel: ObservableObject {
 
     /// Initialize to the app's current appearance.
     var selectedAppearance: ThemeSettingsAppearances {
-        NSApp.effectiveAppearance.name == .darkAqua ? .dark : .light
+        Self.isSystemInDarkMode ? .dark : .light
     }
 
     enum ThemeSettingsAppearances: String, CaseIterable {
@@ -147,11 +199,10 @@ final class ThemeModel: ObservableObject {
     /// - Parameter theme: The theme to activate.
     func activateTheme(_ theme: Theme) {
         selectedTheme = theme
-        if colorScheme == .light {
-            selectedLightTheme = theme
-        }
-        if colorScheme == .dark {
+        if theme.appearance == .dark {
             selectedDarkTheme = theme
+        } else {
+            selectedLightTheme = theme
         }
     }
 

@@ -17,8 +17,8 @@ private struct NewListTableItemView<HeaderView: View>: View {
     @Environment(\.dismiss)
     var dismiss
 
-    @State private var key = ""
-    @State private var value = ""
+    @State private var key: String
+    @State private var value: String
 
     let keyColumnName: String
     let valueColumnName: String
@@ -30,15 +30,15 @@ private struct NewListTableItemView<HeaderView: View>: View {
     init(
         key: String? = nil,
         value: String? = nil,
-        _ keyColumnName: String,
-        _ valueColumnName: String,
-        _ newItemInstruction: String,
+        keyColumnName: String,
+        valueColumnName: String,
+        newItemInstruction: String,
         validKeys: [String],
         headerView: HeaderView? = nil,
         completion: @escaping (String, String) -> Void
     ) {
-        self.key = key ?? ""
-        self.value = value ?? ""
+        self._key = State(initialValue: key ?? "")
+        self._value = State(initialValue: value ?? "")
         self.keyColumnName = keyColumnName
         self.valueColumnName = valueColumnName
         self.newItemInstruction = newItemInstruction
@@ -185,9 +185,9 @@ struct KeyValueTable<Header: View, ActionBarView: View>: View {
             NewListTableItemView(
                 key: item.key,
                 value: item.value,
-                keyColumnName,
-                valueColumnName,
-                newItemInstruction,
+                keyColumnName: keyColumnName,
+                valueColumnName: valueColumnName,
+                newItemInstruction: newItemInstruction,
                 validKeys: validKeys,
                 headerView: newItemHeader()
             ) { key, value in
@@ -209,7 +209,7 @@ struct KeyValueTable<Header: View, ActionBarView: View>: View {
     }
 
     private func updateTableItems(_ newValue: [String: String]) {
-        tableItems = items
+        tableItems = newValue
             .sorted { $0.key < $1.key }
             .map { KeyValueItem(key: $0.key, value: $0.value) }
     }

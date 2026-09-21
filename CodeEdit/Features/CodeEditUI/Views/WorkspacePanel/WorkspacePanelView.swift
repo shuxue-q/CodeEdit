@@ -17,7 +17,6 @@ struct WorkspacePanelView<Tab: WorkspacePanelTab, ViewModel: ObservableObject, B
 
     var sidebarPosition: SettingsData.SidebarTabBarPosition
     var darkDivider: Bool
-    let padSideItemVertically: Bool
     let sideOnTrailing: Bool
     let sidebarPadding: () -> (Edge.Set, CGFloat)
     let bottomAccessory: BottomAccessory
@@ -28,7 +27,6 @@ struct WorkspacePanelView<Tab: WorkspacePanelTab, ViewModel: ObservableObject, B
         tabItems: Binding<[Tab]>,
         sidebarPosition: SettingsData.SidebarTabBarPosition,
         darkDivider: Bool = false,
-        padSideItemVertically: Bool = false,
         sideOnTrailing: Bool = false,
         sidebarPadding: @escaping () -> (Edge.Set, CGFloat) = { ([], 0) },
         @ViewBuilder bottomAccessory: () -> BottomAccessory
@@ -38,12 +36,7 @@ struct WorkspacePanelView<Tab: WorkspacePanelTab, ViewModel: ObservableObject, B
         self._tabItems = tabItems
         self.sidebarPosition = sidebarPosition
         self.darkDivider = darkDivider
-        self.padSideItemVertically = padSideItemVertically
-        if #available(macOS 26, *) {
-            self.sideOnTrailing = sideOnTrailing
-        } else {
-            self.sideOnTrailing = false
-        }
+        self.sideOnTrailing = sideOnTrailing
         self.sidebarPadding = sidebarPadding
         self.bottomAccessory = bottomAccessory()
     }
@@ -54,21 +47,15 @@ struct WorkspacePanelView<Tab: WorkspacePanelTab, ViewModel: ObservableObject, B
         tabItems: Binding<[Tab]>,
         sidebarPosition: SettingsData.SidebarTabBarPosition,
         darkDivider: Bool = false,
-        padSideItemVertically: Bool = false,
         sidebarPadding: @escaping () -> (Edge.Set, CGFloat) = { ([], 0) },
-        sideOnTrailing: Bool = false,
+        sideOnTrailing: Bool = false
     ) where BottomAccessory == EmptyView {
         self.viewModel = viewModel
         self._selectedTab = selectedTab
         self._tabItems = tabItems
         self.sidebarPosition = sidebarPosition
         self.darkDivider = darkDivider
-        self.padSideItemVertically = padSideItemVertically
-        if #available(macOS 26, *) {
-            self.sideOnTrailing = sideOnTrailing
-        } else {
-            self.sideOnTrailing = false
-        }
+        self.sideOnTrailing = sideOnTrailing
         self.sidebarPadding = sidebarPadding
         self.bottomAccessory = EmptyView()
     }
@@ -78,9 +65,7 @@ struct WorkspacePanelView<Tab: WorkspacePanelTab, ViewModel: ObservableObject, B
             if let selection = selectedTab {
                 selection
                     .safeAreaInset(edge: .bottom, spacing: 0) {
-                        if #unavailable(macOS 26) {
-                            bottomAccessory
-                        }
+                        bottomAccessory
                     }
             } else {
                 CEContentUnavailableView("No Selection")
@@ -99,27 +84,13 @@ struct WorkspacePanelView<Tab: WorkspacePanelTab, ViewModel: ObservableObject, B
         .safeAreaInset(edge: .top, spacing: 0) {
             if sidebarPosition == .top {
                 VStack(spacing: 0) {
-                    if #unavailable(macOS 26) {
-                        Divider()
-                    }
-
+                    Divider()
                     WorkspacePanelTabBar(items: $tabItems, selection: $selectedTab, position: sidebarPosition)
-
-                    if #unavailable(macOS 26) {
-                        Divider()
-                    }
+                    Divider()
                 }
                 .padding(sidebarPadding().0, sidebarPadding().1)
-            } else if !darkDivider, #unavailable(macOS 26) {
+            } else if !darkDivider {
                 Divider()
-            }
-        }
-        .if(.tahoe) {
-            $0.clipped()
-        }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            if #available(macOS 26, *) {
-                bottomAccessory
             }
         }
     }
@@ -127,14 +98,8 @@ struct WorkspacePanelView<Tab: WorkspacePanelTab, ViewModel: ObservableObject, B
     @ViewBuilder private var sideTabBar: some View {
         HStack(spacing: 0) {
             WorkspacePanelTabBar(items: $tabItems, selection: $selectedTab, position: sidebarPosition)
-                .if(.tahoe) {
-                    $0.padding(.vertical, padSideItemVertically ? 8 : 0)
-                        .padding(sideOnTrailing ? .trailing : .leading, 8)
-                }
-            if #unavailable(macOS 26) {
-                Divider()
-                    .overlay(Color(nsColor: darkDivider && colorScheme == .dark ? .black : .clear))
-            }
+            Divider()
+                .overlay(Color(nsColor: darkDivider && colorScheme == .dark ? .black : .clear))
         }
     }
 }

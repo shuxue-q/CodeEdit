@@ -11,6 +11,7 @@ struct EditorTabBackground: View {
     var isActive: Bool
     var isPressing: Bool
     var isDragging: Bool
+    var isHovering: Bool = false
 
     @Environment(\.colorScheme)
     private var colorScheme
@@ -28,12 +29,8 @@ struct EditorTabBackground: View {
     var body: some View {
         ZStack {
             if isActive {
-                // Content background (visible if active)
-                if #available(macOS 26, *) {
-                    GlassEffectView()
-                } else {
-                    EffectView(.contentBackground)
-                }
+                // Opaque fill clips cleanly to a capsule; EffectView does not.
+                Color(nsColor: .controlBackgroundColor)
 
                 // Accent color (visible if active)
                 Color(.controlAccentColor)
@@ -53,7 +50,7 @@ struct EditorTabBackground: View {
                     .opacity(
                         isActive
                         ? activeState == .inactive ? 0.04 : inHoldingState ? 0.14 : 0.09
-                        : isPressing ? 0.05 : 0
+                        : isPressing || isHovering ? 0.05 : 0
                     )
             }
 
@@ -65,8 +62,12 @@ struct EditorTabBackground: View {
 
             if !isActive && isPressing {
                 Color(.unemphasizedSelectedTextBackgroundColor)
+            } else if !isActive && isHovering {
+                Color(.unemphasizedSelectedTextBackgroundColor)
+                    .opacity(0.5)
             }
         }
+        .clipShape(Capsule())
     }
 }
 

@@ -27,13 +27,14 @@ struct StartTaskToolbarButton: View {
             workspace.utilityAreaModel?.selectedTab = taskManager.isCMakeBuildTarget ? .problems : .debugConsole
             taskManager.taskShowingOutput = taskManager.selectedTaskID
         } label: {
-            Label("Start", systemImage: "play.fill")
+            Label("Run", systemImage: "play.fill")
                 .labelStyle(.iconOnly)
+                .font(.system(size: 17, weight: .regular))
+                .toolbarPillFeedback()
                 .opacity(activeState == .inactive ? 0.5 : 1.0)
-                .font(.system(size: 18, weight: .regular))
-                .help(taskManager.isCMakeBuildTarget ? "Build CMake project" : "Start selected task")
-                .frame(width: 28)
-                .offset(CGSize(width: 0, height: 2.5))
         }
+        .buttonStyle(.plain)
+        .help(taskManager.isCMakeBuildTarget ? "Build and then run the current target" : "Start selected task")
+        .accessibilityLabel("Run")
     }
 }

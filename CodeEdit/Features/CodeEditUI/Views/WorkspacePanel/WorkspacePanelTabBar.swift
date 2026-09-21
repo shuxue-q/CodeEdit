@@ -53,28 +53,19 @@ struct WorkspacePanelTabBar<Tab: WorkspacePanelTab>: View {
                 .animation(.default, value: items)
         }
         .clipped()
-        .if(.tahoe) {
-            $0.frame(maxWidth: .infinity, idealHeight: 28).padding(.horizontal, 8)
-        } else: {
-            $0.frame(maxWidth: .infinity, idealHeight: 27)
-        }
+        .frame(maxWidth: .infinity, idealHeight: 27)
         .fixedSize(horizontal: false, vertical: true)
     }
 
     @ViewBuilder var sideBody: some View {
         GeometryReader { proxy in
             iconsView(size: proxy.size)
-                .if(!.tahoe) {
-                    $0.padding(.vertical, 5).frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
+                .padding(.vertical, 5)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .animation(.default, value: items)
         }
         .clipped()
-        .if(.tahoe) {
-            $0.frame(idealWidth: 26, maxHeight: .infinity)
-        } else: {
-            $0.frame(idealWidth: 40, maxHeight: .infinity)
-        }
+        .frame(idealWidth: 40, maxHeight: .infinity)
         .fixedSize(horizontal: true, vertical: false)
     }
 
@@ -85,23 +76,12 @@ struct WorkspacePanelTabBar<Tab: WorkspacePanelTab>: View {
             : AnyLayout(VStackLayout(spacing: 0))
 
         layout {
-            if #available(macOS 26, *) {
-                ForEach(Array(items.enumerated()), id: \.element) { (idx, tab) in
-                    tabViewTahoe(tab, next: items[safe: idx + 1], size: size)
-                }
-            } else {
-                ForEach(items) { tab in
-                    tabView(tab, size: size)
-                }
+            ForEach(items) { tab in
+                tabView(tab, size: size)
             }
 
-            if position == .side, #unavailable(macOS 26) {
+            if position == .side {
                 Spacer()
-            }
-        }
-        .if(.tahoe) {
-            if #available(macOS 14.0, *) {
-                $0.background(GlassEffectView(tintColor: .secondarySystemFill)).clipShape(Capsule())
             }
         }
     }
@@ -115,36 +95,6 @@ struct WorkspacePanelTabBar<Tab: WorkspacePanelTab>: View {
             )
             .background(makeTabItemGeometryReader(tab: tab))
             .simultaneousGesture(makeAreaTabDragGesture(tab: tab))
-    }
-
-    @available(macOS 26, *)
-    @ViewBuilder
-    private func tabViewTahoe(_ tab: Tab, next: Tab?, size: CGSize) -> some View {
-        let layout = position == .top
-            ? AnyLayout(HStackLayout(spacing: 0))
-            : AnyLayout(VStackLayout(spacing: 0))
-        let paddingDirection: Edge.Set = position == .top
-            ? .vertical
-            : .horizontal
-        let paddingAmount: CGFloat = position == .top
-            ? 5
-            : 2
-
-        IconButton(tab: tab, size: size, position: position, selection: $selection)
-            .offset(
-                x: (position == .top) ? (tabOffsets[tab] ?? 0) : 0,
-                y: (position == .side) ? (tabOffsets[tab] ?? 0) : 0
-            )
-            .background(makeTabItemGeometryReader(tab: tab))
-            .simultaneousGesture(makeAreaTabDragGesture(tab: tab))
-            .overlay { // overlay to avoid layout adjustment when appearing/disappearing
-                layout {
-                    Spacer()
-                    if tab != items.last && selection != tab && next != selection {
-                        Divider().padding(paddingDirection, paddingAmount)
-                    }
-                }
-            }
     }
 }
 

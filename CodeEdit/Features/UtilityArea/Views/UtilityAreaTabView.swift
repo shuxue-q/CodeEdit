@@ -118,22 +118,14 @@ struct UtilityAreaTabView<Content: View, LeadingSidebar: View, TrailingSidebar: 
                         }
                         .buttonStyle(.icon(isActive: !model.leadingSidebarIsCollapsed))
                     }
-                    if #available(macOS 26, *) {
-                        Divider().frame(height: 12)
-                    } else {
-                        Divider()
-                    }
+                    Divider()
                 }
             }
         }
         .overlay(alignment: .bottomTrailing) {
             if model.hasTrailingSidebar {
                 PaneToolbar {
-                    if #available(macOS 26, *) {
-                        Divider().frame(height: 12)
-                    } else {
-                        Divider()
-                    }
+                    Divider()
                     PaneToolbarSection {
                         Button {
                             model.trailingSidebarIsCollapsed.toggle()

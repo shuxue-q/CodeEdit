@@ -29,7 +29,7 @@ internal struct StatusBarToggleUtilityAreaButton: View {
                     name: "Toggle Utility Area",
                     title: "Toggle Utility Area",
                     id: "open.drawer",
-                    command: { [weak utilityAreaViewModel] in utilityAreaViewModel?.togglePanel() }
+                    command: { utilityAreaViewModel.togglePanel() }
                 )
             }
         }
@@ -38,7 +38,7 @@ internal struct StatusBarToggleUtilityAreaButton: View {
                 name: "Toggle Utility Area",
                 title: "Toggle Utility Area",
                 id: "open.drawer",
-                command: { [weak utilityAreaViewModel] in utilityAreaViewModel?.togglePanel() }
+                command: { utilityAreaViewModel.togglePanel() }
             )
         }
     }

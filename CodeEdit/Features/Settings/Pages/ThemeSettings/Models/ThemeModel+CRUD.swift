@@ -102,31 +102,27 @@ extension ThemeModel {
 
                     // add the theme to themes array
                     self.themes.append(theme)
-
-                    // if there already is a selected theme in `settings.json` select this theme
-                    // otherwise take the first in the list
-                    self.selectedDarkTheme = self.darkThemes.first {
-                        $0.name == prefs.theme.selectedDarkTheme
-                    } ?? self.darkThemes.first
-
-                    self.selectedLightTheme = self.lightThemes.first {
-                        $0.name == prefs.theme.selectedLightTheme
-                    } ?? self.lightThemes.first
-
-                    // For selecting the default theme, doing it correctly on startup requires some more logic
-                    let userSelectedTheme = self.themes.first { $0.name == prefs.theme.selectedTheme }
-                    let systemAppearance = NSAppearance.currentDrawing().name
-
-                    if userSelectedTheme != nil {
-                        self.selectedTheme = userSelectedTheme
-                    } else {
-                        if systemAppearance == .darkAqua {
-                            self.selectedTheme = self.selectedDarkTheme
-                        } else {
-                            self.selectedTheme = self.selectedLightTheme
-                        }
-                    }
                 }
+            }
+
+            // if there already is a selected theme in `settings.json` select this theme
+            // otherwise take the first in the list
+            self.selectedDarkTheme = self.darkThemes.first {
+                $0.name == prefs.theme.selectedDarkTheme
+            } ?? self.darkThemes.first
+
+            self.selectedLightTheme = self.lightThemes.first {
+                $0.name == prefs.theme.selectedLightTheme
+            } ?? self.lightThemes.first
+
+            let isDark = Self.isSystemInDarkMode
+            self.colorScheme = isDark ? .dark : .light
+
+            if prefs.theme.matchAppearance {
+                self.selectedTheme = isDark ? self.selectedDarkTheme : self.selectedLightTheme
+            } else {
+                let userSelectedTheme = self.themes.first { $0.name == prefs.theme.selectedTheme }
+                self.selectedTheme = userSelectedTheme ?? (isDark ? self.selectedDarkTheme : self.selectedLightTheme)
             }
         }
     }

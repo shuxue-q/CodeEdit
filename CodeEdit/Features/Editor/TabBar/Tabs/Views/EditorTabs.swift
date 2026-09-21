@@ -149,7 +149,7 @@ struct EditorTabs: View {
                         previousTabLocation.maxX - previousTabWidth * 0.1,
                         previousTabLocation.minX + currentTabWidth * 0.9
                     ) {
-                        let changing = previousTabWidth - 1 // One offset for overlapping divider.
+                        let changing = previousTabWidth + 4 // Width plus capsule spacing.
                         draggingStartLocation! -= changing
                         withAnimation {
                             tabOffsets[id]! += changing
@@ -172,7 +172,7 @@ struct EditorTabs: View {
                         nextTabLocation.minX + nextTabWidth * 0.1,
                         nextTabLocation.maxX - currentTabWidth * 0.9
                     ) {
-                        let changing = nextTabWidth - 1 // One offset for overlapping divider.
+                        let changing = nextTabWidth + 4 // Width plus capsule spacing.
                         draggingStartLocation! += changing
                         withAnimation {
                             tabOffsets[id]! -= changing
@@ -254,16 +254,10 @@ struct EditorTabs: View {
                 ScrollViewReader { scrollReader in
                     HStack(
                         alignment: .center,
-                        spacing: -1 // Negative spacing for overlapping the divider.
+                        spacing: 4
                     ) {
                         ForEach(Array(openedTabs.enumerated()), id: \.element) { index, id in
                             if let item = editor.tabs.first(where: { $0.file.id == id }) {
-                                if index != 0
-                                    && editor.selectedTab?.file.id != id
-                                    && editor.selectedTab?.file.id != openedTabs[index - 1] {
-                                    EditorTabDivider()
-                                }
-
                                 EditorTabView(
                                     file: item.file,
                                     index: index,
@@ -297,12 +291,6 @@ struct EditorTabs: View {
                                         tabWidth: $tabWidth
                                     )
                                 )
-
-                                if index < openedTabs.count - 1
-                                    && editor.selectedTab?.file.id != id
-                                    && editor.selectedTab?.file.id != openedTabs[index + 1] {
-                                    EditorTabDivider()
-                                }
                             }
                         }
                     }
@@ -366,19 +354,6 @@ struct EditorTabs: View {
                     endPoint: .leading
                 )
                 .opacity((scrollTrailingOffset ?? 0) <= 0 ? 0 : 1)
-            }
-            .if(.tahoe) {
-                if #available(macOS 26.0, *) {
-                    // Unfortunate triple if here due to needing to compile on
-                    // earlier Xcodes.
-#if compiler(>=6.2)
-                    $0.background(GlassEffectView(tintColor: .tertiarySystemFill))
-                        .clipShape(Capsule())
-                        .clipped()
-#else
-                    $0
-#endif
-                }
             }
         }
     }

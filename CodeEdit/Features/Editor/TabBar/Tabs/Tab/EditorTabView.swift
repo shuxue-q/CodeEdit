@@ -80,13 +80,6 @@ struct EditorTabView: View {
         draggingTabId == tabFile.id
     }
 
-    /// Is the current tab being held (by click and hold, not drag).
-    ///
-    /// I use the name `inHoldingState` to avoid any confusion with `isPressing` and `isDragging`.
-    private var inHoldingState: Bool {
-        isPressing || isDragging
-    }
-
     /// Switch the active tab to current tab.
     private func switchAction() {
         // Only set the `selectedId` when they are not equal to avoid performance issue for now.
@@ -121,65 +114,50 @@ struct EditorTabView: View {
     }
 
     @ViewBuilder var content: some View {
-        HStack(spacing: 0.0) {
-
-            if #unavailable(macOS 26) {
-                EditorTabDivider()
-                    .opacity((isActive || inHoldingState) ? 0.0 : 1.0)
-            }
-            // Tab content (icon and text).
-            HStack(alignment: .center, spacing: 3) {
-                Image(nsImage: tabFile.nsIcon)
-                    .frame(width: 16, height: 16)
-                    .foregroundColor(
-                        fileIconStyle == .color
-                        && activeState != .inactive && isActiveEditor
-                        ? tabFile.iconColor
-                        : .secondary
-                    )
-                Text(tabFile.name)
-                    .font(
-                        isTemporary
-                        ? .system(size: 11.0).italic()
-                        : .system(size: 11.0)
-                    )
-                    .lineLimit(1)
-                    .strikethrough(fileObserver.isDeleted, color: .primary)
-            }
-            .frame(maxHeight: .infinity) // To max-out the parent (tab bar) area.
-            .accessibilityElement(children: .ignore)
-            .accessibilityAddTraits(.isStaticText)
-            .accessibilityLabel(tabFile.name)
-            .padding(.horizontal, 20)
-            .overlay {
-                ZStack {
-                    // Close Button with is file changed indicator
-                    EditorFileTabCloseButton(
-                        isActive: isActive,
-                        isHoveringTab: isHovering,
-                        isDragging: draggingTabId != nil || onDragTabId != nil,
-                        closeAction: closeAction,
-                        closeButtonGestureActive: $closeButtonGestureActive,
-                        item: tabFile,
-                        isHoveringClose: $isHoveringClose
-                    )
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .if(.tahoe) {
-                $0.padding(.horizontal, 1.5)
-            }
-            .opacity(
-                // Inactive states for tab bar item content.
-                activeState != .inactive
-                ? 1.0
-                : isActive ? 0.6 : 0.4
-            )
-            if #unavailable(macOS 26) {
-                EditorTabDivider()
-                    .opacity((isActive || inHoldingState) ? 0.0 : 1.0)
-            }
+        HStack(alignment: .center, spacing: 3) {
+            Image(nsImage: tabFile.nsIcon)
+                .frame(width: 16, height: 16)
+                .foregroundColor(
+                    fileIconStyle == .color
+                    && activeState != .inactive && isActiveEditor
+                    ? tabFile.iconColor
+                    : .secondary
+                )
+            Text(tabFile.name)
+                .font(
+                    isTemporary
+                    ? .system(size: 11.0).italic()
+                    : .system(size: 11.0)
+                )
+                .lineLimit(1)
+                .strikethrough(fileObserver.isDeleted, color: .primary)
         }
+        .frame(maxHeight: .infinity) // To max-out the parent (tab bar) area.
+        .accessibilityElement(children: .ignore)
+        .accessibilityAddTraits(.isStaticText)
+        .accessibilityLabel(tabFile.name)
+        .padding(.horizontal, 20)
+        .overlay {
+            ZStack {
+                // Close Button with is file changed indicator
+                EditorFileTabCloseButton(
+                    isActive: isActive,
+                    isHoveringTab: isHovering,
+                    isDragging: draggingTabId != nil || onDragTabId != nil,
+                    closeAction: closeAction,
+                    closeButtonGestureActive: $closeButtonGestureActive,
+                    item: tabFile,
+                    isHoveringClose: $isHoveringClose
+                )
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .opacity(
+            // Inactive states for tab bar item content.
+            activeState != .inactive
+            ? 1.0
+            : isActive ? 0.6 : 0.4
+        )
         .foregroundColor(
             isActive && isActiveEditor
             ? (
@@ -190,7 +168,7 @@ struct EditorTabView: View {
             : .primary
         )
         .frame(maxHeight: .infinity) // To vertically max-out the parent (tab bar) area.
-        .contentShape(Rectangle()) // Make entire area clickable.
+        .contentShape(Capsule()) // Make the capsule clickable.
         .onHover { hover in
             isHovering = hover
             DispatchQueue.main.async {
@@ -223,13 +201,15 @@ struct EditorTabView: View {
         // We don't use a button here so that accessibility isn't broken.
         content
             .background {
-                EditorTabBackground(isActive: isActive, isPressing: isPressing, isDragging: isDragging)
-                    .animation(.easeInOut(duration: 0.08), value: isHovering)
-            }
-            .if(.tahoe) {
-                if #available(macOS 26, *) {
-                    $0.clipShape(Capsule()).clipped().containerShape(Capsule())
-                }
+                EditorTabBackground(
+                    isActive: isActive,
+                    isPressing: isPressing,
+                    isDragging: isDragging,
+                    isHovering: isHovering
+                )
+                .padding(.vertical, 3)
+                .padding(.horizontal, 2)
+                .animation(.easeInOut(duration: 0.08), value: isHovering)
             }
             // TODO: Enable the following code snippet when dragging-out behavior should be allowed.
             // Since we didn't handle the drop-outside event, dragging-out is disabled for now.
