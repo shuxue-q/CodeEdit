@@ -52,7 +52,7 @@ extension SettingsData {
         }
 
         /// Show editor jump bar
-        var showEditorJumpBar: Bool = true
+        var showEditorJumpBar: Bool = false
 
         /// Dims editors without focus
         var dimEditorsWithoutFocus: Bool = false
@@ -118,7 +118,7 @@ extension SettingsData {
             self.showEditorJumpBar = try container.decodeIfPresent(
                 Bool.self,
                 forKey: .showEditorJumpBar
-            ) ?? true
+            ) ?? false
             self.dimEditorsWithoutFocus = try container.decodeIfPresent(
                 Bool.self,
                 forKey: .dimEditorsWithoutFocus

@@ -67,8 +67,34 @@ struct NavigateCommands: Commands {
                     editor?.goBackInHistory()
                 }
                 .disabled(!(editor?.canGoBackInHistory ?? false))
+
+                Divider()
+
+                Button("Jump to Next Issue") {
+                    jumpToIssue(next: true)
+                }
+                .keyboardShortcut("'", modifiers: [.control, .command])
+                .disabled(windowController?.workspace == nil)
+
+                Button("Jump to Previous Issue") {
+                    jumpToIssue(next: false)
+                }
+                .keyboardShortcut("'", modifiers: [.control, .command, .shift])
+                .disabled(windowController?.workspace == nil)
             }
             .disabled(editor == nil)
+        }
+    }
+
+    private func jumpToIssue(next: Bool) {
+        guard let workspace = windowController?.workspace,
+              let store = ServiceContainer.resolve(.singleton, LSPService.self)?.diagnosticsStore else {
+            return
+        }
+        if next {
+            WorkspaceDiagnostics.jumpToNextIssue(workspace: workspace, store: store)
+        } else {
+            WorkspaceDiagnostics.jumpToPreviousIssue(workspace: workspace, store: store)
         }
     }
 }
