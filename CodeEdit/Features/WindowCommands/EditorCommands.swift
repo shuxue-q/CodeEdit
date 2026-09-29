@@ -28,6 +28,43 @@ struct EditorCommands: Commands {
                 }
                 .keyboardShortcut("]", modifiers: [.command, .option])
             }
+
+            Button("Format Code") {
+                editor?.selectedTab?.rangeTranslator.formatCode()
+            }
+            .keyboardShortcut("i", modifiers: [.control])
+            .disabled(!canFormatActiveFile)
+
+            Divider()
+
+            Button("Show Markdown Source") {
+                editor?.selectedTab?.markdownPreview.mode = .source
+            }
+            .disabled(!activeFileIsMarkdown)
+
+            Button("Show Markdown Preview") {
+                editor?.selectedTab?.markdownPreview.mode = .preview
+            }
+            .disabled(!activeFileIsMarkdown)
+
+            Button("Show Markdown Source and Preview") {
+                editor?.selectedTab?.markdownPreview.mode = .split
+            }
+            .disabled(!activeFileIsMarkdown)
         }
+    }
+
+    private var activeFileIsMarkdown: Bool {
+        guard let tab = editor?.selectedTab else { return false }
+        if let document = tab.file.fileDocument {
+            return MarkdownPreview.isMarkdown(document)
+        }
+        return MarkdownPreview.isMarkdownURL(tab.file.url)
+    }
+
+    /// Format Code applies to languages clang-format understands, such as C and C++.
+    private var canFormatActiveFile: Bool {
+        guard let url = editor?.selectedTab?.file.url else { return false }
+        return ClangFormatLanguage.supports(url: url)
     }
 }

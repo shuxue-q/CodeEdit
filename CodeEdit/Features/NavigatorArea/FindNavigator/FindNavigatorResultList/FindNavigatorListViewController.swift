@@ -27,6 +27,7 @@ final class FindNavigatorListViewController: NSViewController {
     /// Setup the `scrollView` and `outlineView`
     override func loadView() {
         self.scrollView = NSScrollView()
+        self.scrollView.verticalScroller = NavigatorScroller()
         self.view = scrollView
 
         self.outlineView = NSOutlineView()

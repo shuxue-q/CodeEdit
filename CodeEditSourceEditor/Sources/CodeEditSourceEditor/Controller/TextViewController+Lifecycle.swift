@@ -153,6 +153,7 @@ extension TextViewController {
             self.gutterView.foldingRibbon.needsDisplay = true
             self.reformattingGuideView?.updatePosition(in: self)
             self.scrollView.needsLayout = true
+            self.updateSnippetPlaceholderLayers()
         }
     }
 
@@ -164,6 +165,7 @@ extension TextViewController {
         ) { [weak self] _ in
             self?.updateCursorPosition()
             self?.emphasizeSelectionPairs()
+            self?.updateSnippetSessionForSelectionChange()
         }
     }
 
@@ -295,6 +297,10 @@ extension TextViewController {
             findViewController?.hideFindPanel()
             return nil
         }
+        if isSnippetSessionActive && !SuggestionController.shared.isVisible {
+            endSnippetSession()
+            return nil
+        }
         return handleShowCompletions(event)
     }
 
@@ -313,6 +319,14 @@ extension TextViewController {
     /// - Returns: The original event if it should be passed on, or `nil` to indicate handling within the method.
     func handleTab(event: NSEvent, modifierFlags: UInt) -> NSEvent? {
         let shiftKey = NSEvent.ModifierFlags.shift.rawValue
+
+        // While a snippet is being filled in, Tab moves between its placeholders. An open
+        // suggestion window still gets Tab first, to accept the selected item.
+        if isSnippetSessionActive && !SuggestionController.shared.isVisible
+            && (modifierFlags == 0 || modifierFlags == shiftKey) {
+            moveToSnippetTabStop(backwards: modifierFlags == shiftKey)
+            return nil
+        }
 
         if modifierFlags == shiftKey {
             handleIndent(inwards: true)

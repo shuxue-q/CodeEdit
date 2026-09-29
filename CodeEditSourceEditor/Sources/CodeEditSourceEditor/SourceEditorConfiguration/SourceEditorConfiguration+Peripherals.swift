@@ -30,6 +30,14 @@ extension SourceEditorConfiguration {
 
         public var codeSuggestionTriggerCharacters: Set<String>
 
+        /// Shows each completion's type on the row and its header under the list.
+        ///
+        /// When this is false, that information stays in the documentation panel beside the list.
+        public var showInlineCompletionInfo: Bool
+
+        /// How many completion rows are visible before the list scrolls.
+        public var visibleCompletionCount: Int
+
         public init(
             showGutter: Bool = true,
             showMinimap: Bool = true,
@@ -37,7 +45,9 @@ extension SourceEditorConfiguration {
             showFoldingRibbon: Bool = true,
             invisibleCharactersConfiguration: InvisibleCharactersConfiguration = .empty,
             warningCharacters: Set<UInt16> = [],
-            codeSuggestionTriggerCharacters: Set<String> = []
+            codeSuggestionTriggerCharacters: Set<String> = [],
+            showInlineCompletionInfo: Bool = false,
+            visibleCompletionCount: Int = 5
         ) {
             self.showGutter = showGutter
             self.showMinimap = showMinimap
@@ -46,6 +56,8 @@ extension SourceEditorConfiguration {
             self.invisibleCharactersConfiguration = invisibleCharactersConfiguration
             self.warningCharacters = warningCharacters
             self.codeSuggestionTriggerCharacters = codeSuggestionTriggerCharacters
+            self.showInlineCompletionInfo = showInlineCompletionInfo
+            self.visibleCompletionCount = visibleCompletionCount
         }
 
         @MainActor
@@ -86,6 +98,11 @@ extension SourceEditorConfiguration {
 
             if oldConfig?.codeSuggestionTriggerCharacters != codeSuggestionTriggerCharacters {
                 controller.setUpTextFormation()
+            }
+
+            if oldConfig?.showInlineCompletionInfo != showInlineCompletionInfo
+                || oldConfig?.visibleCompletionCount != visibleCompletionCount {
+                SuggestionController.shared.applyConfiguration(from: controller)
             }
         }
     }

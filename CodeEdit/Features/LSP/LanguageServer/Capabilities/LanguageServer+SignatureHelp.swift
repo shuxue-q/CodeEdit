@@ -18,7 +18,7 @@ extension LanguageServer {
             )
             return try await lspInstance.signatureHelp(params)
         } catch {
-            logger.warning("requestInlayHint: Error \(error)")
+            logger.warning("requestSignatureHelp: Error \(error)")
             throw error
         }
     }

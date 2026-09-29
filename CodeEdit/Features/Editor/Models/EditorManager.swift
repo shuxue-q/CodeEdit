@@ -153,3 +153,25 @@ class EditorManager: ObservableObject {
         isFocusingActiveEditor.toggle()
     }
 }
+
+extension EditorManager: CEWorkspaceFileManagerObserver {
+    /// Closes tabs whose file no longer exists on disk, for example files deleted outside of CodeEdit.
+    ///
+    /// Tabs with unsaved changes are left open so no work is lost. They are shown with a struck-through
+    /// title by ``EditorTabFileObserver`` and can still be saved or closed manually.
+    ///
+    /// All open tabs are checked instead of only the updated items so that deletions of entire
+    /// folders are handled as well.
+    /// - Parameter updatedItems: The items that were updated.
+    func fileManagerUpdated(updatedItems: Set<CEWorkspaceFile>) {
+        for editor in getFlattened() {
+            // Collect the files first, closing a tab mutates `editor.tabs`.
+            let deletedFiles = editor.tabs
+                .map(\.file)
+                .filter { !$0.doesExist && $0.fileDocument?.isDocumentEdited != true }
+            for file in deletedFiles {
+                editor.closeTab(file: file)
+            }
+        }
+    }
+}

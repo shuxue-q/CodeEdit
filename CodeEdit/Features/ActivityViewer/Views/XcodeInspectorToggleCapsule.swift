@@ -45,7 +45,7 @@ private func inspectorCapsule(isOpen: Bool, action: @escaping () -> Void) -> som
             Image(systemName: "sidebar.trailing")
                 .font(.system(size: 17, weight: .regular))
                 .foregroundColor(isOpen ? .accentColor : .primary)
-                .toolbarPillFeedback(isSelected: isOpen, pillWidth: 33)
+                .toolbarCircleFeedback(isSelected: isOpen)
         }
         .buttonStyle(.plain)
         .help("Hide or show the Inspector")

@@ -18,6 +18,7 @@ excluded:
   - CodeEditModules/.build # Where Swift Package Manager checks out dependency sources
   - CodeEditLanguages # Vendored package with its own .swiftlint.yml
   - CodeEditSourceEditor # Vendored package with its own .swiftlint.yml
+  - CodeEditTextView # Vendored package with its own .swiftlint.yml
   - DerivedData
 
 opt_in_rules:

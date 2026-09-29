@@ -1,0 +1,126 @@
+{
+  "name": "tokyo-night-storm",
+  "displayName": "Tokyo Night Storm",
+  "description": "CodeEdit bundled theme.",
+  "author": "CodeEdit",
+  "version": "0.0.1",
+  "license": "MIT",
+  "distributionURL": "https://github.com/CodeEditApp/CodeEdit",
+  "type": "dark",
+  "editor": {
+    "background": {
+      "color": "#24283B"
+    },
+    "selection": {
+      "color": "#2E3C64"
+    },
+    "insertionPoint": {
+      "color": "#C0CAF5"
+    },
+    "lineHighlight": {
+      "color": "#292E42"
+    },
+    "invisibles": {
+      "color": "#3B4261"
+    },
+    "text": {
+      "color": "#C0CAF5"
+    },
+    "comments": {
+      "color": "#636DA6"
+    },
+    "strings": {
+      "color": "#9ECE6A"
+    },
+    "characters": {
+      "color": "#9ECE6A"
+    },
+    "numbers": {
+      "color": "#FF9E64"
+    },
+    "keywords": {
+      "color": "#BB9AF7",
+      "bold": false
+    },
+    "attributes": {
+      "color": "#73DACA"
+    },
+    "types": {
+      "color": "#2AC3DE"
+    },
+    "variables": {
+      "color": "#7DCFFF"
+    },
+    "commands": {
+      "color": "#7AA2F7"
+    },
+    "values": {
+      "color": "#E0AF68"
+    }
+  },
+  "terminal": {
+    "background": {
+      "color": "#24283B"
+    },
+    "selection": {
+      "color": "#2E3C64"
+    },
+    "cursor": {
+      "color": "#C0CAF5"
+    },
+    "text": {
+      "color": "#C0CAF5"
+    },
+    "boldText": {
+      "color": "#C0CAF5"
+    },
+    "black": {
+      "color": "#15161E"
+    },
+    "red": {
+      "color": "#F7768E"
+    },
+    "green": {
+      "color": "#9ECE6A"
+    },
+    "yellow": {
+      "color": "#E0AF68"
+    },
+    "blue": {
+      "color": "#7AA2F7"
+    },
+    "magenta": {
+      "color": "#BB9AF7"
+    },
+    "cyan": {
+      "color": "#7DCFFF"
+    },
+    "white": {
+      "color": "#A9B1D6"
+    },
+    "brightBlack": {
+      "color": "#414868"
+    },
+    "brightRed": {
+      "color": "#F7768E"
+    },
+    "brightGreen": {
+      "color": "#9ECE6A"
+    },
+    "brightYellow": {
+      "color": "#E0AF68"
+    },
+    "brightBlue": {
+      "color": "#7AA2F7"
+    },
+    "brightMagenta": {
+      "color": "#BB9AF7"
+    },
+    "brightCyan": {
+      "color": "#7DCFFF"
+    },
+    "brightWhite": {
+      "color": "#C0CAF5"
+    }
+  }
+}

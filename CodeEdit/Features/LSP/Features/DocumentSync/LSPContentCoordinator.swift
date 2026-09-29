@@ -30,6 +30,12 @@ class LSPContentCoordinator<DocumentType: LanguageServerDocument>: TextViewCoord
     private var pendingChanges: [SequenceElement] = []
     private var task: Task<Void, Never>?
     private var sendingTask: Task<Void, Error>?
+    /// Identifies the in-flight send so a newer batch is not cleared when an older one fails.
+    private var sendGeneration = 0
+    /// The in-flight semantic token refresh. Not awaited by ``flushPendingChanges()``.
+    private var highlightTask: Task<Void, Never>?
+    /// Set when edits are sent during a refresh, so one more refresh runs after it.
+    private var needsHighlightRefresh = false
 
     weak var languageServer: LanguageServer<DocumentType>?
     var documentURI: String?
@@ -71,14 +77,47 @@ class LSPContentCoordinator<DocumentType: LanguageServerDocument>: TextViewCoord
             }
             pendingChanges.removeAll()
             let previousTask = sendingTask
-            sendingTask = Task { @MainActor in
+            sendGeneration += 1
+            sendingTask = Task { @MainActor [weak self] in
                 // Keep incremental edits ordered even when another flush arrives during a send.
                 _ = try? await previousTask?.value
                 try Task.checkCancellation()
                 try await languageServer.documentChanged(uri: uri, changes: changes)
+                self?.scheduleHighlightRefresh(uri: uri)
             }
         }
-        try await sendingTask?.value
+        guard let currentTask = sendingTask else { return }
+        let awaitedGeneration = sendGeneration
+        do {
+            try await currentTask.value
+        } catch {
+            // A failed batch must not stay in `sendingTask`. Later flushes with nothing new would
+            // otherwise rethrow it, and completion would stay closed.
+            if sendGeneration == awaitedGeneration {
+                sendingTask = nil
+            }
+            throw error
+        }
+    }
+
+    /// Requests semantic tokens after edits were sent, without holding up completion.
+    ///
+    /// Only one token request runs at a time so deltas apply in order. Edits sent while it runs are
+    /// covered by a single follow-up request.
+    @MainActor
+    private func scheduleHighlightRefresh(uri: String) {
+        guard highlightTask == nil else {
+            needsHighlightRefresh = true
+            return
+        }
+        highlightTask = Task { @MainActor [weak self] in
+            while let self, let languageServer = self.languageServer, !Task.isCancelled {
+                self.needsHighlightRefresh = false
+                await languageServer.refreshHighlighting(uri: uri)
+                guard self.needsHighlightRefresh else { break }
+            }
+            self?.highlightTask = nil
+        }
     }
 
     func prepareCoordinator(controller: TextViewController) {
@@ -107,6 +146,9 @@ class LSPContentCoordinator<DocumentType: LanguageServerDocument>: TextViewCoord
         task = nil
         sendingTask?.cancel()
         sendingTask = nil
+        highlightTask?.cancel()
+        highlightTask = nil
+        needsHighlightRefresh = false
         pendingChanges.removeAll()
     }
 

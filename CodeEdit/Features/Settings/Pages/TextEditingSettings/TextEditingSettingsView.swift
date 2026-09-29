@@ -14,6 +14,8 @@ struct TextEditingSettingsView: View {
 
     @State private var isShowingInvisibleCharacterSettings = false
     @State private var isShowingWarningCharactersSettings = false
+    @State private var anthropicAPIKey: String = ""
+    private let keychain = CodeEditKeychain()
 
     var body: some View {
         SettingsForm {
@@ -29,6 +31,7 @@ struct TextEditingSettingsView: View {
                 showMinimap
                 showFoldingRibbon
                 reformatSettings
+                codeFormatStyle
             }
             Section {
                 fontSelector
@@ -40,6 +43,8 @@ struct TextEditingSettingsView: View {
             Section {
                 autocompleteBraces
                 enableTypeOverCompletion
+                showInlineCompletionInfo
+                visibleCompletionCount
             }
             Section {
                 bracketPairHighlight
@@ -48,11 +53,24 @@ struct TextEditingSettingsView: View {
                 invisibles
                 warningCharacters
             }
+            Section {
+                aiCompletionToggle
+                aiCompletionModel
+                aiCompletionAPIKey
+                aiCompletionNote
+            }
+        }
+        .onAppear {
+            anthropicAPIKey = keychain.get(
+                SettingsData.TextEditingSettings.AICompletionSettings.keychainKey
+            ) ?? ""
         }
     }
 }
 
 private extension TextEditingSettingsView {
+    private typealias CodeFormatStyle = SettingsData.TextEditingSettings.CodeFormatStyle
+
     @ViewBuilder private var fontSelector: some View {
         MonospacedFontPicker(title: "Font", selectedFontName: $textEditing.font.name)
     }
@@ -80,6 +98,27 @@ private extension TextEditingSettingsView {
 
     @ViewBuilder private var enableTypeOverCompletion: some View {
         Toggle("Enable type-over completion", isOn: $textEditing.enableTypeOverCompletion)
+    }
+
+    @ViewBuilder private var showInlineCompletionInfo: some View {
+        Toggle(isOn: $textEditing.showInlineCompletionInfo) {
+            Text("Show Completion Info Beside the Name")
+            Text("Shows the type on each row and the header at the bottom of the list.")
+        }
+    }
+
+    @ViewBuilder private var visibleCompletionCount: some View {
+        Stepper(
+            "Visible Completions",
+            value: Binding<Double>(
+                get: { Double(textEditing.visibleCompletionCount) },
+                set: { textEditing.visibleCompletionCount = Int($0.rounded()) }
+            ),
+            in: 1...20,
+            step: 1,
+            format: .number
+        )
+        .help("How many completions are shown before the list scrolls. Type a number or use the stepper.")
     }
 
     @ViewBuilder private var wrapLinesToEditorWidth: some View {
@@ -233,7 +272,7 @@ private extension TextEditingSettingsView {
 
     @ViewBuilder private var reformatSettings: some View {
         Toggle("Show Reformatting Guide", isOn: $textEditing.showReformattingGuide)
-            .help("Shows a vertical guide at the reformat column.")
+            .help("Shows a vertical guide at the reformat column. Lines can extend past it.")
 
         Stepper(
             "Reformat at Column",
@@ -245,7 +284,28 @@ private extension TextEditingSettingsView {
             step: 1,
             format: .number
         )
-        .help("The column at which text should be reformatted.")
+        .help("The column where the guide suggests a line break. It does not wrap the line.")
+    }
+
+    @ViewBuilder private var codeFormatStyle: some View {
+        Picker(selection: $textEditing.codeFormatStyle) {
+            Text("LLVM").tag(CodeFormatStyle.llvm)
+            Text("Google").tag(CodeFormatStyle.google)
+            Text("Chromium").tag(CodeFormatStyle.chromium)
+            Text("Mozilla").tag(CodeFormatStyle.mozilla)
+            Text("WebKit").tag(CodeFormatStyle.webKit)
+            Text("Microsoft").tag(CodeFormatStyle.microsoft)
+            Text("GNU").tag(CodeFormatStyle.gnu)
+            Divider()
+            Text("Custom").tag(CodeFormatStyle.custom)
+        } label: {
+            Text("Code Format")
+            Text("Custom reads the project's .clang-format file.")
+        }
+        .help(
+            "Built-in styles are passed to clang-format. " +
+            "Custom walks up from the open file and uses the nearest .clang-format or _clang-format file."
+        )
     }
 
     @ViewBuilder private var invisibles: some View {
@@ -269,6 +329,35 @@ private extension TextEditingSettingsView {
         .sheet(isPresented: $isShowingInvisibleCharacterSettings) {
             InvisiblesSettingsView(invisibleCharacters: $textEditing.invisibleCharacters)
         }
+    }
+
+    @ViewBuilder private var aiCompletionToggle: some View {
+        Toggle(isOn: $textEditing.aiCompletion.enabled) {
+            Text("AI Completions")
+            Text("Suggests completions using the Claude API.")
+        }
+    }
+
+    @ViewBuilder private var aiCompletionModel: some View {
+        TextField("Model", text: $textEditing.aiCompletion.model)
+            .disabled(!textEditing.aiCompletion.enabled)
+    }
+
+    @ViewBuilder private var aiCompletionAPIKey: some View {
+        SecureField("Anthropic API Key", text: $anthropicAPIKey)
+            .disabled(!textEditing.aiCompletion.enabled)
+            .onChange(of: anthropicAPIKey) { _, newValue in
+                if newValue.isEmpty {
+                    keychain.delete(SettingsData.TextEditingSettings.AICompletionSettings.keychainKey)
+                } else {
+                    keychain.set(newValue, forKey: SettingsData.TextEditingSettings.AICompletionSettings.keychainKey)
+                }
+            }
+    }
+
+    @ViewBuilder private var aiCompletionNote: some View {
+        Text("When enabled, the code surrounding your cursor is sent to Anthropic to generate suggestions.")
+            .foregroundColor(.secondary)
     }
 
     @ViewBuilder private var warningCharacters: some View {

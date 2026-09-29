@@ -31,7 +31,7 @@ struct ThemeSettingsThemeRow: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             if !active {
                 Button {
-                    themeModel.activateTheme(theme)
+                    themeModel.chooseTheme(theme)
                 } label: {
                     Text("Choose")
                 }

@@ -85,8 +85,9 @@ final class CodeFileDocument: NSDocument, ObservableObject {
     }
 
     /// Specify options for opening the file such as the initial cursor positions.
-    /// Nulled by ``CodeFileView`` on first load.
-    var openOptions: OpenOptions?
+    /// ``CodeFileView`` applies these on load and whenever they change afterwards,
+    /// then clears them.
+    @Published var openOptions: OpenOptions?
 
     private let isDocumentEditedSubject = PassthroughSubject<Bool, Never>()
 
@@ -200,22 +201,12 @@ final class CodeFileDocument: NSDocument, ObservableObject {
     /// Triggered when change occurred
     override func updateChangeCount(_ change: NSDocument.ChangeType) {
         super.updateChangeCount(change)
-
-        if CodeFileDocument.autosavesInPlace {
-            return
-        }
-
         self.isDocumentEditedSubject.send(self.isDocumentEdited)
     }
 
     /// Triggered when changes saved
     override func updateChangeCount(withToken changeCountToken: Any, for saveOperation: NSDocument.SaveOperationType) {
         super.updateChangeCount(withToken: changeCountToken, for: saveOperation)
-
-        if CodeFileDocument.autosavesInPlace {
-            return
-        }
-
         self.isDocumentEditedSubject.send(self.isDocumentEdited)
     }
 
@@ -344,6 +335,16 @@ extension CodeFileDocument: LanguageServerDocument {
     /// Needs to be a valid URI, so always returns with the `file://` prefix to indicate it's a file URI.
     var languageServerURI: String? {
         fileURL?.lspURI
+    }
+}
+
+extension CodeFileDocument {
+    /// Stops a pending autosave without writing the file.
+    func cancelScheduledAutosave() {
+        autosaveTimerLock.withLock {
+            autosaveTimer?.invalidate()
+            autosaveTimer = nil
+        }
     }
 }
 

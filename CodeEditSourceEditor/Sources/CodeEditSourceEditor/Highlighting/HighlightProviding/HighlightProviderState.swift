@@ -137,15 +137,18 @@ extension HighlightProviderState {
 
     func storageDidUpdate(range: NSRange, delta: Int) {
         guard let textView else { return }
+        // `range` is the range *before* the edit; the text now occupies `modifiedRange`.
+        let modifiedRange = NSRange(location: range.location, length: max(range.length + delta, 0))
         highlightProvider?.applyEdit(textView: textView, range: range, delta: delta) { [weak self] result in
             switch result {
             case .success(let invalidSet):
-                let modifiedRange = NSRange(location: range.location, length: range.length + delta)
                 // Make sure we add in the edited range too
                 self?.invalidate(invalidSet.union(IndexSet(integersIn: modifiedRange)))
             case .failure(let error):
                 if case HighlightProvidingError.operationCancelled = error {
-                    self?.invalidate(IndexSet(integersIn: range))
+                    // Invalidate the text that now exists, not the pre-edit range. A replacement that grows the
+                    // text (e.g. accepting a completion) would otherwise leave its tail with stale attributes.
+                    self?.invalidate(IndexSet(integersIn: modifiedRange).union(IndexSet(integersIn: range)))
                 } else {
                     self?.logger.error("Failed to apply edit. Query returned with error: \(error)")
                 }

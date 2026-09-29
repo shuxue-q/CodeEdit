@@ -21,6 +21,10 @@ struct SettingsView: View {
     @Environment(\.presentationMode)
     var presentationMode
 
+    /// A page requested from outside the settings scene (e.g. the toolbar's editor
+    /// options menu), applied to ``selectedPage`` when the view appears.
+    static var pendingPage: SettingsPage.Name?
+
     static var pages: [PageAndSettings] = [
         .init(
             SettingsPage(
@@ -120,6 +124,12 @@ struct SettingsView: View {
         }
 
         return SettingsSearchResult(pageFound: foundPage, pages: returnedPages)
+    }
+
+    /// Selects the sidebar page matching the given page name, if it exists.
+    private func selectPage(_ name: SettingsPage.Name) {
+        guard let match = Self.pages.first(where: { $0.page.name == name }) else { return }
+        selectedPage = match.page
     }
 
     /// Gets search results from a settings page and an array of settings
@@ -246,7 +256,25 @@ struct SettingsView: View {
         .onDisappear {
             model.removeKeyDownMonitor()
         }
+        .onAppear {
+            if let pendingPage = Self.pendingPage {
+                selectPage(pendingPage)
+                Self.pendingPage = nil
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .openSettingsPage)) { notification in
+            Self.pendingPage = nil
+            if let pageName = notification.object as? SettingsPage.Name {
+                selectPage(pageName)
+            }
+        }
     }
+}
+
+extension Notification.Name {
+    /// Requests an already-open Settings window to select a specific page.
+    /// The notification's `object` is the ``SettingsPage/Name`` to select.
+    static let openSettingsPage = Notification.Name("OpenSettingsPage")
 }
 
 class SettingsViewModel: ObservableObject {

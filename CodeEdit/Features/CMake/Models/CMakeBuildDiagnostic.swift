@@ -12,9 +12,9 @@ import Foundation
 /// Instances are produced by ``CMakeBuildOutputParser`` and consumed by the problems panel.
 /// `filePath` is kept exactly as printed by the compiler; it may be relative to the build or
 /// source directory and is resolved when the user clicks an entry.
-struct CMakeBuildDiagnostic: Identifiable, Hashable, Sendable {
+struct CMakeBuildDiagnostic: Identifiable, Hashable, Sendable, Codable {
     /// The kind of message, ordered by importance for sorting and counts.
-    enum Severity: String, Hashable, Sendable, Comparable {
+    enum Severity: String, Hashable, Sendable, Comparable, Codable {
         case error
         case warning
         case note

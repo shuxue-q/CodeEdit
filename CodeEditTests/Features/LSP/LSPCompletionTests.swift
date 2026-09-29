@@ -133,26 +133,34 @@ final class LSPCompletionTests: XCTestCase {
     }
 
     @MainActor
-    private func checkMemberCompletion(language: CodeLanguage, declaration: String) async throws {
+    private struct MemberCompletionFixture {
+        let directory: URL
+        let file: URL
+        let client: LSPService.LanguageServerType
+        let key: LSPService.ClientKey
+        let document: CodeFileDocument
+        let editor: TextViewController
+        let offset: Int
+    }
+
+    @MainActor
+    private func makeMemberCompletionFixture(
+        language: CodeLanguage, declaration: String
+    ) async throws -> MemberCompletionFixture? {
         let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: directory) }
         let source = "struct Point { int x; int y; };\nint main() {\n    \(declaration)\n    point\n}\n"
         let file = directory.appending(path: "main.\(language.id.rawValue)")
         try source.write(to: file, atomically: true, encoding: .utf8)
         let configs = await Task.detached { LanguageServerDetector.detectServers() }.value
         let languageId = try XCTUnwrap(language.lspLanguageId)
-        guard let binary = configs[languageId] else { throw XCTSkip("clangd is not installed") }
+        guard let binary = configs[languageId] else { return nil }
         let service = try XCTUnwrap(ServiceContainer.resolve(.singleton, LSPService.self))
         let client = try await LSPService.LanguageServerType.createServer(
             for: languageId, with: binary, workspacePath: directory.path
         )
         let key = LSPService.ClientKey(languageId, directory.path)
         service.languageClients[key] = client
-        defer {
-            service.languageClients[key] = nil
-            Task { try? await client.shutdown() }
-        }
         let document = try CodeFileDocument(for: file, withContentsOf: file, ofType: "public.source-code")
         try await client.openDocument(document)
         let editor = makeEditor(
@@ -162,20 +170,49 @@ final class LSPCompletionTests: XCTestCase {
         )
         editor.textView.setTextStorage(try XCTUnwrap(document.content))
         let offset = (source as NSString).range(of: "point\n").location + "point".utf16.count
-        editor.textView.replaceCharacters(in: NSRange(location: offset, length: 0), with: ".")
-        let delegate = LSPCompletionDelegate(document: document)
-        // Do not wait for the regular document-sync timer: completion must include this edit.
-        let result = await delegate.completionSuggestionsRequested(
-            textView: editor, cursorPosition: CursorPosition(range: NSRange(location: offset + 1, length: 0))
+        return MemberCompletionFixture(
+            directory: directory, file: file, client: client, key: key, document: document,
+            editor: editor, offset: offset
         )
-        let labels = result?.items.map { $0.label.trimmingCharacters(in: .whitespaces) } ?? []
+    }
+
+    @MainActor
+    private func checkMemberCompletion(language: CodeLanguage, declaration: String) async throws {
+        guard let fixture = try await makeMemberCompletionFixture(language: language, declaration: declaration) else {
+            throw XCTSkip("clangd is not installed")
+        }
+        let service = try XCTUnwrap(ServiceContainer.resolve(.singleton, LSPService.self))
+        defer {
+            service.languageClients[fixture.key] = nil
+            let client = fixture.client
+            Task { try? await client.shutdown() }
+            try? FileManager.default.removeItem(at: fixture.directory)
+        }
+        let (document, editor, client, file, offset) = (
+            fixture.document, fixture.editor, fixture.client, fixture.file, fixture.offset
+        )
+        let languageId = try XCTUnwrap(language.lspLanguageId)
+        editor.textView.replaceCharacters(in: NSRange(location: offset, length: 0), with: ".")
+        let provider = LSPCompletionProvider(document: document)
+        // Do not wait for the regular document-sync timer: completion must include this edit.
+        let context = CompletionContext(
+            prefix: "",
+            prefixRange: NSRange(location: offset + 1, length: 0),
+            triggerCharacter: ".",
+            syntax: .memberAccess,
+            languageId: languageId,
+            documentText: editor.text,
+            cursorOffset: offset + 1
+        )
+        let result = await provider.candidates(for: context, textView: editor)
+        let labels = result.map { $0.label.trimmingCharacters(in: .whitespaces) }
         XCTAssertTrue(labels.contains("x") && labels.contains("y"), "Expected Point members, got \(labels)")
         editor.textView.replaceCharacters(in: NSRange(location: offset + 1, length: 0), with: "y")
         let cursor = CursorPosition(range: NSRange(location: offset + 2, length: 0))
-        let filtered = try XCTUnwrap(delegate.completionOnCursorMove(textView: editor, cursorPosition: cursor))
+        let filtered = CompletionRanker.rank(result, prefix: "y", syntax: .memberAccess)
         XCTAssertEqual(filtered.map { $0.label.trimmingCharacters(in: .whitespaces) }, ["y"])
-        delegate.completionWindowApplyCompletion(
-            item: try XCTUnwrap(filtered.first), textView: editor, cursorPosition: cursor
+        provider.apply(
+            try XCTUnwrap(filtered.first), textView: editor, cursorPosition: cursor
         )
         XCTAssertTrue(editor.text.contains("point.y\n"), "Completion must replace the typed prefix: \(editor.text)")
         document.languageServerObjects.textCoordinator.destroy()
@@ -199,6 +236,22 @@ extension LSPCompletionTests {
                 NSImage(systemSymbolName: name, accessibilityDescription: nil),
                 "Missing SF Symbol for \(category): \(name)"
             )
+        }
+    }
+
+    @MainActor
+    func testCompletionAssetIconsExist() {
+        let categories: [LSPCompletionCategory] = [
+            .function, .variable, .class, .struct, .interface, .enum, .enumMember,
+            .macro, .namespace, .typeAlias, .keyword, .snippet, .file, .folder,
+            .text, .color, .reference, .event, .other
+        ]
+        for category in categories {
+            let name = LSPCompletionEntry.assetName(for: category)
+            XCTAssertNotNil(NSImage(named: name), "Missing completion asset for \(category): \(name)")
+        }
+        for name in ["LSP-provider", "tree-sitter-ast-provider", "AI-provider"] {
+            XCTAssertNotNil(NSImage(named: name), "Missing provider asset: \(name)")
         }
     }
 

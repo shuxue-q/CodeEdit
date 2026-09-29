@@ -11,6 +11,17 @@ import CodeEditTextViewObjC
 
 public protocol GutterViewDelegate: AnyObject {
     func gutterViewWidthDidUpdate()
+
+    /// Called when the user clicks a line in the gutter, e.g. to toggle a breakpoint.
+    /// - Parameters:
+    ///   - gutterView: The gutter view that was clicked.
+    ///   - line: The 0-based index of the clicked line.
+    func gutterView(_ gutterView: GutterView, didClickLine line: Int)
+}
+
+public extension GutterViewDelegate {
+    /// Default empty implementation.
+    func gutterView(_ gutterView: GutterView, didClickLine line: Int) { }
 }
 
 /// The gutter view displays line numbers that match the text view's line indexes.
@@ -81,13 +92,29 @@ public class GutterView: NSView {
         }
     }
 
-    private weak var textView: TextView?
-    private weak var delegate: GutterViewDelegate?
+    /// The width of the leading lane used for breakpoint markers.
+    @Invalidating(.display)
+    public var breakpointLaneWidth: CGFloat = 16
+
+    /// The 0-based line indexes that have a breakpoint. Set by the host app to draw breakpoint markers.
+    public var breakpointLines: Set<Int> = [] {
+        didSet { needsDisplay = true }
+    }
+
+    /// The 0-based line index of the current debug execution position, if any.
+    ///
+    /// When this matches a line in ``breakpointLines``, a green arrow is drawn instead of the blue breakpoint arrow.
+    public var currentDebugLine: Int? {
+        didSet { needsDisplay = true }
+    }
+
+    weak var textView: TextView?
+    weak var delegate: GutterViewDelegate?
     private var maxLineNumberWidth: CGFloat = 0
     /// The maximum number of digits found for a line number.
     private var maxLineLength: Int = 0
 
-    private var fontLineHeight = 1.0
+    var fontLineHeight = 1.0
 
     private func updateFontLineHeight() {
         let string = NSAttributedString(string: "0", attributes: [.font: font])
@@ -204,7 +231,7 @@ public class GutterView: NSView {
             maxLineLength = lineStorageDigits
         }
 
-        let newWidth = maxLineNumberWidth + edgeInsets.horizontal + foldingRibbonWidth
+        let newWidth = maxLineNumberWidth + edgeInsets.horizontal + foldingRibbonWidth + breakpointLaneWidth
         if frame.size.width != newWidth {
             frame.size.width = newWidth
             delegate?.gutterViewWidthDidUpdate()
@@ -302,8 +329,8 @@ public class GutterView: NSView {
             let fontHeightDifference = ((fragment?.height ?? 0) - fontLineHeight) / 4
 
             let yPos = linePosition.yPos + ascent + (fragment?.heightDifference ?? 0)/2 + fontHeightDifference
-            // Leading padding + (width - linewidth)
-            let xPos = edgeInsets.leading + (maxLineNumberWidth - lineNumberWidth)
+            // Breakpoint lane + leading padding + (width - linewidth)
+            let xPos = breakpointLaneWidth + edgeInsets.leading + (maxLineNumberWidth - lineNumberWidth)
 
             ContextSetHiddenSmoothingStyle(context, 16)
 
@@ -326,8 +353,18 @@ public class GutterView: NSView {
         context.saveGState()
         drawBackground(context, dirtyRect: dirtyRect)
         drawSelectedLines(context)
+        drawBreakpoints(context, dirtyRect: dirtyRect)
         drawLineNumbers(context, dirtyRect: dirtyRect)
         context.restoreGState()
+    }
+
+    override public func resetCursorRects() {
+        // Use an arrow cursor in the gutter, not an I-beam.
+        addCursorRect(bounds, cursor: .arrow)
+    }
+
+    override public func mouseDown(with event: NSEvent) {
+        handleGutterClick(event)
     }
 
     deinit {

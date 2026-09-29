@@ -14,6 +14,7 @@ extension WorkspacePanelTabBar {
         let size: CGSize
 
         var position: SettingsData.SidebarTabBarPosition
+        var width: CGFloat?
 
         @Binding var selection: Tab?
 
@@ -41,6 +42,8 @@ extension WorkspacePanelTabBar {
             // We still use the NSImage init to check if a symbol with the name exists.
             if NSImage(systemSymbolName: named, accessibilityDescription: nil) != nil {
                 return Image(systemName: named)
+            } else if let image = NSImage(named: named) {
+                return Image(nsImage: image)
             } else {
                 return Image(symbol: named)
             }
@@ -50,7 +53,7 @@ extension WorkspacePanelTabBar {
             .icon(
                 isActive: tab == selection,
                 size: CGSize(
-                    width: position == .side ? 24 : 42,
+                    width: width ?? (position == .side ? 24 : 42),
                     height: position == .side ? 40 : size.height
                 )
             )

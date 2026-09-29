@@ -68,12 +68,12 @@ struct XcodeProjectInfoView: View {
             VStack(alignment: .leading, spacing: 0) {
                 Text(projectName)
                     .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
                     .lineLimit(1)
 
                 statusLabel
                     .font(.system(size: 12, weight: .regular))
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
             // Toolbar items are measured by AppKit before the first SwiftUI

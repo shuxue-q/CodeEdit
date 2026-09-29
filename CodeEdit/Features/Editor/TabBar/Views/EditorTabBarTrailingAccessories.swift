@@ -32,6 +32,11 @@ struct EditorTabBarTrailingAccessories: View {
 
     var body: some View {
         HStack(spacing: 6) {
+            if let codeFile, let tab = editor.selectedTab, MarkdownPreview.isMarkdown(codeFile) {
+                MarkdownPreviewModeControl(model: tab.markdownPreview)
+                Divider()
+                    .padding(.vertical, 10)
+            }
             // Once more options are implemented that are available for non-code documents, remove this if statement
             if let codeFile {
                 editorOptionsMenu(codeFile: codeFile)

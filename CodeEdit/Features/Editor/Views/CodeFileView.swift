@@ -22,9 +22,27 @@ struct CodeFileView: View {
     /// Shows language-server documentation when hovering over symbols.
     @State private var hoverCoordinator: LSPHoverCoordinator
 
+    /// Shows parameter hints while filling in a call's arguments.
+    @State private var signatureHelpCoordinator: LSPSignatureHelpCoordinator
+
+    /// Resolves language-server definition locations for jump-to-definition actions.
+    @State private var jumpToDefinitionDelegate: LSPJumpToDefinitionDelegate
+
+    /// Synchronizes gutter breakpoint markers and the current debug line for this file.
+    @State private var breakpointCoordinator: BreakpointCoordinator
+
+    /// Handles editor context-menu actions, including Format Code.
+    ///
+    /// The source editor keeps this delegate weakly, so the view owns it.
+    @State private var contextMenuDelegate: CodeFileContextMenuDelegate
+
     /// Any coordinators passed to the view.
     private var textViewCoordinators: [TextViewCoordinator]
-    private var highlightProviders: [any HighlightProviding] = []
+    /// Highlight providers given to the source editor. Computed so the same provider instances are reused across
+    /// view updates. Storing new instances per-update causes the editor to reset highlighting on every update.
+    private var highlightProviders: [any HighlightProviding] {
+        [codeFile.languageServerObjects.highlightProvider, treeSitterClient]
+    }
 
     @AppSettings(\.textEditing.defaultTabWidth)
     var defaultTabWidth
@@ -62,6 +80,10 @@ struct CodeFileView: View {
     var invisibleCharactersConfiguration
     @AppSettings(\.textEditing.warningCharacters)
     var warningCharacters
+    @AppSettings(\.textEditing.showInlineCompletionInfo)
+    var showInlineCompletionInfo
+    @AppSettings(\.textEditing.visibleCompletionCount)
+    var visibleCompletionCount
 
     @Environment(\.colorScheme)
     private var colorScheme
@@ -85,6 +107,14 @@ struct CodeFileView: View {
 
         let hoverCoordinator = LSPHoverCoordinator(document: codeFile)
         self._hoverCoordinator = State(initialValue: hoverCoordinator)
+        let signatureHelpCoordinator = LSPSignatureHelpCoordinator(document: codeFile)
+        self._signatureHelpCoordinator = State(initialValue: signatureHelpCoordinator)
+        self._jumpToDefinitionDelegate = State(initialValue: LSPJumpToDefinitionDelegate(document: codeFile))
+        let breakpointCoordinator = BreakpointCoordinator(fileURL: codeFile.fileURL)
+        self._breakpointCoordinator = State(initialValue: breakpointCoordinator)
+        self._contextMenuDelegate = State(
+            initialValue: CodeFileContextMenuDelegate(codeFile: codeFile, editorInstance: editorInstance)
+        )
 
         let treeSitterClient = TreeSitterClient()
         self._treeSitterClient = State(initialValue: treeSitterClient)
@@ -94,17 +124,23 @@ struct CodeFileView: View {
             + [codeFile.contentCoordinator]
             + [codeFile.languageServerObjects.textCoordinator]
             + [hoverCoordinator]
+            + [signatureHelpCoordinator]
+            + [breakpointCoordinator]
         self.isEditable = isEditable
 
-        if let openOptions = codeFile.openOptions {
-            codeFile.openOptions = nil
-            editorInstance.cursorPositions = openOptions.cursorPositions
-        }
-
-        highlightProviders = [codeFile.languageServerObjects.highlightProvider] + [treeSitterClient]
+        codeFile.$openOptions
+            .sink { [weak codeFile] options in
+                guard let options else { return }
+                editorInstance.cursorPositions = options.cursorPositions
+                codeFile?.openOptions = nil
+            }
+            .store(in: &cancellables)
 
         if codeFile.languageServerObjects.completionDelegate == nil {
-            codeFile.languageServerObjects.completionDelegate = LSPCompletionDelegate(document: codeFile)
+            codeFile.languageServerObjects.completionDelegate = CompletionAggregator(
+                document: codeFile,
+                treeSitterClient: treeSitterClient
+            )
         }
 
         codeFile
@@ -163,7 +199,9 @@ struct CodeFileView: View {
                     showFoldingRibbon: showFoldingRibbon,
                     invisibleCharactersConfiguration: invisibleCharactersConfiguration.textViewOption(),
                     warningCharacters: Set(warningCharacters.characters.keys),
-                    codeSuggestionTriggerCharacters: codeSuggestionTriggerCharacters
+                    codeSuggestionTriggerCharacters: codeSuggestionTriggerCharacters,
+                    showInlineCompletionInfo: showInlineCompletionInfo,
+                    visibleCompletionCount: visibleCompletionCount
                 )
             ),
             state: Binding(
@@ -188,6 +226,7 @@ struct CodeFileView: View {
             undoManager: undoRegistration.manager(forFile: editorInstance.file),
             coordinators: textViewCoordinators,
             completionDelegate: codeFile.languageServerObjects.completionDelegate,
+            jumpToDefinitionDelegate: jumpToDefinitionDelegate,
             fileURL: codeFile.fileURL ?? editorInstance.file.url,
             contextMenuDelegate: contextMenuDelegate
         )
@@ -238,9 +277,6 @@ struct CodeFileView: View {
         }
     }
 
-    private var contextMenuDelegate: CodeFileContextMenuDelegate {
-        CodeFileContextMenuDelegate(codeFile: codeFile, editorInstance: editorInstance)
-    }
 }
 
 // This extension is kept here because it should not be used elsewhere in the app and may cause confusion
@@ -280,6 +316,8 @@ private extension SettingsData.TextEditingSettings.InvisibleCharactersConfig {
 final class CodeFileContextMenuDelegate: SourceEditorContextMenuDelegate {
     weak var codeFile: CodeFileDocument?
     weak var editorInstance: EditorInstance?
+    /// True while clang-format is running, so a second request does not start.
+    var isFormattingCode = false
 
     init(codeFile: CodeFileDocument?, editorInstance: EditorInstance?) {
         self.codeFile = codeFile

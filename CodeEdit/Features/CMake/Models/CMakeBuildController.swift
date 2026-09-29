@@ -43,6 +43,14 @@ final class CMakeBuildController {
     /// A short human-readable description of what the builder is doing, shown next to the problems tab.
     private(set) var statusText = ""
 
+    /// When the most recent build started; used to compute report durations.
+    private(set) var lastBuildStartDate: Date?
+
+    /// Raw combined stdout/stderr of the most recent build, truncated to the last
+    /// ``logCharacterLimit`` characters. Streamed live to the problems panel while building
+    /// and kept for report details afterwards.
+    private(set) var lastBuildLog = ""
+
     /// Invoked on the main actor when a build finishes; the argument is `true` on success.
     var onBuildFinished: ((Bool) -> Void)?
 
@@ -58,6 +66,10 @@ final class CMakeBuildController {
         subsystem: Bundle.main.bundleIdentifier ?? "",
         category: "CMakeBuildController"
     )
+
+    /// Maximum number of characters retained in ``lastBuildLog``; older output is dropped
+    /// from the front.
+    private static let logCharacterLimit = 200_000
 
     private let sourceDirectory: URL
     private let workspace: CMakeWorkspace
@@ -135,6 +147,8 @@ final class CMakeBuildController {
         diagnostics = []
         outcome = .none
         isBuilding = true
+        lastBuildStartDate = Date()
+        lastBuildLog = ""
 
         let configurePreset = workspace.configurePreset
         let buildPreset = workspace.buildPreset
@@ -287,6 +301,15 @@ extension CMakeBuildController {
         ]
     }
 
+    /// Appends streamed process output to ``lastBuildLog``, keeping only the last
+    /// ``logCharacterLimit`` characters.
+    private func appendLog(_ chunk: String) {
+        lastBuildLog += chunk
+        if lastBuildLog.count > Self.logCharacterLimit {
+            lastBuildLog = String(lastBuildLog.suffix(Self.logCharacterLimit))
+        }
+    }
+
     /// Launches a process whose combined output is parsed for diagnostics, then calls
     /// `completion` on the main actor with its exit code.
     private func runProcess(
@@ -314,6 +337,7 @@ extension CMakeBuildController {
             let chunk = String(data: data, encoding: .utf8) ?? ""
             Task { @MainActor in
                 guard let self, self.generation == generation else { return }
+                self.appendLog(chunk)
                 let found = self.parser.feed(chunk)
                 if !found.isEmpty {
                     self.diagnostics.append(contentsOf: found)

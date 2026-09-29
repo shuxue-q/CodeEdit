@@ -42,12 +42,12 @@ struct XcodeSchemeDestinationCapsule: View {
 
                 Text(schemeName)
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
                     .lineLimit(1)
 
                 Image(systemName: "chevron.right")
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
 
                 Rectangle()
                     .fill(Color.primary.opacity(0.15))
@@ -57,7 +57,7 @@ struct XcodeSchemeDestinationCapsule: View {
 
                 Text("My Mac")
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
                     .lineLimit(1)
             }
             .contentShape(Capsule())
@@ -136,7 +136,7 @@ struct XcodeSchemeDestinationCapsule: View {
         } else if workspace?.cmakeWorkspace == nil {
             Text("No Tasks Configured")
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .padding(.horizontal, 6)
         }
     }
@@ -145,7 +145,7 @@ struct XcodeSchemeDestinationCapsule: View {
         if let cmake = workspace?.cmakeWorkspace, let project = cmake.project, !project.configurePresets.isEmpty {
             Text("CMake Presets")
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .padding(.horizontal, 6)
                 .padding(.top, 2)
             ForEach(project.configurePresets, id: \.id) { preset in

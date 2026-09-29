@@ -19,7 +19,9 @@ struct NavigatorAreaView: View {
         self.workspace = workspace
         self.viewModel = viewModel
 
-        viewModel.tabItems = [.project, .sourceControl, .search] +
+        viewModel.tabItems = [
+            .project, .sourceControl, .bookmarks, .search, .issues, .tests, .debug, .breakpoints, .reports
+        ] +
             extensionManager
                 .extensions
                 .map { ext in
@@ -51,6 +53,8 @@ struct NavigatorAreaView: View {
             }
         )
         .listStyle(.inset)
+        .scrollContentBackground(.hidden)
+        .themedChrome(.sidebar, fallback: .sidebar)
         .environmentObject(workspace)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("navigator")

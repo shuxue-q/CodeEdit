@@ -63,11 +63,9 @@ extension LineFoldRibbonView {
 
     /// Generates drawable fold info for a range of text.
     ///
-    /// The fold storage intentionally does not store the full ranges of all folds at each interval. We may, for an
-    /// interval, find that we only receive fold information for depths > 1. In this case, we still need to draw those
-    /// layers of color to create the illusion that those folds are continuous under the nested folds. To achieve this,
-    /// we create 'fake' folds that span more than the queried text range. When returned for drawing, the drawing
-    /// methods will draw those extra folds normally.
+    /// AppKit often asks for only part of the ribbon, such as the strip a scroll exposes, so the result must not depend
+    /// on how much text the range covers. It includes every fold that is drawn on the range's lines, including folds
+    /// that enclose the whole range, so each partial redraw paints exactly what a full redraw paints there.
     ///
     /// - Parameters:
     ///   - textRange: The range of characters in text to create drawing fold info for.
@@ -77,23 +75,10 @@ extension LineFoldRibbonView {
         forTextRange textRange: Range<Int>,
         layoutManager: TextLayoutManager
     ) -> [DrawingFoldInfo] {
-        var folds = model?.getFolds(in: textRange) ?? []
-
-        // Add in some fake depths, we can draw these underneath the rest of the folds to make it look like it's
-        // continuous
-        if let minimumDepth = folds.min(by: { $0.depth < $1.depth })?.depth {
-            for depth in (1..<minimumDepth).reversed() {
-                folds.insert(
-                    FoldRange(
-                        id: .max,
-                        depth: depth,
-                        range: (textRange.lowerBound)..<(textRange.upperBound + 1),
-                        isCollapsed: false
-                    ),
-                    at: 0
-                )
-            }
-        }
+        // A fold that ends at the first column of the range's first line is still drawn on that line, so start the
+        // query one character early to include it.
+        let queryRange = max(textRange.lowerBound - 1, 0)..<textRange.upperBound
+        let folds = model?.foldCache.folds(overlapping: queryRange) ?? []
 
         return folds.compactMap { fold in
             guard let startLine = layoutManager.textLineForOffset(fold.range.lowerBound),

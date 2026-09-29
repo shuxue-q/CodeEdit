@@ -9,10 +9,13 @@ import SwiftUI
 import LanguageServerProtocol
 import CodeEditSourceEditor
 
-/// Last jump-bar crumb: the symbol enclosing the cursor, or "No Selection".
+/// Symbol crumbs after the file path. The last crumb is the variable under the cursor when there is one,
+/// and the crumb before that is the enclosing function.
 struct EditorJumpBarSymbolComponent: View {
     @ObservedObject var model: EditorJumpBarSymbolModel
     @ObservedObject var editorInstance: EditorInstance
+
+    @ObservedObject private var themeModel: ThemeModel = .shared
 
     @Environment(\.controlActiveState)
     private var activeState
@@ -21,39 +24,13 @@ struct EditorJumpBarSymbolComponent: View {
     private var isActiveEditor
 
     var body: some View {
-        Menu {
-            if model.symbols.isEmpty {
-                Button("No Selection") {}
-                    .disabled(true)
-            } else {
-                ForEach(model.symbols) { symbol in
-                    Button {
-                        select(symbol)
-                    } label: {
-                        HStack {
-                            Image(systemName: iconName(for: symbol.kind))
-                            Text(menuTitle(for: symbol))
-                        }
-                    }
+        HStack(spacing: 0) {
+            ForEach(model.pathSegments) { segment in
+                JumpBarPathCrumb(segment: segment, labelColor: labelColor) { item in
+                    select(item)
                 }
             }
-        } label: {
-            HStack(spacing: 4) {
-                Image(systemName: "chevron.compact.right")
-                    .font(.system(size: 9, weight: .medium))
-                    .foregroundStyle(.secondary)
-                    .scaleEffect(x: 1.30, y: 1.0, anchor: .center)
-                Text(model.enclosingSymbol?.name ?? "No Selection")
-                    .font(.system(size: 11, weight: .regular))
-                    .foregroundColor(labelColor)
-                    .lineLimit(1)
-            }
-            .frame(maxHeight: .infinity)
         }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .disabled(model.symbols.isEmpty)
-        .help("Current Symbol")
         .onAppear {
             model.cursorMoved(editorInstance.cursorPositions.first)
         }
@@ -66,38 +43,76 @@ struct EditorJumpBarSymbolComponent: View {
         if activeState == .inactive {
             return SwiftUI.Color(nsColor: .tertiaryLabelColor)
         }
-        return isActiveEditor ? .primary : .secondary
+        let palette = themeModel.activeChrome
+        if isActiveEditor { return palette?.text ?? .primary }
+        return palette?.textSecondary ?? .secondary
     }
 
-    private func menuTitle(for symbol: JumpBarSymbol) -> String {
-        String(repeating: "  ", count: symbol.depth) + symbol.name
-    }
-
-    private func select(_ symbol: JumpBarSymbol) {
+    private func select(_ item: JumpBarPathSegment.Item) {
         editorInstance.cursorPositions = [
-            CursorPosition(line: symbol.line, column: symbol.column)
+            CursorPosition(line: item.line, column: item.column)
         ]
         model.cursorMoved(editorInstance.cursorPositions.first)
     }
+}
 
-    private func iconName(for kind: SymbolKind) -> String {
-        switch kind {
-        case .function, .method, .constructor:
-            return "f.square"
-        case .class, .interface:
-            return "c.square"
-        case .struct:
-            return "s.square"
-        case .enum:
-            return "e.square"
-        case .variable, .property, .field:
-            return "v.square"
-        case .constant:
-            return "k.square"
-        case .namespace, .module, .package:
-            return "shippingbox"
-        default:
-            return "curlybraces"
+/// One clickable path crumb. The menu lists siblings at the same level.
+private struct JumpBarPathCrumb: View {
+    let segment: JumpBarPathSegment
+    let labelColor: SwiftUI.Color
+    let select: (JumpBarPathSegment.Item) -> Void
+
+    var body: some View {
+        Menu {
+            if segment.items.isEmpty {
+                Button(segment.title) {}
+                    .disabled(true)
+            } else {
+                ForEach(segment.items) { item in
+                    Button {
+                        select(item)
+                    } label: {
+                        Label(item.title, systemImage: item.systemImage)
+                    }
+                }
+            }
+        } label: {
+            label
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize(horizontal: true, vertical: false)
+        .disabled(segment.items.isEmpty)
+        .help(help)
+    }
+
+    private var label: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "chevron.compact.right")
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(.secondary)
+                .scaleEffect(x: 1.30, y: 1.0, anchor: .center)
+            Image(systemName: segment.systemImage)
+                .font(.system(size: 10, weight: .regular))
+                .foregroundStyle(labelColor)
+            Text(segment.title)
+                .font(.system(size: 11, weight: .regular))
+                .foregroundStyle(labelColor)
+                .lineLimit(1)
+        }
+        .frame(maxHeight: .infinity)
+    }
+
+    private var help: String {
+        switch segment.role {
+        case .function:
+            return "Functions"
+        case .variable:
+            return "Variables"
+        case .scope:
+            return "Symbols"
+        case .placeholder:
+            return "No Selection"
         }
     }
 }

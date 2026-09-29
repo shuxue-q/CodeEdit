@@ -14,6 +14,7 @@ import OSLog
 final class Editor: ObservableObject, Identifiable {
     enum EditorError: Error {
         case noWorkspaceAttached
+        case fileDoesNotExist
     }
 
     typealias Tab = EditorInstance
@@ -191,6 +192,10 @@ final class Editor: ObservableObject, Identifiable {
     ///   - file: the file to open.
     ///   - asTemporary: indicates whether the tab should be opened as a temporary tab or a permanent tab.
     func openTab(file: CEWorkspaceFile, asTemporary: Bool) {
+        guard file.doesExist else {
+            logger.debug("Not opening tab for file that no longer exists: \(file.url.path(), privacy: .sensitive)")
+            return
+        }
         let item = EditorInstance(workspace: workspace, file: file)
         // Item is already opened in a tab.
         guard !tabs.contains(item) || !asTemporary else {
@@ -249,6 +254,10 @@ final class Editor: ObservableObject, Identifiable {
     ///   - index: Index where the tab needs to be added. If nil, it is added to the back.
     ///   - fromHistory: Indicates whether the tab has been opened from going back in history.
     func openTab(file: CEWorkspaceFile, at index: Int? = nil, fromHistory: Bool = false) {
+        guard file.doesExist else {
+            logger.debug("Not opening tab for file that no longer exists: \(file.url.path(), privacy: .sensitive)")
+            return
+        }
         let item = Tab(workspace: workspace, file: file)
         if let index {
             tabs.insert(item, at: index)
@@ -282,6 +291,10 @@ final class Editor: ObservableObject, Identifiable {
             throw EditorError.noWorkspaceAttached
         }
 
+        guard item.file.doesExist else {
+            throw EditorError.fileDoesNotExist
+        }
+
         try item.file.loadCodeFile()
     }
 
@@ -295,14 +308,14 @@ final class Editor: ObservableObject, Identifiable {
         }
     }
 
-    /// Check if tab can be closed
+    /// Check if tab can be closed.
     ///
-    /// If document edited it will show dialog where user can save document before closing or cancel.
+    /// An edited document presents a dialog to save or discard changes before the tab closes.
     /// - Parameters:
     ///   - file: The file to check.
     ///   - askToSave: If `false`, no save dialog is presented for an edited document.
     ///   - completion: Invoked with `true` if the tab can be closed, `false` if the user canceled.
-    ///                 Invoked asynchronously if a dialog had to be presented first.
+    ///                 Invoked asynchronously when a dialog is presented.
     private func canCloseTab(
         file: CEWorkspaceFile,
         askToSave: Bool = true,
@@ -313,45 +326,10 @@ final class Editor: ObservableObject, Identifiable {
             return
         }
 
-        // `canClose` may invoke the delegate callback asynchronously (e.g. when `autosavesInPlace`
-        // is enabled), so the context is retained until ``document(_:shouldClose:contextInfo:)``
-        // fires and releases it.
-        let context = CanCloseContext(completion: completion)
-        codeFile.canClose(
-            withDelegate: self,
-            shouldClose: #selector(document(_:shouldClose:contextInfo:)),
-            contextInfo: Unmanaged.passRetained(context).toOpaque()
+        codeFile.confirmUnsavedClose(
+            in: workspace?.windowControllers.first?.window,
+            completion: completion
         )
-    }
-
-    /// Box carrying a completion handler through `canClose(withDelegate:shouldClose:contextInfo:)`.
-    ///
-    /// Passed as a retained opaque `contextInfo` pointer; ``document(_:shouldClose:contextInfo:)``
-    /// takes over the retain when the delegate callback fires, exactly once, synchronously or not.
-    private final class CanCloseContext {
-        let completion: (Bool) -> Void
-
-        init(completion: @escaping (Bool) -> Void) {
-            self.completion = completion
-        }
-    }
-
-    /// Receives the result of `canClose` and forwards it to the completion handler in `contextInfo`.
-    ///
-    /// - Parameters:
-    ///   - document: The document which may be closed.
-    ///   - shouldClose: The result of user selection.
-    ///      `shouldClose` is false if the user selected cancel, otherwise true.
-    ///   - contextInfo: A retained ``CanCloseContext`` as an opaque pointer; this method takes over
-    ///       the retain.
-    @objc
-    func document(
-        _ document: NSDocument,
-        shouldClose: Bool,
-        contextInfo: UnsafeMutableRawPointer
-    ) {
-        let context = Unmanaged<CanCloseContext>.fromOpaque(contextInfo).takeRetainedValue()
-        context.completion(shouldClose)
     }
 
     /// Remove the given file from tabs.

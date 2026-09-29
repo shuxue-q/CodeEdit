@@ -46,6 +46,11 @@
 		6CD3CA552C8B508200D83DCD /* CodeEditSourceEditor in Frameworks */ = {isa = PBXBuildFile; productRef = 6CD3CA542C8B508200D83DCD /* CodeEditSourceEditor */; };
 		6CE21E872C650D2C0031B056 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = 6CE21E862C650D2C0031B056 /* SwiftTerm */; };
 		B6FF04782B6C08AC002C2C78 /* DefaultThemes in Resources */ = {isa = PBXBuildFile; fileRef = B6FF04772B6C08AC002C2C78 /* DefaultThemes */; };
+		EAC78B2430693566005E1D1F /* CodeEdit/Assets.xcassets/CodeEditBetaIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = EAC78B1F30693566005E1D1F /* CodeEdit/Assets.xcassets/CodeEditBetaIcon.icon */; };
+		EAC78B2530693566005E1D1F /* CodeEdit/Assets.xcassets/CodeEditDevIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = EAC78B2030693566005E1D1F /* CodeEdit/Assets.xcassets/CodeEditDevIcon.icon */; };
+		EAC78B2630693566005E1D1F /* CodeEdit/Assets.xcassets/CodeEditAlphaIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = EAC78B1E30693566005E1D1F /* CodeEdit/Assets.xcassets/CodeEditAlphaIcon.icon */; };
+		EAC78B2730693566005E1D1F /* CodeEdit/Assets.xcassets/CodeEditPreIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = EAC78B2230693566005E1D1F /* CodeEdit/Assets.xcassets/CodeEditPreIcon.icon */; };
+		EAC78B2830693566005E1D1F /* CodeEdit/Assets.xcassets/CodeEditIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = EAC78B2130693566005E1D1F /* CodeEdit/Assets.xcassets/CodeEditIcon.icon */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -120,6 +125,11 @@
 		B658FB3D27DA9E1000EA4DBD /* CodeEditTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CodeEditTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B658FB4727DA9E1000EA4DBD /* CodeEditUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CodeEditUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B6FF04772B6C08AC002C2C78 /* DefaultThemes */ = {isa = PBXFileReference; lastKnownFileType = folder; path = DefaultThemes; sourceTree = "<group>"; };
+		EAC78B1E30693566005E1D1F /* CodeEdit/Assets.xcassets/CodeEditAlphaIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = CodeEdit/Assets.xcassets/CodeEditAlphaIcon.icon; sourceTree = "<group>"; };
+		EAC78B1F30693566005E1D1F /* CodeEdit/Assets.xcassets/CodeEditBetaIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = CodeEdit/Assets.xcassets/CodeEditBetaIcon.icon; sourceTree = "<group>"; };
+		EAC78B2030693566005E1D1F /* CodeEdit/Assets.xcassets/CodeEditDevIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = CodeEdit/Assets.xcassets/CodeEditDevIcon.icon; sourceTree = "<group>"; };
+		EAC78B2130693566005E1D1F /* CodeEdit/Assets.xcassets/CodeEditIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = CodeEdit/Assets.xcassets/CodeEditIcon.icon; sourceTree = "<group>"; };
+		EAC78B2230693566005E1D1F /* CodeEdit/Assets.xcassets/CodeEditPreIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = CodeEdit/Assets.xcassets/CodeEditPreIcon.icon; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -240,6 +250,11 @@
 			isa = PBXGroup;
 			children = (
 				B624520B2D78A3CC009A86D1 /* CodeEdit */,
+				EAC78B1E30693566005E1D1F /* CodeEdit/Assets.xcassets/CodeEditAlphaIcon.icon */,
+				EAC78B1F30693566005E1D1F /* CodeEdit/Assets.xcassets/CodeEditBetaIcon.icon */,
+				EAC78B2030693566005E1D1F /* CodeEdit/Assets.xcassets/CodeEditDevIcon.icon */,
+				EAC78B2130693566005E1D1F /* CodeEdit/Assets.xcassets/CodeEditIcon.icon */,
+				EAC78B2230693566005E1D1F /* CodeEdit/Assets.xcassets/CodeEditPreIcon.icon */,
 				B62454A32D78A3D4009A86D1 /* CodeEditTests */,
 				B62454602D78A3D4009A86D1 /* CodeEditUITests */,
 				B624544F2D78A3D3009A86D1 /* Configs */,
@@ -471,6 +486,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				B6FF04782B6C08AC002C2C78 /* DefaultThemes in Resources */,
+				EAC78B2430693566005E1D1F /* CodeEdit/Assets.xcassets/CodeEditBetaIcon.icon in Resources */,
+				EAC78B2530693566005E1D1F /* CodeEdit/Assets.xcassets/CodeEditDevIcon.icon in Resources */,
+				EAC78B2630693566005E1D1F /* CodeEdit/Assets.xcassets/CodeEditAlphaIcon.icon in Resources */,
+				EAC78B2730693566005E1D1F /* CodeEdit/Assets.xcassets/CodeEditPreIcon.icon in Resources */,
+				EAC78B2830693566005E1D1F /* CodeEdit/Assets.xcassets/CodeEditIcon.icon in Resources */,
 				283BDCBD2972EEBD002AFF81 /* Package.resolved in Resources */,
 				284DC8512978BA2600BF2770 /* .all-contributorsrc in Resources */,
 			);
@@ -666,6 +686,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "${CE_APPICON_NAME}";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = CodeEdit/CodeEdit.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
@@ -867,6 +888,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "${CE_APPICON_NAME}";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = CodeEdit/CodeEdit.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
@@ -1071,7 +1093,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
-				CE_APPICON_NAME = AppIconPre;
+				CE_APPICON_NAME = CodeEditPreIcon;
 				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
@@ -1139,7 +1161,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "${CE_APPICON_NAME}";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CE_APPICON_NAME = AppIconPre;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				CE_APPICON_NAME = CodeEditPreIcon;
 				CODE_SIGN_ENTITLEMENTS = CodeEdit/CodeEdit.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
@@ -1413,6 +1436,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "${CE_APPICON_NAME}";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = CodeEdit/CodeEdit.entitlements;
 				CODE_SIGN_IDENTITY = "-";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
@@ -1457,6 +1481,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "${CE_APPICON_NAME}";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = CodeEdit/CodeEdit.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
@@ -1799,7 +1824,7 @@
 			repositoryURL = "https://github.com/groue/GRDB.swift.git";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 6.0.0;
+				minimumVersion = 7.0.0;
 			};
 		};
 		6C6BD6F229CD142C00235D17 /* XCRemoteSwiftPackageReference "collectionconcurrencykit" */ = {
@@ -1823,7 +1848,7 @@
 			repositoryURL = "https://github.com/siteline/SwiftUI-Introspect.git";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 1.2.0;
+				minimumVersion = 26.0.0;
 			};
 		};
 		6CB94D012CA1205100E8651C /* XCRemoteSwiftPackageReference "swift-async-algorithms" */ = {

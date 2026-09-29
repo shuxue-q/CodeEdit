@@ -26,7 +26,7 @@ final class LSPCompletionDelegate: CodeSuggestionDelegate {
     @LazyService private var lspService: LSPService
 
     /// The completion items from the last request, kept for synchronous filtering and applying.
-    private var cachedEntries: [LSPCompletionEntry] = []
+    var cachedEntries: [LSPCompletionEntry] = []
     /// The document offset the cursor was at when the last completion request was made.
     private var requestOffset: Int?
 
@@ -48,39 +48,69 @@ final class LSPCompletionDelegate: CodeSuggestionDelegate {
         textView: TextViewController,
         cursorPosition: CursorPosition
     ) async -> (windowPosition: CursorPosition, items: [CodeSuggestionEntry])? {
-        guard let document,
-              let uri = document.languageServerURI,
-              let client = languageClient(),
+        guard document?.languageServerURI != nil,
+              languageClient() != nil,
               let resolved = textView.resolveCursorPosition(cursorPosition),
               let position = textView.textView.lspPositionFrom(offset: resolved.range.location) else {
             return nil
         }
 
         do {
-            try await document.languageServerObjects.textCoordinator.flushPendingChanges()
-            try Task.checkCancellation()
-            let response = try await client.requestCompletion(
-                for: uri,
-                position: position,
-                bypassCache: true
-            )
-            try Task.checkCancellation()
-            let rawItems = response?.items ?? []
-            let string = textView.textView.textStorage.string as NSString
-            let augmented = augmentIncludeCompletions(
-                items: rawItems,
+            let entries = try await completionEntries(
                 textView: textView,
                 position: position,
-                location: resolved.range.location,
-                string: string
+                location: resolved.range.location
             )
-            let entries = augmented.map { LSPCompletionEntry(item: $0) }
             cachedEntries = entries
             requestOffset = resolved.range.location
             return (cursorPosition, entries)
         } catch {
             return nil
         }
+    }
+
+    /// Requests completions after pending edits have been sent.
+    ///
+    /// If the server has dropped the file, open it again with the current buffer and retry once.
+    private func completionEntries(
+        textView: TextViewController,
+        position: Position,
+        location: Int
+    ) async throws -> [LSPCompletionEntry] {
+        guard let document,
+              let uri = document.languageServerURI,
+              let client = languageClient() else {
+            throw CancellationError()
+        }
+        try await document.languageServerObjects.textCoordinator.flushPendingChanges()
+        try Task.checkCancellation()
+        do {
+            let response = try await client.requestCompletion(for: uri, position: position, bypassCache: true)
+            return entries(from: response, textView: textView, position: position, location: location)
+        } catch {
+            guard LSPService.LanguageServerType.isNonAddedDocument(error) else { throw error }
+            try await client.reopenDocument(document)
+            try Task.checkCancellation()
+            let response = try await client.requestCompletion(for: uri, position: position, bypassCache: true)
+            return entries(from: response, textView: textView, position: position, location: location)
+        }
+    }
+
+    private func entries(
+        from response: CompletionResponse,
+        textView: TextViewController,
+        position: Position,
+        location: Int
+    ) -> [LSPCompletionEntry] {
+        let rawItems = response?.items ?? []
+        let string = textView.textView.textStorage.string as NSString
+        return augmentIncludeCompletions(
+            items: rawItems,
+            textView: textView,
+            position: position,
+            location: location,
+            string: string
+        ).map { LSPCompletionEntry(item: $0) }
     }
 
     func completionOnCursorMove(
@@ -248,7 +278,7 @@ final class LSPCompletionDelegate: CodeSuggestionDelegate {
     // MARK: - Helpers
 
     /// The language client managing this delegate's document, if one is running.
-    private func languageClient() -> LSPService.LanguageServerType? {
+    func languageClient() -> LSPService.LanguageServerType? {
         guard let fileURL = document?.fileURL else { return nil }
         return lspService.languageClient(forDocument: fileURL)
     }

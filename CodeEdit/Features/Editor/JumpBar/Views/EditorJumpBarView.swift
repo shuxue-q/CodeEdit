@@ -87,10 +87,14 @@ struct EditorJumpBarView: View {
         .grayscale(isActiveEditor ? 0.0 : 1.0)
         .onAppear {
             symbolModel.load(file: file)
+            symbolModel.observe(document: codeFile)
             symbolModel.cursorMoved(editor.selectedTab?.cursorPositions.first)
         }
         .onChange(of: file) { _, newFile in
             symbolModel.load(file: newFile)
+        }
+        .onChange(of: codeFile?.fileURL) { _, _ in
+            symbolModel.observe(document: codeFile)
         }
         .onChange(of: editor.selectedTab?.cursorPositions) { _, newValue in
             symbolModel.cursorMoved(newValue?.first)
@@ -122,7 +126,7 @@ struct EditorJumpBarView: View {
                             EditorJumpBarComponent(
                                 fileItem: fileItem,
                                 tappedOpenFile: tappedOpenFile,
-                                isLastItem: false,
+                                isLastItem: fileItem == fileItems.last,
                                 isTruncated: fileItems.first == fileItem ? $firstCrumbWidth : $crumbWidth
                             )
                         }

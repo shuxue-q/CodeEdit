@@ -104,12 +104,6 @@ struct EditorAreaView: View {
                             .frame(height: 1)
                             .background(.clear)
                     }
-                    if shouldShowTabBar {
-                        EditorTabBarView(hasTopInsets: topSafeArea > 0, codeFile: fileBinding)
-                            .id("TabBarView" + editor.id.uuidString)
-                            .environmentObject(editor)
-                        Divider()
-                    }
                     if showEditorJumpBar {
                         EditorJumpBarView(
                             file: editor.selectedTab?.file,
@@ -121,12 +115,20 @@ struct EditorAreaView: View {
                             }
                         }
                         .environmentObject(editor)
-                        .padding(.top, shouldShowTabBar ? -1 : 0)
-                        Divider()
+                        ThemedChromeDivider()
+                    }
+                    if shouldShowTabBar {
+                        EditorTabBarView(
+                            hasTopInsets: topSafeArea > 0 && !showEditorJumpBar,
+                            codeFile: fileBinding
+                        )
+                        .id("TabBarView" + editor.id.uuidString)
+                        .environmentObject(editor)
+                        ThemedChromeDivider()
                     }
                 }
                 .environment(\.isActiveEditor, editor == editorManager.activeEditor)
-                .background(EffectView(.headerView))
+                .themedChrome(.bar)
             }
         }
         .focused($focus, equals: editor)

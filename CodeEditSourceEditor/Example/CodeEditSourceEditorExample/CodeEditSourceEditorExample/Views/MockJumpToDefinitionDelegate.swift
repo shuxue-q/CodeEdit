@@ -8,6 +8,7 @@
 import AppKit
 import CodeEditSourceEditor
 
+@MainActor
 final class MockJumpToDefinitionDelegate: JumpToDefinitionDelegate, ObservableObject {
     func queryLinks(forRange range: NSRange, textView: TextViewController) async -> [JumpToDefinitionLink]? {
         [

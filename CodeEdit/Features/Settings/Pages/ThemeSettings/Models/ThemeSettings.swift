@@ -38,6 +38,8 @@ extension SettingsData {
                 "Always use dark terminal appearance",
                 "Use theme background",
                 "Light Appearance",
+                "Light Mode Theme",
+                "Dark Mode Theme",
                 "GitHub Light",
                 "Xcode Light",
                 "Solarized Light",

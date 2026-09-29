@@ -23,8 +23,8 @@ public final class SuggestionController: NSWindowController {
 
     // MARK: - Private Properties
 
-    /// Maximum number of visible rows (8.5)
-    static let MAX_VISIBLE_ROWS: CGFloat = 8.5
+    /// How many rows to show when the editor has no completion-count setting.
+    static let defaultVisibleRows = 5
     /// Padding at top and bottom of the window
     static let WINDOW_PADDING: CGFloat = 5
     /// Width of the documentation panel shown to the right of the suggestion list
@@ -101,6 +101,13 @@ public final class SuggestionController: NSWindowController {
                 }
             }
         }
+    }
+
+    /// Relays a completion-display setting change into the open suggestion window.
+    func applyConfiguration(from textView: TextViewController) {
+        guard isVisible, model.activeTextView === textView else { return }
+        let controller = (popover?.contentViewController ?? contentViewController) as? SuggestionViewController
+        controller?.configurationChanged()
     }
 
     /// Opens the window as a child of another window.

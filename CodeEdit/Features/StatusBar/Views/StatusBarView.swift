@@ -26,9 +26,6 @@ struct StatusBarView: View {
 
     static var height: CGFloat { 29.0 }
 
-    @Environment(\.colorScheme)
-    private var colorScheme
-
     var proxy: SplitViewProxy
 
     static let statusbarID = "statusbarID"
@@ -59,11 +56,10 @@ struct StatusBarView: View {
         .padding(.horizontal, 10)
         .cursor(.resizeUpDown)
         .frame(height: Self.height - 1.0)
-        .background(.bar)
+        .themedChrome(.sidebar, fallback: .headerView)
         .padding(.top, 1)
         .overlay(alignment: .top) {
-            Divider()
-                .overlay(Color(nsColor: colorScheme == .dark ? .black : .clear))
+            ThemedChromeDivider()
         }
         .gesture(dragGesture)
         .disabled(controlActive == .inactive)

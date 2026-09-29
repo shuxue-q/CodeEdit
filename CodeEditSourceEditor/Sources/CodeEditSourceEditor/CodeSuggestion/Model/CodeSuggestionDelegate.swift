@@ -30,10 +30,16 @@ public protocol CodeSuggestionDelegate: AnyObject {
     )
     // Optional
     func completionWindowDidSelect(item: CodeSuggestionEntry)
+
+    /// Fills in documentation and detail for the item the user has highlighted.
+    ///
+    /// Servers often leave these empty until `completionItem/resolve`. Return nil to keep `item`.
+    func completionWindowResolve(item: CodeSuggestionEntry) async -> CodeSuggestionEntry?
 }
 
 public extension CodeSuggestionDelegate {
     func completionTriggerCharacters() -> Set<String> { [] }
     func completionWindowDidClose() { }
     func completionWindowDidSelect(item: CodeSuggestionEntry) { }
+    func completionWindowResolve(item: CodeSuggestionEntry) async -> CodeSuggestionEntry? { nil }
 }

@@ -67,7 +67,7 @@ private struct IssuesCapsuleContent: View {
 
                     Text("\(issueCount)")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.primary)
+                        .foregroundStyle(.primary)
                 }
                 .contentShape(Capsule())
             }

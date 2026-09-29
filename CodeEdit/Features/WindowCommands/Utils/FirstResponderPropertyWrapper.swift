@@ -22,7 +22,11 @@ struct FirstResponder: DynamicProperty {
         @Published var responder: NSResponder? = NSApp.keyWindow?.firstResponder
 
         init() {
-            NSApp.publisher(for: \.keyWindow?.firstResponder).assign(to: &$responder)
+            // The key window changes while SwiftUI is still showing a window (e.g. the Welcome window at launch).
+            // Publishing synchronously from that KVO callback is a publish from inside a view update.
+            NSApp.publisher(for: \.keyWindow?.firstResponder)
+                .receive(on: DispatchQueue.main)
+                .assign(to: &$responder)
         }
     }
 }

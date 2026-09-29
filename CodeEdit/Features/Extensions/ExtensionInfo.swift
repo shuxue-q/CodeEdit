@@ -45,7 +45,7 @@ struct ExtensionInfo: Identifiable, Hashable {
         let process = try await AppExtensionProcess(configuration: .init(appExtensionIdentity: endpoint))
 
         let connection = try process.makeXPCConnection()
-        connection.remoteObjectInterface = .init(with: XPCWrappable.self)
+        connection.remoteObjectInterface = ExtensionInfo.makeRemoteInterface()
         connection.resume()
 
         defer {
@@ -62,6 +62,32 @@ struct ExtensionInfo: Identifiable, Hashable {
 
 // Functions to get basic information about extension
 extension ExtensionInfo {
+    /// Builds the `XPCWrappable` interface with explicit secure-coding classes for the `(Data?, Error?)` replies,
+    /// so Foundation doesn't fall back to an `NSObject` allow-list (which it reports as a fault).
+    private static func makeRemoteInterface() -> NSXPCInterface {
+        let interface = NSXPCInterface(with: XPCWrappable.self)
+        let replySelectors = [
+            #selector(XPCWrappable.getExtensionURL(reply:)),
+            #selector(XPCWrappable.getExtensionKinds(reply:)),
+            #selector(XPCWrappable.doAction(with:reply:))
+        ]
+        for selector in replySelectors {
+            interface.setClasses(
+                NSSet(object: NSData.self) as? Set<AnyHashable> ?? [],
+                for: selector,
+                argumentIndex: 0,
+                ofReply: true
+            )
+            interface.setClasses(
+                NSSet(object: NSError.self) as? Set<AnyHashable> ?? [],
+                for: selector,
+                argumentIndex: 1,
+                ofReply: true
+            )
+        }
+        return interface
+    }
+
     private static func getProcessID(_ connection: NSXPCConnection) async throws -> pid_t {
         try await connection.withContinuation { (service: XPCWrappable, continuation) in
             service.getExtensionProcessIdentifier {

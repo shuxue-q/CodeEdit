@@ -55,11 +55,13 @@ running, git integration, extensions, and more.
   AppKit interop (`NSApplicationDelegateAdaptor`, `NSViewControllerRepresentable`, etc.).
 - **Platform**: macOS only; minimum deployment target **macOS 14.0**.
 - **Build system**: The app builds through `CodeEdit.xcodeproj`. There is **no
-  root `Package.swift`**; the two vendored packages have their own manifests.
+  root `Package.swift`**; the three vendored packages have their own manifests.
   Remote Swift Package Manager dependencies are resolved by Xcode and pinned in
   `CodeEdit.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved`.
 - **Key dependencies** (see `Package.resolved` for exact pins):
-  - `CodeEditTextView` — custom text view (maintained by the CodeEditApp org).
+  - `CodeEditTextView` — custom text view, vendored locally in
+    `CodeEditTextView/` and referenced by `CodeEditSourceEditor/Package.swift`.
+    Edit this copy for mouse selection behavior; do not re-add the remote package.
   - `CodeEditSourceEditor` — the source editor (completion window, etc.).
     **Vendored locally** in `CodeEditSourceEditor/` at the repo root as a Swift
     package (added to the project as a local package reference replacing the
@@ -109,10 +111,23 @@ running, git integration, extensions, and more.
       compilation database generation, build execution, and build-output parsing.
     - `NavigatorArea` / `InspectorArea` / `UtilityArea` / `StatusBar` /
       `ActivityViewer` — the window's sidebars, bottom panel, and status UI.
-      `UtilityArea/ProblemsUtility/` displays problems;
+      The navigator tab bar (project, source control, bookmarks, search,
+      issues, tests, debug, breakpoints, reports) is defined by
+      `NavigatorArea/Models/NavigatorTab.swift`; `IssuesNavigator` and
+      `UtilityArea/ProblemsUtility/` share `CodeEditUI/Views/DiagnosticsListView`
+      to display problems; `ReportsNavigator/Models/ReportStore.swift` records
+      build/task/debug history per workspace in `.codeedit/reports.json`;
       `ActivityViewer/Views/` contains the toolbar capsules and controls.
     - `SourceControl` — git integration.
     - `TerminalEmulator`, `Tasks` — integrated terminal and task runner.
+    - `Debugging` — DAP-based C/C++ debugging via the system `lldb-dap`
+      (located through the login shell PATH with an `xcrun --find` fallback).
+      `DAP/` contains the wire-protocol client; `Service/DebugService` owns the
+      session (launch, breakpoints, stepping, watches); `BreakpointStore`
+      persists gutter breakpoints (0-based lines per file path);
+      `BreakpointCoordinator` bridges gutter clicks and the current-line
+      marker in the vendored editor (`GutterView.breakpointLines` /
+      `currentDebugLine`); `Views/` implements the `Debugger` utility tab.
     - `Search`, `OpenQuickly` — project find/replace and quick open.
     - `Settings` — settings window, models, and `SoftwareUpdater` (Sparkle).
     - `CodeEditUI` — shared UI components (views, styles) used across features.
@@ -122,7 +137,11 @@ running, git integration, extensions, and more.
     `KeyChain`, `ShellClient`, `Formatters`, `Environment`, `Protocols`.
   - `Localization/` — `en.lproj` strings plus `Localized+Ex.swift`.
   - `ShellIntegration/` — shell scripts bundled for terminal integration.
-  - `Assets.xcassets`, `Info.plist`, `CodeEdit.entitlements`.
+  - `Assets.xcassets`, `Info.plist`, `CodeEdit.entitlements`. Channel app
+    icons are Icon Composer `.icon` bundles in `Assets.xcassets`
+    (`CodeEditDevIcon`, `CodeEditAlphaIcon`, `CodeEditBetaIcon`,
+    `CodeEditPreIcon`, `CodeEditIcon`). `CE_APPICON_NAME` selects one per
+    configuration.
 - `CodeEditTests/` — unit and integration tests using XCTest and Swift Testing,
   mirroring the feature layout (`Features/…`, `Utils/…`).
 - `CodeEditUITests/` — XCUITest UI tests; see `CodeEditUITests/UI TESTING.md`
@@ -139,11 +158,13 @@ running, git integration, extensions, and more.
   suggestion window. Maintained in-tree; the GitHub
   `CodeEditApp/CodeEditSourceEditor` repo is no longer used. It is excluded
   from the repo-wide `.swiftlint.yml` (it carries its own config).
+- `CodeEditTextView/` — vendored Swift package providing text layout, mouse
+  selection, and drawing. `CodeEditSourceEditor` depends on this local copy.
+  It has its own SwiftLint configuration and tests.
 - `Configs/` — shared `.xcconfig` files: `Debug`, `Alpha`, `Beta`, `Pre`,
   `Release`. These set per-channel app icons (`CE_APPICON_NAME`), version
   postfixes, and copyright.
 - `DefaultThemes/` — bundled `.cetheme` editor themes.
-- `ProductIcons/` — `.icon` icon sources for each release channel.
 - `AppCast/` — Jekyll site that generates the Sparkle `appcast.xml` update feed.
 - `Documentation.docc/` — DocC documentation catalog.
 - `docs/cmake-project-presets.md` — CMake settings, build controls, problems,
@@ -250,7 +271,7 @@ CI-parity output.
   ```
   SwiftLint also runs automatically as a build phase plugin when building in
   Xcode; violations appear as Xcode warnings/errors. The root lint configuration
-  excludes both vendored packages: run lint from the affected package directory
+  excludes the three vendored packages: run lint from the affected package directory
   with its own configuration when changing package code.
 
 Build output belongs in ignored `DerivedData/` or a task-specific temporary

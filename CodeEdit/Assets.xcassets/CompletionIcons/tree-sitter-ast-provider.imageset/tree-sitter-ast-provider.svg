@@ -1,0 +1,15 @@
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <!-- AST tree icon for tree-sitter. Official logo is a PNG treehouse, not SVG. -->
+  <g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 8.2v3.4"/>
+    <path d="M12 11.6L6.8 15.2"/>
+    <path d="M12 11.6l5.2 3.6"/>
+    <path d="M6.8 15.2v2.1"/>
+    <path d="M17.2 15.2v2.1"/>
+    <path d="M6.8 15.2L3.6 17.8"/>
+  </g>
+  <circle cx="12" cy="6.2" r="2.4" fill="currentColor"/>
+  <circle cx="6.8" cy="19.4" r="2.05" fill="currentColor"/>
+  <circle cx="17.2" cy="19.4" r="2.05" fill="currentColor"/>
+  <circle cx="3.4" cy="19.4" r="1.35" fill="currentColor"/>
+</svg>

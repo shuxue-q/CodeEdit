@@ -5,6 +5,7 @@
 //  Created by Marco Carnevali on 18/03/22.
 //
 
+import Combine
 import Foundation
 import SwiftUI
 import Testing
@@ -65,6 +66,23 @@ struct CodeFileDocumentTests {
 
             #expect(codeFile.content?.string as NSString? == nsString)
             #expect(fileEncoding == NSUTF8StringEncoding)
+        }
+    }
+
+    @Test
+    func publishesEditedStateWhileAutosaveIsEnabled() throws {
+        try withCodeFile { codeFile in
+            var values: [Bool] = []
+            let cancellable = codeFile.isDocumentEditedPublisher.sink { values.append($0) }
+            codeFile.updateChangeCount(.changeDone)
+            #expect(codeFile.isDocumentEdited == true)
+            #expect(values == [true])
+
+            codeFile.cancelScheduledAutosave()
+            codeFile.updateChangeCount(.changeCleared)
+            #expect(codeFile.isDocumentEdited == false)
+            #expect(values == [true, false])
+            cancellable.cancel()
         }
     }
 

@@ -96,13 +96,6 @@ extension TextViewController {
     }
 
     @objc
-    func contextMenuRefactorFormatDocument(_ sender: Any?) {
-        if contextMenuDelegate?.refactorFormatDocument() != true {
-            BezelNotification.show(symbolName: "text.alignleft", over: textView)
-        }
-    }
-
-    @objc
     func contextMenuFindInWorkspace(_ sender: Any?) {
         if let contextMenuDelegate {
             contextMenuDelegate.findInWorkspace(query: nil)

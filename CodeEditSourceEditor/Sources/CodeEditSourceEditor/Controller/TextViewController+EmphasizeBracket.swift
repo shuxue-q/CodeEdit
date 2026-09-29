@@ -16,6 +16,7 @@ extension TextViewController {
         for range in textView.selectionManager.textSelections.map({ $0.range }) {
             if range.isEmpty,
                range.location > 0, // Range is not the beginning of the document
+               range.location <= textView.textStorage.length, // Range is not past the end of the document
                let precedingCharacter = textView.textStorage.substring(
                 from: NSRange(location: range.location - 1, length: 1) // The preceding character exists
                ) {
@@ -91,12 +92,22 @@ extension TextViewController {
         if reverse {
             options = options.union(.reverse)
         }
+        let stringLength = textView.textStorage.length
+        guard from >= 0, from <= stringLength else { return nil }
+        let enumerationRange: NSRange
+        if reverse {
+            let lowerBound = max(limit, 0)
+            guard from > lowerBound else { return nil }
+            enumerationRange = NSRange(location: lowerBound, length: from - lowerBound)
+        } else {
+            let upperBound = min(limit, stringLength)
+            guard upperBound > from else { return nil }
+            enumerationRange = NSRange(location: from, length: upperBound - from)
+        }
         var closeCount = 0
         var index: Int?
         textView.textStorage.mutableString.enumerateSubstrings(
-            in: reverse ?
-                NSRange(location: limit, length: from - limit) :
-                NSRange(location: from, length: limit - from),
+            in: enumerationRange,
             options: options,
             using: { substring, range, _, stop in
                 if substring == close {

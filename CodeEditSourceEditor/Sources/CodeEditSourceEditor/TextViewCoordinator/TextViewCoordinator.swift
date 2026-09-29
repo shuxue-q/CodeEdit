@@ -43,6 +43,23 @@ public protocol TextViewCoordinator: AnyObject {
     /// - Parameter newPositions: The new positions of the cursors.
     func textViewDidChangeSelection(controller: TextViewController, newPositions: [CursorPosition])
 
+    /// Called when the user clicks a line in the gutter.
+    ///
+    /// Useful for implementing features like breakpoints: use ``TextViewController/gutterView`` to read and update
+    /// the ``GutterView/breakpointLines`` and ``GutterView/currentDebugLine`` properties to draw breakpoint markers
+    /// and the current debug execution position.
+    /// - Parameters:
+    ///   - controller: The text controller.
+    ///   - line: The 0-based index of the clicked line.
+    func textViewDidClickGutter(controller: TextViewController, atLine line: Int)
+
+    /// Called when a snippet tab stop becomes active, for example after a completion inserted a snippet or
+    /// the user pressed Tab to move to the next placeholder.
+    /// - Parameters:
+    ///   - controller: The text controller.
+    ///   - activeRanges: The ranges of the active placeholder, or `nil` when the snippet session ended.
+    func textViewDidChangeSnippetPlaceholder(controller: TextViewController, activeRanges: [NSRange]?)
+
     /// Called when the text controller is being destroyed. Use to free any necessary resources.
     func destroy()
 }
@@ -53,5 +70,7 @@ public extension TextViewCoordinator {
     func controllerDidDisappear(controller: TextViewController) { }
     func textViewDidChangeText(controller: TextViewController) { }
     func textViewDidChangeSelection(controller: TextViewController, newPositions: [CursorPosition]) { }
+    func textViewDidClickGutter(controller: TextViewController, atLine line: Int) { }
+    func textViewDidChangeSnippetPlaceholder(controller: TextViewController, activeRanges: [NSRange]?) { }
     func destroy() { }
 }

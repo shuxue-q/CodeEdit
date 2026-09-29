@@ -160,7 +160,7 @@ class LanguageServer<DocumentType: LanguageServerDocument> {
                         tagSupport: ValueSet(valueSet: [CompletionItemTag.deprecated]),
                         insertReplaceSupport: true,
                         resolveSupport: CompletionClientCapabilities.CompletionItem.ResolveSupport(
-                            properties: ["documentation", "details"]
+                            properties: ["documentation", "detail"]
                         ),
                         insertTextModeSupport: ValueSet(valueSet: [InsertTextMode.adjustIndentation]),
                         labelDetailsSupport: true
@@ -175,6 +175,15 @@ class LanguageServer<DocumentType: LanguageServerDocument> {
                 hover: HoverClientCapabilities(
                     dynamicRegistration: false,
                     contentFormat: [MarkupKind.markdown, MarkupKind.plaintext]
+                ),
+                signatureHelp: SignatureHelpClientCapabilities(
+                    dynamicRegistration: false,
+                    signatureInformation: SignatureHelpClientCapabilities.SignatureInformation(
+                        documentationFormat: [MarkupKind.markdown, MarkupKind.plaintext],
+                        parameterInformation: .init(labelOffsetSupport: true),
+                        activeParameterSupport: true
+                    ),
+                    contextSupport: false
                 ),
                 // swiftlint:disable:next line_length
                 // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#semanticTokensClientCapabilities
