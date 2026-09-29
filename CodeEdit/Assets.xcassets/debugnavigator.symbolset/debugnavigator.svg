@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE svg
+PUBLIC "-//W3C//DTD SVG 1.1//EN"
+       "http://www.w3.org/Graphics/SVG/1.1//DTD/svg11.dtd">
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="3300" height="2200">
+ <!--glyph: "debugnavigator", point size: 100.0, template writer version: "65.1"-->
+ <g id="Notes">
+  <rect height="2200" id="artboard" style="fill:white;opacity:1" width="3300" x="0" y="0"/>
+ </g>
+ <g id="Guides">
+  <g id="H-reference" style="fill:#27AAE1;stroke:none;" transform="matrix(1 0 0 1 339 696)">
+   <path d="M0.993347 0L3.6377 0L29.3282-67.1326L30.0301-67.1326L30.0301-70.459L28.1227-70.459ZM11.6882-24.4797L46.9818-24.4797L46.2311-26.7288L12.4382-26.7288ZM55.1193 0L57.7637 0L30.6381-70.459L29.4327-70.459L29.4327-67.1326Z"/>
+  </g>
+  <line id="Baseline-S" style="fill:none;stroke:#27AAE1;opacity:1;stroke-width:0.5;" x1="263" x2="3036" y1="696" y2="696"/>
+  <line id="Capline-S" style="fill:none;stroke:#27AAE1;opacity:1;stroke-width:0.5;" x1="263" x2="3036" y1="625.541" y2="625.541"/>
+  <g id="H-reference" style="fill:#27AAE1;stroke:none;" transform="matrix(1 0 0 1 339 1126)">
+   <path d="M0.993347 0L3.6377 0L29.3282-67.1326L30.0301-67.1326L30.0301-70.459L28.1227-70.459ZM11.6882-24.4797L46.9818-24.4797L46.2311-26.7288L12.4382-26.7288ZM55.1193 0L57.7637 0L30.6381-70.459L29.4327-70.459L29.4327-67.1326Z"/>
+  </g>
+  <line id="Baseline-M" style="fill:none;stroke:#27AAE1;opacity:1;stroke-width:0.5;" x1="263" x2="3036" y1="1126" y2="1126"/>
+  <line id="Capline-M" style="fill:none;stroke:#27AAE1;opacity:1;stroke-width:0.5;" x1="263" x2="3036" y1="1055.54" y2="1055.54"/>
+  <g id="H-reference" style="fill:#27AAE1;stroke:none;" transform="matrix(1 0 0 1 339 1556)">
+   <path d="M0.993347 0L3.6377 0L29.3282-67.1326L30.0301-67.1326L30.0301-70.459L28.1227-70.459ZM11.6882-24.4797L46.9818-24.4797L46.2311-26.7288L12.4382-26.7288ZM55.1193 0L57.7637 0L30.6381-70.459L29.4327-70.459L29.4327-67.1326Z"/>
+  </g>
+  <line id="Baseline-L" style="fill:none;stroke:#27AAE1;opacity:1;stroke-width:0.5;" x1="263" x2="3036" y1="1556" y2="1556"/>
+  <line id="Capline-L" style="fill:none;stroke:#27AAE1;opacity:1;stroke-width:0.5;" x1="263" x2="3036" y1="1485.54" y2="1485.54"/>
+  <line id="left-margin-Ultralight-S" style="fill:none;stroke:#00AEEF;stroke-width:0.5;opacity:1.0;" x1="512.517" x2="512.517" y1="600.784" y2="720.121"/>
+  <line id="right-margin-Ultralight-S" style="fill:none;stroke:#00AEEF;stroke-width:0.5;opacity:1.0;" x1="606.905" x2="606.905" y1="600.784" y2="720.121"/>
+  <line id="left-margin-Regular-S" style="fill:none;stroke:#00AEEF;stroke-width:0.5;opacity:1.0;" x1="1399.7" x2="1399.7" y1="600.784" y2="720.121"/>
+  <line id="right-margin-Regular-S" style="fill:none;stroke:#00AEEF;stroke-width:0.5;opacity:1.0;" x1="1499.99" x2="1499.99" y1="600.784" y2="720.121"/>
+  <line id="left-margin-Black-S" style="fill:none;stroke:#00AEEF;stroke-width:0.5;opacity:1.0;" x1="2882.17" x2="2882.17" y1="600.784" y2="720.121"/>
+  <line id="right-margin-Black-S" style="fill:none;stroke:#00AEEF;stroke-width:0.5;opacity:1.0;" x1="2984.63" x2="2984.63" y1="600.784" y2="720.121"/>
+  <line id="left-margin-Regular-M" style="fill:none;stroke:#00AEEF;stroke-width:0.5;opacity:1.0;" x1="1386.54" x2="1386.54" y1="1030.78" y2="1150.12"/>
+  <line id="right-margin-Regular-M" style="fill:none;stroke:#00AEEF;stroke-width:0.5;opacity:1.0;" x1="1513.14" x2="1513.14" y1="1030.78" y2="1150.12"/>
+ </g>
+ <g id="Symbols">
+  <g id="Regular-M" transform="matrix(1 0 0 1 1386.54 1126)">
+   <g transform="rotate(-15 51 -35)">
+    <path d="M8-35L26.5-56.5Q29-59 33-59L87-59Q94-59 94-52L94-18Q94-11 87-11L33-11Q29-11 26.5-13.5ZM13-35L29.5-17.5Q31-16 33.5-16L87-16Q90.5-16 90.5-20L90.5-50Q90.5-55 87-55L33.5-55Q31-55 29.5-52.5Z"/>
+    <path d="M22.5-35A3.5 3.5 0 1 1 29.5-35A3.5 3.5 0 1 1 22.5-35Z"/>
+   </g>
+   <path d="M105-77L107.6-68.6L115-66L107.6-63.4L105-55L102.4-63.4L95-66L102.4-68.6Z"/>
+   <path d="M90-88L91.6-83.4L96-82L91.6-80.6L90-76L88.4-80.6L84-82L88.4-83.4Z"/>
+  </g>
+ </g>
+</svg>

@@ -96,8 +96,12 @@ extension TextViewController {
     ///   - textView: The textView to use.
     /// - Returns: Return whether or not the mutation should be applied.
     internal func shouldApplyMutation(_ mutation: TextMutation, to textView: TextView) -> Bool {
-        // don't perform any kind of filtering during undo operations
-        if textView.undoManager?.isUndoing ?? false || textView.undoManager?.isRedoing ?? false {
+        // don't perform any kind of filtering during undo operations or while applying a format, or while an
+        // input method is composing (those edits are replaced by the final text, which is filtered instead)
+        if isApplyingFormat
+            || textView.isEditingMarkedText
+            || textView.undoManager?.isUndoing ?? false
+            || textView.undoManager?.isRedoing ?? false {
             return true
         }
 
@@ -141,7 +145,9 @@ extension TextViewController {
                     // Filters run before the mutation. Read the cursor after the edit and selection update.
                     DispatchQueue.main.async { [weak self] in
                         guard let self, let completionDelegate = self.completionDelegate,
-                              let position = self.cursorPositions.first else { return }
+                              let position = self.cursorPositions.first else {
+                            return
+                        }
                         SuggestionController.shared.cursorsUpdated(
                             textView: self,
                             delegate: completionDelegate,

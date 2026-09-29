@@ -88,6 +88,7 @@ private extension GeneralSettingsView {
         }
         .onChange(of: settings.appAppearance) { _, tag in
             tag.applyAppearance()
+            ThemeModel.shared.followAppearanceSetting()
         }
     }
 

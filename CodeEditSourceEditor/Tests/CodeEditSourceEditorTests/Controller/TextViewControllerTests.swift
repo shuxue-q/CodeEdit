@@ -581,7 +581,7 @@ final class TextViewControllerTests: XCTestCase {
 
     // MARK: - Reformat at Column & Soft Wrap
 
-    func test_reformatAtColumnSoftWrap() {
+    func test_reformatAtColumnDoesNotForceWrap() {
         controller.configuration.appearance.wrapLines = true
         controller.configuration.behavior.reformatAtColumn = 40
         controller.setText(String(repeating: "a", count: 100))
@@ -592,12 +592,9 @@ final class TextViewControllerTests: XCTestCase {
             return
         }
 
-        // A 100-character line with reformatAtColumn=40 should wrap into multiple line fragments
-        XCTAssertGreaterThan(firstLine.lineFragments.count, 1)
-        if let firstFragment = firstLine.lineFragments.first?.data {
-            // First fragment should have around 40 characters
-            XCTAssertEqual(firstFragment.documentRange.length, 40)
-        }
+        // The guide is a hint. A wide editor keeps a 100-character line intact.
+        XCTAssertEqual(firstLine.lineFragments.count, 1)
+        XCTAssertEqual(firstLine.lineFragments.first?.data.documentRange.length, 100)
     }
 
     func test_reformatAtColumnDynamicUpdate() {
@@ -611,10 +608,10 @@ final class TextViewControllerTests: XCTestCase {
             return
         }
 
-        XCTAssertGreaterThan(firstLine.lineFragments.count, 1)
-        XCTAssertEqual(firstLine.lineFragments.first?.data.documentRange.length, 80)
+        XCTAssertEqual(firstLine.lineFragments.count, 1)
+        XCTAssertEqual(firstLine.lineFragments.first?.data.documentRange.length, 100)
 
-        // Update reformatAtColumn to 50
+        // Moving the guide must not reflow the line.
         controller.configuration.behavior.reformatAtColumn = 50
         controller.textView.layoutManager.layoutLines()
 
@@ -622,7 +619,8 @@ final class TextViewControllerTests: XCTestCase {
             XCTFail("Expected first line")
             return
         }
-        XCTAssertEqual(updatedFirstLine.lineFragments.first?.data.documentRange.length, 50)
+        XCTAssertEqual(updatedFirstLine.lineFragments.count, 1)
+        XCTAssertEqual(updatedFirstLine.lineFragments.first?.data.documentRange.length, 100)
     }
 
     func test_reformatAtColumnDisabledWhenWrapLinesFalse() {
@@ -649,6 +647,7 @@ final class TextViewControllerTests: XCTestCase {
         let charAdvance = controller.font.charWidth * CGFloat(controller.letterSpacing)
         let expectedX = (CGFloat(80) * charAdvance + leftInset).rounded()
         XCTAssertEqual(controller.reformattingGuideView.frame.origin.x, expectedX)
+        XCTAssertEqual(controller.reformattingGuideView.frame.width, 1)
     }
 
     func test_reformatAtColumnWithoutViewLoaded() {
@@ -670,9 +669,9 @@ final class TextViewControllerTests: XCTestCase {
             return
         }
 
-        XCTAssertGreaterThan(firstLine.lineFragments.count, 1)
+        // Letter spacing must not cap the line at the guide column.
         if let firstFragment = firstLine.lineFragments.first?.data {
-            XCTAssertEqual(firstFragment.documentRange.length, 40)
+            XCTAssertGreaterThan(firstFragment.documentRange.length, 40)
         }
 
         controller.reformattingGuideView.updatePosition(in: controller)

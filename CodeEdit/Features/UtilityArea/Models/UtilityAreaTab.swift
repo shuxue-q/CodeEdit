@@ -12,6 +12,7 @@ enum UtilityAreaTab: WorkspacePanelTab, CaseIterable {
 
     case terminal
     case debugConsole
+    case debugger
     case output
     case problems
 
@@ -21,6 +22,8 @@ enum UtilityAreaTab: WorkspacePanelTab, CaseIterable {
             return "Terminal"
         case .debugConsole:
             return "Debug Console"
+        case .debugger:
+            return "Debugger"
         case .output:
             return "Output"
         case .problems:
@@ -34,6 +37,8 @@ enum UtilityAreaTab: WorkspacePanelTab, CaseIterable {
             return "terminal"
         case .debugConsole:
             return "ladybug"
+        case .debugger:
+            return "ant"
         case .output:
             return "list.bullet.indent"
         case .problems:
@@ -47,6 +52,8 @@ enum UtilityAreaTab: WorkspacePanelTab, CaseIterable {
             UtilityAreaTerminalView()
         case .debugConsole:
             UtilityAreaDebugView()
+        case .debugger:
+            UtilityAreaDebuggerView()
         case .output:
             UtilityAreaOutputView()
         case .problems:

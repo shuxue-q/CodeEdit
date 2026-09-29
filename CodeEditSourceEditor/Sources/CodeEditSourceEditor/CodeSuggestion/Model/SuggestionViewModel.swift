@@ -41,24 +41,18 @@ final class SuggestionViewModel: ObservableObject {
             }
 
             do {
-                guard let completionItems = await delegate.completionSuggestionsRequested(
+                let result = await delegate.completionSuggestionsRequested(
                     textView: textView,
                     cursorPosition: cursorPosition
-                ), !completionItems.items.isEmpty else {
+                )
+                guard let completionItems = result, !completionItems.items.isEmpty else {
                     return
                 }
 
                 try Task.checkCancellation()
                 try await MainActor.run {
                     try Task.checkCancellation()
-
-                    guard let cursorPosition = textView.resolveCursorPosition(completionItems.windowPosition),
-                          let cursorRect = textView.textView.layoutManager.rectForOffset(
-                            cursorPosition.range.location
-                          ),
-                          let cursorRect = textView.view.window?.convertToScreen(
-                            textView.textView.convert(cursorRect, to: nil)
-                          ) else {
+                    guard let cursorRect = screenRect(for: completionItems.windowPosition, in: textView) else {
                         return
                     }
 
@@ -70,6 +64,15 @@ final class SuggestionViewModel: ObservableObject {
                 return
             }
         }
+    }
+
+    /// The screen rect of the character at `position`, used to anchor the completion window.
+    private func screenRect(for position: CursorPosition, in textView: TextViewController) -> NSRect? {
+        guard let resolved = textView.resolveCursorPosition(position),
+              let localRect = textView.textView.layoutManager.rectForOffset(resolved.range.location) else {
+            return nil
+        }
+        return textView.view.window?.convertToScreen(textView.textView.convert(localRect, to: nil))
     }
 
     func cursorsUpdated(
@@ -102,6 +105,18 @@ final class SuggestionViewModel: ObservableObject {
 
     func didSelect(item: CodeSuggestionEntry) {
         delegate?.completionWindowDidSelect(item: item)
+    }
+
+    /// Asks the delegate for the documentation that was left off the original completion list.
+    func resolve(item: CodeSuggestionEntry) async -> CodeSuggestionEntry? {
+        await delegate?.completionWindowResolve(item: item)
+    }
+
+    /// Replaces one row after resolve without treating the list as a new completion session.
+    func replaceItem(at index: Int, with item: CodeSuggestionEntry) {
+        guard items.indices.contains(index) else { return }
+        syntaxHighlightedCache[index] = nil
+        items[index] = item
     }
 
     func applySelectedItem(item: CodeSuggestionEntry, window: NSWindow?) {

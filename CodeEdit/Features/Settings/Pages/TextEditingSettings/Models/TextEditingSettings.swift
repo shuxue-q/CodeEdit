@@ -26,12 +26,16 @@ extension SettingsData {
                 "Letter Spacing",
                 "Autocomplete braces",
                 "Enable type-over completion",
+                "Show Completion Info Beside the Name",
+                "Visible Completions",
                 "Bracket Pair Emphasis",
                 "Bracket Pair Highlight",
                 "Show Gutter",
                 "Show Minimap",
                 "Reformat at Column",
                 "Show Reformatting Guide",
+                "Code Format",
+                "clang-format",
                 "Invisibles",
                 "Warning Characters"
             ]
@@ -56,6 +60,12 @@ extension SettingsData {
 
         /// A flag indicating whether braces are automatically completed
         var autocompleteBraces: Bool = true
+
+        /// Shows the completion type on each row and the header under the list.
+        var showInlineCompletionInfo: Bool = false
+
+        /// How many completions are visible before the list scrolls.
+        var visibleCompletionCount: Int = 5
 
         /// A flag indicating whether to wrap lines to editor width
         var wrapLinesToEditorWidth: Bool = true
@@ -91,10 +101,16 @@ extension SettingsData {
         /// Show the reformatting guide in the editor
         var showReformattingGuide: Bool = false
 
+        /// The clang-format style used by Format Code.
+        var codeFormatStyle: CodeFormatStyle = .llvm
+
         var invisibleCharacters: InvisibleCharactersConfig = .default
 
         /// Map of unicode character codes to a note about them
         var warningCharacters: WarningCharacters = .default
+
+        /// Settings for the opt-in Claude-powered AI completion source. The key lives in Keychain.
+        var aiCompletion: AICompletionSettings = AICompletionSettings()
 
         /// Default initializer
         init() {
@@ -118,6 +134,14 @@ extension SettingsData {
                 Bool.self,
                 forKey: .autocompleteBraces
             ) ?? true
+            self.showInlineCompletionInfo = try container.decodeIfPresent(
+                Bool.self,
+                forKey: .showInlineCompletionInfo
+            ) ?? false
+            self.visibleCompletionCount = min(
+                20,
+                max(1, try container.decodeIfPresent(Int.self, forKey: .visibleCompletionCount) ?? 5)
+            )
             self.wrapLinesToEditorWidth = try container.decodeIfPresent(
                 Bool.self,
                 forKey: .wrapLinesToEditorWidth
@@ -152,6 +176,10 @@ extension SettingsData {
                 Bool.self,
                 forKey: .showReformattingGuide
             ) ?? false
+            self.codeFormatStyle = try container.decodeIfPresent(
+                CodeFormatStyle.self,
+                forKey: .codeFormatStyle
+            ) ?? .llvm
             self.invisibleCharacters = try container.decodeIfPresent(
                 InvisibleCharactersConfig.self,
                 forKey: .invisibleCharacters
@@ -160,6 +188,8 @@ extension SettingsData {
                 WarningCharacters.self,
                 forKey: .warningCharacters
             ) ?? .default
+            self.aiCompletion = try container.decodeIfPresent(AICompletionSettings.self, forKey: .aiCompletion)
+                ?? AICompletionSettings()
 
             self.populateCommands()
         }
@@ -183,6 +213,15 @@ extension SettingsData {
                 id: "prefs.text_editing.autocomplete_braces",
                 command: {
                     Settings[\.textEditing].autocompleteBraces.toggle()
+                }
+            )
+
+            mgr.addCommand(
+                name: "Toggle Inline Completion Info",
+                title: "Toggle Inline Completion Info",
+                id: "prefs.text_editing.inline_completion_info",
+                command: {
+                    Settings[\.textEditing].showInlineCompletionInfo.toggle()
                 }
             )
 

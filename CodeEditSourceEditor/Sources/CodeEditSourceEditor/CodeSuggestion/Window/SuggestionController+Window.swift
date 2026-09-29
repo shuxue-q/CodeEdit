@@ -7,6 +7,21 @@
 
 import AppKit
 
+/// Completion panel. It must not become key: doing so resigns the editor and the
+/// panel closes, and AppKit logs a ViewBridge failure when `makeKey` is refused.
+private final class SuggestionWindow: NSWindow {
+    override var canBecomeKey: Bool { false }
+    override var canBecomeMain: Bool { false }
+
+    override func makeKeyAndOrderFront(_ sender: Any?) {
+        orderFront(sender)
+    }
+
+    override func makeKey() {
+        // Super logs a warning and disconnects ViewBridge because canBecomeKey is false.
+    }
+}
+
 extension SuggestionController {
     /// Will constrain the window's frame to be within the visible screen
     public func constrainWindowToScreenEdges(cursorRect: NSRect) {
@@ -68,8 +83,11 @@ extension SuggestionController {
         guard let window else { return }
         let oldFrame = window.frame
 
-        window.minSize = newSize
-        window.maxSize = NSSize(width: CGFloat.infinity, height: newSize.height)
+        // minSize/maxSize are frame sizes. Lock both to the measured frame so a later
+        // constraint pass cannot shrink the list down to one row.
+        let frameSize = window.frameRect(forContentRect: NSRect(origin: .zero, size: newSize)).size
+        window.minSize = frameSize
+        window.maxSize = frameSize
 
         window.setContentSize(newSize)
 
@@ -81,7 +99,7 @@ extension SuggestionController {
     // MARK: - Private Methods
 
     static func makeWindow() -> NSWindow {
-        let window = NSWindow(
+        let window = SuggestionWindow(
             contentRect: .zero,
             styleMask: [.resizable, .fullSizeContentView, .nonactivatingPanel, .utilityWindow],
             backing: .buffered,

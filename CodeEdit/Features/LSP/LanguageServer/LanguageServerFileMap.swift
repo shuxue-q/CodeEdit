@@ -69,6 +69,11 @@ class LanguageServerFileMap<DocumentType: LanguageServerDocument> {
         return trackedDocumentData[uri]?.documentVersion ?? 0
     }
 
+    /// Sets the tracked version back to zero after the document is opened again.
+    func resetVersion(for uri: DocumentUri) {
+        trackedDocumentData[uri]?.documentVersion = 0
+    }
+
     @MainActor
     func documentVersion(for document: DocumentType) -> Int? {
         guard let uri = document.languageServerURI else { return nil }

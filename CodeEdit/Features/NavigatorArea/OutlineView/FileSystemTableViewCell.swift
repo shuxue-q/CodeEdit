@@ -35,6 +35,16 @@ class FileSystemTableViewCell: StandardTableViewCell {
         addModel()
     }
 
+    /// Keeps the unfiltered label muted, but readable on the emphasized selection highlight.
+    override var backgroundStyle: NSView.BackgroundStyle {
+        didSet {
+            guard navigatorFilter?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true else { return }
+            textField?.textColor = backgroundStyle == .emphasized
+                ? .alternateSelectedControlTextColor
+                : ThemeModel.shared.chromeLabelColor
+        }
+    }
+
     override func configLabel(label: NSTextField, isEditable: Bool) {
         super.configLabel(label: label, isEditable: isEditable)
         label.delegate = self
@@ -50,6 +60,9 @@ class FileSystemTableViewCell: StandardTableViewCell {
 
         guard let filter = navigatorFilter?.trimmingCharacters(in: .whitespacesAndNewlines), !filter.isEmpty else {
             textField?.stringValue = fileName
+            textField?.textColor = backgroundStyle == .emphasized
+                ? .alternateSelectedControlTextColor
+                : ThemeModel.shared.chromeLabelColor
             return
         }
 
@@ -60,7 +73,7 @@ class FileSystemTableViewCell: StandardTableViewCell {
         let attributedString = NSMutableAttributedString(string: fileName, attributes: [
             .paragraphStyle: paragraphStyle,
             .font: NSFont.systemFont(ofSize: fontSize),
-            .foregroundColor: NSColor.secondaryLabelColor
+            .foregroundColor: ThemeModel.shared.chromeSecondaryLabelColor
         ])
 
         /// Check if the filename contains the filter text
@@ -70,7 +83,7 @@ class FileSystemTableViewCell: StandardTableViewCell {
             attributedString.addAttributes(
                 [
                     .font: NSFont.boldSystemFont(ofSize: fontSize),
-                    .foregroundColor: NSColor.labelColor
+                    .foregroundColor: ThemeModel.shared.chromeLabelColor
                 ],
                 range: range
             )
@@ -79,7 +92,7 @@ class FileSystemTableViewCell: StandardTableViewCell {
             /// or secondary label color for a non-matching file
             attributedString.addAttribute(
                 .foregroundColor,
-                value: item.isFolder ? NSColor.labelColor : NSColor.secondaryLabelColor,
+                value: item.isFolder ? ThemeModel.shared.chromeLabelColor : ThemeModel.shared.chromeSecondaryLabelColor,
                 range: NSRange(location: 0, length: attributedString.length)
             )
         }

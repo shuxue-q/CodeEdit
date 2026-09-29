@@ -7,6 +7,7 @@
 
 import Foundation
 import LanguageServerProtocol
+import CodeEditSourceEditor
 
 extension LanguageServer {
     /// Tells the language server we've opened a document and would like to begin working with it.
@@ -105,15 +106,62 @@ extension LanguageServer {
             case .none:
                 return
             }
-
-            // Let the semantic token provider know about the update.
-            // Note for future: If a related LSP object need notifying about document changes, do it here.
-            let highlightProvider = await getIsolatedHighlightProvider(document)
-            try await highlightProvider.documentDidChange()
         } catch {
-            logger.warning("closeDocument: Error \(error)")
+            logger.warning("documentChanged: Error \(error)")
             throw error
         }
+    }
+
+    /// Refreshes semantic tokens for an open document after its edits were sent.
+    ///
+    /// Kept out of ``documentChanged(uri:changes:)``: clangd answers a token request only after
+    /// rebuilding the AST, which can take seconds, and completion waits for `documentChanged` before
+    /// every request. ``LSPContentCoordinator`` runs this in the background, one request at a time.
+    func refreshHighlighting(uri: String) async {
+        guard let document = openFiles.document(for: uri) else { return }
+        await syncHighlighting(for: document)
+    }
+
+    /// Refreshes semantic tokens after an edit.
+    ///
+    /// A token request must not fail the edit itself. When clangd has dropped the file, the request
+    /// fails with "non-added document" and completion fails the same way until the file is opened again.
+    private func syncHighlighting(for document: DocumentType) async {
+        let highlightProvider = await getIsolatedHighlightProvider(document)
+        do {
+            try await highlightProvider.documentDidChange()
+        } catch {
+            guard Self.isNonAddedDocument(error) else { return }
+            do {
+                try await reopenDocument(document)
+            } catch {
+                logger.warning("Failed to reopen document: \(error)")
+            }
+        }
+    }
+
+    /// Sends `textDocument/didOpen` again with the editor's current text.
+    ///
+    /// Clangd removes a document when an incremental edit does not apply, and ignores later edits
+    /// until the client opens the file again. The version counter is reset so the next edit is `1`,
+    /// matching this open at version `0`.
+    func reopenDocument(_ document: DocumentType) async throws {
+        guard resolveOpenCloseSupport(), let content = await getIsolatedDocumentContent(document) else {
+            return
+        }
+        openFiles.resetVersion(for: content.uri)
+        let textDocument = TextDocumentItem(
+            uri: content.uri,
+            languageId: content.language,
+            version: 0,
+            text: content.string
+        )
+        try await lspInstance.textDocumentDidOpen(DidOpenTextDocumentParams(textDocument: textDocument))
+    }
+
+    /// Whether `error` is a language server reporting that the file is not open.
+    static func isNonAddedDocument(_ error: Error) -> Bool {
+        String(describing: error).contains("non-added document")
     }
 
     // MARK: File Private Helpers

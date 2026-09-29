@@ -1,0 +1,126 @@
+{
+  "name": "one-dark-pro-darker",
+  "displayName": "One Dark Pro Darker",
+  "description": "One Dark Pro with a darker #23272E background; chrome derives from the editor background.",
+  "author": "CodeEdit",
+  "version": "0.0.1",
+  "license": "MIT",
+  "distributionURL": "https://github.com/CodeEditApp/CodeEdit",
+  "type": "dark",
+  "editor": {
+    "background": {
+      "color": "#23272E"
+    },
+    "selection": {
+      "color": "#3D4555"
+    },
+    "insertionPoint": {
+      "color": "#528BFF"
+    },
+    "lineHighlight": {
+      "color": "#2C313C"
+    },
+    "invisibles": {
+      "color": "#3B4048"
+    },
+    "text": {
+      "color": "#ABB2BF"
+    },
+    "comments": {
+      "color": "#7F848E"
+    },
+    "strings": {
+      "color": "#98C379"
+    },
+    "characters": {
+      "color": "#98C379"
+    },
+    "numbers": {
+      "color": "#D19A66"
+    },
+    "keywords": {
+      "color": "#C678DD",
+      "bold": false
+    },
+    "attributes": {
+      "color": "#D19A66"
+    },
+    "types": {
+      "color": "#E5C07B"
+    },
+    "variables": {
+      "color": "#56B6C2"
+    },
+    "commands": {
+      "color": "#61AFEF"
+    },
+    "values": {
+      "color": "#D19A66"
+    }
+  },
+  "terminal": {
+    "background": {
+      "color": "#23272E"
+    },
+    "selection": {
+      "color": "#3D4555"
+    },
+    "cursor": {
+      "color": "#528BFF"
+    },
+    "text": {
+      "color": "#ABB2BF"
+    },
+    "boldText": {
+      "color": "#ABB2BF"
+    },
+    "black": {
+      "color": "#3F4451"
+    },
+    "red": {
+      "color": "#E05561"
+    },
+    "green": {
+      "color": "#8CC265"
+    },
+    "yellow": {
+      "color": "#D18F52"
+    },
+    "blue": {
+      "color": "#4AA5F0"
+    },
+    "magenta": {
+      "color": "#C162DE"
+    },
+    "cyan": {
+      "color": "#42B3C2"
+    },
+    "white": {
+      "color": "#D7DAE0"
+    },
+    "brightBlack": {
+      "color": "#4F5666"
+    },
+    "brightRed": {
+      "color": "#FF616E"
+    },
+    "brightGreen": {
+      "color": "#A5E075"
+    },
+    "brightYellow": {
+      "color": "#F0A45D"
+    },
+    "brightBlue": {
+      "color": "#4DC4FF"
+    },
+    "brightMagenta": {
+      "color": "#DE73FF"
+    },
+    "brightCyan": {
+      "color": "#4CD1E0"
+    },
+    "brightWhite": {
+      "color": "#E6E6E6"
+    }
+  }
+}

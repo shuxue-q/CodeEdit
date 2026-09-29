@@ -9,14 +9,25 @@ import Foundation
 import LanguageServerProtocol
 
 extension LanguageServer {
-    func requestGoToDefinition(for documentURI: String, position: Position) async throws -> DefinitionResponse {
+    /// Requests the definition location of a symbol at a position in a document.
+    /// - Parameters:
+    ///   - documentURI: The URI of the document.
+    ///   - position: The position of the symbol to resolve.
+    ///   - bypassCache: Skips the response cache. The cache is keyed by URI and position only,
+    ///     so it can serve stale results after edits. Interactive jumps should bypass it.
+    func requestGoToDefinition(
+        for documentURI: String,
+        position: Position,
+        bypassCache: Bool = false
+    ) async throws -> DefinitionResponse {
         do {
             let cacheKey = CacheKey(
                 uri: documentURI,
                 requestType: "goToDefinition",
-                extraData: NoExtraData()
+                extraData: position
             )
-            if let cachedResponse: DefinitionResponse = lspCache.get(key: cacheKey, as: DefinitionResponse.self) {
+            if !bypassCache,
+               let cachedResponse: DefinitionResponse = lspCache.get(key: cacheKey, as: DefinitionResponse.self) {
                 return cachedResponse
             }
 
@@ -27,7 +38,9 @@ extension LanguageServer {
             )
             let response = try await lspInstance.definition(textDocumentPositionParams)
 
-            lspCache.set(key: cacheKey, value: response)
+            if !bypassCache {
+                lspCache.set(key: cacheKey, value: response)
+            }
             return response
         } catch {
             logger.warning("requestGoToDefinition: Error \(error)")

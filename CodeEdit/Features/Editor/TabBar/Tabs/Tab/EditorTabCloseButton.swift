@@ -15,93 +15,97 @@ struct EditorTabCloseButton: View {
     @Binding var closeButtonGestureActive: Bool
     var isDocumentEdited: Bool = false
 
-    @Environment(\.colorScheme)
-    var colorScheme
+    @Environment(\.controlActiveState)
+    private var activeState
 
     @State private var isPressingClose: Bool = false
     @Binding var isHoveringClose: Bool
 
-    let buttonSize: CGFloat = 16
+    /// Diameter of the hover circle inside the tab capsule's leading end.
+    private static let buttonSize: CGFloat = 16
 
-    var body: some View {
-        HStack(alignment: .center) {
-            Image(systemName: isDocumentEdited && !isHoveringTab ? "circlebadge.fill" : "xmark")
-                .font(
-                    .system(
-                        size: isDocumentEdited && !isHoveringTab ? 9.5 : 11.5,
-                        weight: .regular,
-                        design: .rounded
-                    )
-                )
-                .foregroundColor(
-                    isActive
-                    ? colorScheme == .dark ? .primary : Color(.controlAccentColor)
-                    : .secondary
-                )
-        }
-        .frame(width: buttonSize, height: buttonSize)
-        .background(backgroundColor)
-        .foregroundColor(isPressingClose ? .primary : .secondary)
-        .clipShape(RoundedRectangle(cornerRadius: 2))
-        .contentShape(Rectangle())
-        .gesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged({ _ in
-                    isPressingClose = true
-                    closeButtonGestureActive = true
-                })
-                .onEnded({ value in
-                    // If the final position of the mouse is within the bounds of the
-                    // close button then close the tab
-                    if value.location.x > 0
-                        && value.location.x < buttonSize
-                        && value.location.y > 0
-                        && value.location.y < buttonSize {
-                        closeAction()
-                    }
-                    isPressingClose = false
-                    closeButtonGestureActive = false
-                })
-        )
-        .onHover { hover in
-            isHoveringClose = hover
-        }
-        .accessibilityAddTraits(.isButton)
-        .accessibilityLabel(Text("Close"))
-        // Only show when the mouse is hovering and there is no tab dragging.
-        .opacity((isHoveringTab || isDocumentEdited == true) && !isDragging ? 1 : 0)
-        .animation(.easeInOut(duration: 0.08), value: isHoveringTab)
-        .padding(.leading, 4)
+    /// Leading inset that puts this circle on the same center as the capsule's leading end.
+    private static var leadingInset: CGFloat {
+        let capDiameter = EditorTabBarView.height - (EditorTabBackground.verticalInset * 2)
+        let capCenterX = EditorTabBackground.horizontalInset + (capDiameter / 2)
+        return capCenterX - (buttonSize / 2)
     }
 
-    @ViewBuilder var backgroundColor: some View {
-        if colorScheme == .dark {
-            let opacity: Double = if isPressingClose {
-                0.10
-            } else if isHoveringClose {
-                0.05
-            } else {
-                0
-            }
+    /// Distance from the tab's leading edge to the circle's trailing edge.
+    static var trailingEdge: CGFloat {
+        leadingInset + buttonSize
+    }
 
-            Color(nsColor: .white)
-                .opacity(opacity)
-        } else {
-            let opacity: Double = if isPressingClose {
-                0.25
-            } else if isHoveringClose {
-                if isActive {
-                    0.10
-                } else {
-                    0.06
-                }
-            } else {
-                0.0
-            }
+    /// Unsaved files keep a dot in the blue circle until the pointer is on that circle.
+    private var showsCloseGlyph: Bool {
+        !isDocumentEdited || isHoveringClose || isPressingClose
+    }
 
-            Color(nsColor: isActive ? .controlAccentColor : .systemGray)
-                .opacity(opacity)
+    /// Opaque accent so the circle stays visible on the tinted tab capsule.
+    private var circleColor: Color {
+        let accent = Color(nsColor: .controlAccentColor)
+        if activeState == .inactive {
+            return accent.opacity(0.55)
         }
+        return accent.opacity(isActive ? 1 : 0.88)
+    }
+
+    var body: some View {
+        Image(systemName: showsCloseGlyph ? "xmark" : "circle.fill")
+            .font(
+                .system(
+                    size: showsCloseGlyph ? 10 : 7,
+                    weight: .bold,
+                    design: .rounded
+                )
+            )
+            .foregroundStyle(Color.white)
+            .frame(width: Self.buttonSize, height: Self.buttonSize)
+            .background {
+                Circle()
+                    .fill(circleColor)
+                    .overlay {
+                        if isPressingClose {
+                            Circle().fill(Color.black.opacity(0.18))
+                        }
+                    }
+            }
+            .clipShape(Circle())
+            .contentShape(Circle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged({ _ in
+                        isPressingClose = true
+                        closeButtonGestureActive = true
+                    })
+                    .onEnded({ value in
+                        if isInsideCircle(value.location) {
+                            closeAction()
+                        }
+                        isPressingClose = false
+                        closeButtonGestureActive = false
+                    })
+            )
+            .onHover { hover in
+                isHoveringClose = hover
+            }
+            .accessibilityAddTraits(.isButton)
+            .accessibilityLabel(Text("Close"))
+            // Shown while the pointer is on the tab, and kept visible for unsaved files.
+            .opacity((isHoveringTab || isDocumentEdited) && !isDragging ? 1 : 0)
+            .animation(.easeInOut(duration: 0.08), value: isHoveringTab)
+            .animation(.easeInOut(duration: 0.08), value: isHoveringClose)
+            .animation(.easeInOut(duration: 0.08), value: isDocumentEdited)
+            .animation(.easeInOut(duration: 0.08), value: isPressingClose)
+            .padding(.leading, Self.leadingInset)
+    }
+
+    /// The circle is the capsule's leading end, so a point in the square bounds is only a hit inside that circle.
+    private func isInsideCircle(_ location: CGPoint) -> Bool {
+        let radius = Self.buttonSize / 2
+        let deltaX = location.x - radius
+        let deltaY = location.y - radius
+        return (deltaX * deltaX) + (deltaY * deltaY) <= (radius * radius)
     }
 }
 

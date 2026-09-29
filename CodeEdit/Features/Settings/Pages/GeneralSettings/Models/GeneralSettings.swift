@@ -52,7 +52,7 @@ extension SettingsData {
         }
 
         /// Show editor jump bar
-        var showEditorJumpBar: Bool = false
+        var showEditorJumpBar: Bool = true
 
         /// Dims editors without focus
         var dimEditorsWithoutFocus: Bool = false
@@ -96,6 +96,9 @@ extension SettingsData {
         /// Auto save behavior toggle
         var isAutoSaveOn: Bool = true
 
+        /// The placement for auxiliary editors (assistant/canvas) opened from the toolbar
+        var canvasLayout: CanvasLayout = .automatic
+
         /// Default initializer
         init() {}
 
@@ -118,7 +121,7 @@ extension SettingsData {
             self.showEditorJumpBar = try container.decodeIfPresent(
                 Bool.self,
                 forKey: .showEditorJumpBar
-            ) ?? false
+            ) ?? true
             self.dimEditorsWithoutFocus = try container.decodeIfPresent(
                 Bool.self,
                 forKey: .dimEditorsWithoutFocus
@@ -175,6 +178,10 @@ extension SettingsData {
                 Bool.self,
                 forKey: .isAutoSaveOn
             ) ?? true
+            self.canvasLayout = try container.decodeIfPresent(
+                CanvasLayout.self,
+                forKey: .canvasLayout
+            ) ?? .automatic
         }
         // swiftlint:enable function_body_length
     }
@@ -274,6 +281,16 @@ extension SettingsData {
         case showWelcomeWindow
         case doNothing
         case quit
+    }
+
+    /// The placement for auxiliary editors (assistant/canvas) opened from the toolbar
+    /// - **automatic**: The editor chooses the placement
+    /// - **right**: Auxiliary editors open to the right of the active editor
+    /// - **bottom**: Auxiliary editors open below the active editor
+    enum CanvasLayout: String, Codable {
+        case automatic
+        case right
+        case bottom
     }
 
     enum ProjectNavigatorSize: String, Codable {

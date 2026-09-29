@@ -14,6 +14,8 @@ struct ThemeSettingsView: View {
     @ObservedObject private var themeModel: ThemeModel = .shared
     @AppSettings(\.theme)
     var settings
+    @AppSettings(\.general.appAppearance)
+    var appAppearance
     @AppSettings(\.terminal.darkAppearance)
     var useDarkTerminalAppearance
 
@@ -62,6 +64,11 @@ struct ThemeSettingsView: View {
                 }
                 if themeSearchQuery.isEmpty {
                     Section {
+                        appearancePicker
+                        if appAppearance == .system {
+                            pairedThemePicker("Light Mode Theme", scheme: .light)
+                            pairedThemePicker("Dark Mode Theme", scheme: .dark)
+                        }
                         changeThemeOnSystemAppearance
                         if settings.matchAppearance {
                             alwaysUseDarkTerminalAppearance
@@ -152,6 +159,38 @@ struct ThemeSettingsView: View {
 }
 
 private extension ThemeSettingsView {
+    /// The app appearance picker; mirrors the General setting.
+    private var appearancePicker: some View {
+        Picker("Appearance", selection: $appAppearance) {
+            Text("System").tag(SettingsData.Appearances.system)
+            Divider()
+            Text("Light").tag(SettingsData.Appearances.light)
+            Text("Dark").tag(SettingsData.Appearances.dark)
+        }
+        .onChange(of: appAppearance) { _, tag in
+            tag.applyAppearance()
+            themeModel.followAppearanceSetting()
+        }
+    }
+
+    /// A picker for the theme paired with one system appearance, listing only themes of that appearance.
+    private func pairedThemePicker(_ title: LocalizedStringKey, scheme: ColorScheme) -> some View {
+        let themes = scheme == .dark ? themeModel.darkThemes : themeModel.lightThemes
+        let paired = scheme == .dark ? themeModel.selectedDarkTheme : themeModel.selectedLightTheme
+        return Picker(
+            title,
+            selection: Binding<Theme?>(
+                get: { paired },
+                set: { if let theme = $0 { themeModel.setPairedTheme(theme, for: scheme) } }
+            )
+        ) {
+            ForEach(themes) { theme in
+                Text(theme.displayName).tag(Optional(theme))
+            }
+        }
+        .disabled(!settings.matchAppearance)
+    }
+
     private var useThemeBackground: some View {
         Toggle("Use theme background ", isOn: $settings.useThemeBackground)
     }

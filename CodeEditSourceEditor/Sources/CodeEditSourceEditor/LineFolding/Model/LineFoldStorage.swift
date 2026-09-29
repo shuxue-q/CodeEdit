@@ -31,6 +31,8 @@ struct LineFoldStorage: Sendable {
     private var idCounter = FoldRange.FoldIdentifier.zero
     private var store: RangeStore<FoldStoreElement>
     private var foldRanges: [FoldRange.FoldIdentifier: FoldRange] = [:]
+    /// The fold that directly encloses each nested fold, keyed by the nested fold's id.
+    private var parentIDs: [FoldRange.FoldIdentifier: FoldRange.FoldIdentifier] = [:]
 
     /// Initialize with the full document length
     init(documentLength: Int, folds: [RawFold] = [], collapsedRanges: Set<DepthStartPair> = []) {
@@ -55,7 +57,11 @@ struct LineFoldStorage: Sendable {
 
         // Build new regions
         foldRanges.removeAll(keepingCapacity: true)
+        parentIDs.removeAll(keepingCapacity: true)
         store = RangeStore<FoldStoreElement>(documentLength: store.length)
+
+        // Folds nest and arrive sorted by start, so the folds on this stack that haven't ended enclose the next one.
+        var enclosingFolds: [FoldRange] = []
 
         for raw in rawFolds {
             let key = DepthStartPair(depth: raw.depth, start: raw.range.lowerBound)
@@ -66,6 +72,12 @@ struct LineFoldStorage: Sendable {
             // override collapse if provider says so
             let isCollapsed = collapsedRanges.contains(key) || wasCollapsed
             let fold = FoldRange(id: id, depth: raw.depth, range: raw.range, isCollapsed: isCollapsed)
+
+            while let last = enclosingFolds.last, last.range.upperBound <= raw.range.lowerBound {
+                enclosingFolds.removeLast()
+            }
+            parentIDs[id] = enclosingFolds.last?.id
+            enclosingFolds.append(fold)
 
             foldRanges[id] = fold
             let elem = FoldStoreElement(id: id, depth: raw.depth)
@@ -101,6 +113,27 @@ struct LineFoldStorage: Sendable {
                     )
                 )
                 alreadyReturnedIDs.insert(elem.id)
+            }
+        }
+
+        return result.sorted { $0.range.lowerBound < $1.range.lowerBound }
+    }
+
+    /// Query a document subrange and return every fold that overlaps it, ordered by start position.
+    ///
+    /// The store only keeps the innermost fold at each offset, so ``folds(in:)`` misses an enclosing fold when nested
+    /// folds cover all of its text in the range. This walks up from each of those folds to add its ancestors.
+    func folds(overlapping queryRange: Range<Int>) -> [FoldRange] {
+        let innermost = folds(in: queryRange)
+        var seenIDs = Set(innermost.map(\.id))
+        var result = innermost
+
+        for fold in innermost {
+            var parentID = parentIDs[fold.id]
+            // Stop at a fold already listed: its ancestors are added from wherever it was listed.
+            while let id = parentID, seenIDs.insert(id).inserted, let parent = foldRanges[id] {
+                result.append(parent)
+                parentID = parentIDs[id]
             }
         }
 

@@ -1,0 +1,126 @@
+{
+  "name": "tokyo-night-day",
+  "displayName": "Tokyo Night Day",
+  "description": "CodeEdit bundled theme.",
+  "author": "CodeEdit",
+  "version": "0.0.1",
+  "license": "MIT",
+  "distributionURL": "https://github.com/CodeEditApp/CodeEdit",
+  "type": "light",
+  "editor": {
+    "background": {
+      "color": "#E1E2E7"
+    },
+    "selection": {
+      "color": "#B7C1E3"
+    },
+    "insertionPoint": {
+      "color": "#3760BF"
+    },
+    "lineHighlight": {
+      "color": "#D5D6DB"
+    },
+    "invisibles": {
+      "color": "#B4B5B9"
+    },
+    "text": {
+      "color": "#3760BF"
+    },
+    "comments": {
+      "color": "#848CB5"
+    },
+    "strings": {
+      "color": "#587539"
+    },
+    "characters": {
+      "color": "#587539"
+    },
+    "numbers": {
+      "color": "#B15C00"
+    },
+    "keywords": {
+      "color": "#9854F1",
+      "bold": false
+    },
+    "attributes": {
+      "color": "#8C6C3E"
+    },
+    "types": {
+      "color": "#007197"
+    },
+    "variables": {
+      "color": "#118C74"
+    },
+    "commands": {
+      "color": "#2E7DE9"
+    },
+    "values": {
+      "color": "#965027"
+    }
+  },
+  "terminal": {
+    "background": {
+      "color": "#E1E2E7"
+    },
+    "selection": {
+      "color": "#B7C1E3"
+    },
+    "cursor": {
+      "color": "#3760BF"
+    },
+    "text": {
+      "color": "#3760BF"
+    },
+    "boldText": {
+      "color": "#3760BF"
+    },
+    "black": {
+      "color": "#E9E9ED"
+    },
+    "red": {
+      "color": "#F52A65"
+    },
+    "green": {
+      "color": "#587539"
+    },
+    "yellow": {
+      "color": "#8C6C3E"
+    },
+    "blue": {
+      "color": "#2E7DE9"
+    },
+    "magenta": {
+      "color": "#9854F1"
+    },
+    "cyan": {
+      "color": "#007197"
+    },
+    "white": {
+      "color": "#6172B0"
+    },
+    "brightBlack": {
+      "color": "#A1A6C5"
+    },
+    "brightRed": {
+      "color": "#F52A65"
+    },
+    "brightGreen": {
+      "color": "#587539"
+    },
+    "brightYellow": {
+      "color": "#8C6C3E"
+    },
+    "brightBlue": {
+      "color": "#2E7DE9"
+    },
+    "brightMagenta": {
+      "color": "#9854F1"
+    },
+    "brightCyan": {
+      "color": "#007197"
+    },
+    "brightWhite": {
+      "color": "#3760BF"
+    }
+  }
+}

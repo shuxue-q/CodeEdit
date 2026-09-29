@@ -9,7 +9,7 @@ import Foundation
 import SwiftUI
 
 public struct JumpToDefinitionLink: Identifiable, Sendable, CodeSuggestionEntry {
-    public var id: String { url?.absoluteString ?? "\(targetRange)" }
+    public var id: String { "\(url?.absoluteString ?? "local")#\(targetRange)" }
     /// Leave as `nil` if the link is in the same document.
     public let url: URL?
     public var targetPosition: CursorPosition? {

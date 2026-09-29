@@ -69,20 +69,10 @@ struct WorkspaceView: View {
                     // MARK: - Theme Color Scheme
 
                     .task {
-                        themeModel.colorScheme = colorScheme
-                        if matchAppearance {
-                            themeModel.selectedTheme = colorScheme == .dark
-                            ? themeModel.selectedDarkTheme
-                            : themeModel.selectedLightTheme
-                        }
+                        themeModel.syncAppearance(to: colorScheme, matchAppearance: matchAppearance)
                     }
                     .onChange(of: colorScheme) { _, newValue in
-                        themeModel.colorScheme = newValue
-                        if matchAppearance {
-                            themeModel.selectedTheme = newValue == .dark
-                            ? themeModel.selectedDarkTheme
-                            : themeModel.selectedLightTheme
-                        }
+                        themeModel.syncAppearance(to: newValue, matchAppearance: matchAppearance)
                     }
 
                     // MARK: - Source Control

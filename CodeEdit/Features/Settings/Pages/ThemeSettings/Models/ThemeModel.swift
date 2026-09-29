@@ -206,6 +206,55 @@ final class ThemeModel: ObservableObject {
         }
     }
 
+    /// Activates a theme the user picked, and brings the window chrome along with it.
+    ///
+    /// The navigator, tab bar, breadcrumbs, status bar and window frame follow `NSApp.appearance`, not the
+    /// theme, so a dark theme under a light appearance would otherwise leave the chrome light. When the
+    /// theme's ``Theme/appearance`` differs from the current one, the General appearance setting is switched
+    /// to match and applied immediately.
+    /// - Parameter theme: The theme the user chose.
+    func chooseTheme(_ theme: Theme) {
+        activateTheme(theme)
+        guard (theme.appearance == .dark) != Self.isSystemInDarkMode else { return }
+        let appearance: SettingsData.Appearances = theme.appearance == .dark ? .dark : .light
+        Settings.shared.preferences.general.appAppearance = appearance
+        appearance.applyAppearance()
+    }
+
+    /// Brings the selected theme along after the user changes the General appearance setting.
+    ///
+    /// The inverse of ``chooseTheme(_:)``: a dark theme under a newly chosen light appearance (or the reverse)
+    /// would leave the editor and the window chrome disagreeing, so the remembered theme for the new
+    /// appearance is activated. Nothing changes when the current theme already fits, or when no theme was
+    /// remembered for that appearance.
+    func followAppearanceSetting() {
+        let isDark = Self.isSystemInDarkMode
+        guard let current = selectedTheme, (current.appearance == .dark) != isDark else { return }
+        guard let matching = isDark ? selectedDarkTheme : selectedLightTheme,
+              (matching.appearance == .dark) == isDark else { return }
+        selectedTheme = matching
+    }
+
+    /// Designates the theme used for one system appearance.
+    ///
+    /// The choice is stored in ``selectedLightTheme`` / ``selectedDarkTheme`` (persisted as the
+    /// `selectedLightTheme` / `selectedDarkTheme` settings). When appearance matching is on and the app is
+    /// currently in that appearance, the theme is also activated immediately, so the editor and window
+    /// chrome update without waiting for the next appearance change.
+    /// - Parameters:
+    ///   - theme: The theme to designate.
+    ///   - scheme: The system appearance the theme is paired with.
+    func setPairedTheme(_ theme: Theme, for scheme: ColorScheme) {
+        if scheme == .dark {
+            selectedDarkTheme = theme
+        } else {
+            selectedLightTheme = theme
+        }
+        if settings.matchAppearance, colorScheme == scheme, selectedTheme != theme {
+            selectedTheme = theme
+        }
+    }
+
     func exportTheme(_ theme: Theme) {
         guard let themeFileURL = theme.fileURL else {
             print("Theme file URL not found.")
@@ -256,4 +305,36 @@ final class ThemeModel: ObservableObject {
                 }
             }
         }
+}
+
+extension ThemeModel {
+    /// Follows a window color scheme after the current SwiftUI view update.
+    ///
+    /// `.task` and `.onChange` run while SwiftUI is still updating the window. Assigning
+    /// ``colorScheme`` or ``selectedTheme`` there publishes from inside that update.
+    /// - Parameters:
+    ///   - colorScheme: The scheme reported by the window.
+    ///   - matchAppearance: When true, ``selectedTheme`` follows the scheme's light or dark theme.
+    func syncAppearance(to colorScheme: ColorScheme, matchAppearance: Bool) {
+        DispatchQueue.main.async { [weak self] in
+            self?.applyAppearance(colorScheme, matchAppearance: matchAppearance)
+        }
+    }
+
+    /// Sets the color scheme, and the selected theme when appearance matching is on.
+    ///
+    /// Values that are already current are left alone so observers are not notified.
+    /// - Parameters:
+    ///   - colorScheme: The scheme to store.
+    ///   - matchAppearance: When true, ``selectedTheme`` follows the scheme's light or dark theme.
+    func applyAppearance(_ colorScheme: ColorScheme, matchAppearance: Bool) {
+        if self.colorScheme != colorScheme {
+            self.colorScheme = colorScheme
+        }
+        guard matchAppearance else { return }
+        let matchingTheme = colorScheme == .dark ? selectedDarkTheme : selectedLightTheme
+        if selectedTheme != matchingTheme {
+            selectedTheme = matchingTheme
+        }
+    }
 }

@@ -94,6 +94,39 @@ final class HighlightProviderStateTest: XCTestCase {
         wait(for: [secondSetUpExpectation], timeout: 1.0)
     }
 
+    /// A cancelled edit must invalidate the text that now exists, not the shorter pre-edit range. Accepting a
+    /// completion (`temp` -> `template<>`) otherwise re-highlighted only `temp` and left `late<>` stale.
+    @MainActor
+    func test_cancelledEditInvalidatesWholeReplacedRange() {
+        textView.string = "template<>"
+        rangeProvider.setVisibleSet(IndexSet(integersIn: NSRange(location: 0, length: 10)))
+
+        var queriedRanges: [NSRange] = []
+        let mockProvider = Mock.highlightProvider(
+            onSetUp: { _ in },
+            onApplyEdit: { _, _, _ in .failure(HighlightProvidingError.operationCancelled) },
+            onQueryHighlightsFor: { _, range in
+                queriedRanges.append(range)
+                return .success([])
+            }
+        )
+
+        let state = HighlightProviderState(
+            id: 0,
+            delegate: delegate,
+            highlightProvider: mockProvider,
+            textView: textView,
+            visibleRangeProvider: rangeProvider,
+            language: .cpp
+        )
+        state.invalidate() // Mark everything valid first.
+        queriedRanges.removeAll()
+
+        state.storageDidUpdate(range: NSRange(location: 0, length: 4), delta: 6)
+
+        XCTAssertEqual(queriedRanges, [NSRange(location: 0, length: 10)])
+    }
+
     @MainActor
     func test_storageUpdatedRangesPassedOn() {
         var updatedRanges: [(NSRange, Int)] = []

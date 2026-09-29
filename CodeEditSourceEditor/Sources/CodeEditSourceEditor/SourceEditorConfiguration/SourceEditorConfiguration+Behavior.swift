@@ -17,7 +17,7 @@ extension SourceEditorConfiguration {
         /// Determines what character(s) to insert when the tab key is pressed. Defaults to 4 spaces.
         public var indentOption: IndentOption = .spaces(count: 4)
 
-        /// The column to reformat at.
+        /// Column where the reformatting guide is drawn. Text may extend past it.
         public var reformatAtColumn: Int = 80
 
         public init(
@@ -55,11 +55,6 @@ extension SourceEditorConfiguration {
             if oldConfig?.reformatAtColumn != reformatAtColumn {
                 controller.reformattingGuideView?.column = reformatAtColumn
                 controller.reformattingGuideView?.updatePosition(in: controller)
-                if controller.isViewLoaded {
-                    controller.view.updateConstraintsForSubtreeIfNeeded()
-                    controller.textView?.layoutManager.setNeedsLayout()
-                    controller.textView?.updateFrameIfNeeded()
-                }
             }
         }
     }

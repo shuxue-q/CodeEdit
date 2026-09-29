@@ -55,7 +55,14 @@ final class TextViewControllerContextMenuTests: XCTestCase {
         XCTAssertTrue(itemTitles.contains("Navigate"))
         XCTAssertTrue(itemTitles.contains { $0 == "Fold" || $0 == "Unfold" })
         XCTAssertTrue(itemTitles.contains("Add Documentation"))
+        XCTAssertTrue(itemTitles.contains("Format Code"))
         XCTAssertTrue(itemTitles.contains("Show Last Change for Line"))
+        let documentationIndex = try XCTUnwrap(itemTitles.firstIndex(of: "Add Documentation"))
+        let formatIndex = try XCTUnwrap(itemTitles.firstIndex(of: "Format Code"))
+        let lastChangeIndex = try XCTUnwrap(itemTitles.firstIndex(of: "Show Last Change for Line"))
+        XCTAssertLessThan(documentationIndex, formatIndex)
+        XCTAssertLessThan(formatIndex, lastChangeIndex)
+        XCTAssertEqual(itemTitles[formatIndex + 1], "---")
         XCTAssertTrue(itemTitles.contains { $0.hasPrefix("Bookmark “MyFile.swift” Line") })
         XCTAssertTrue(itemTitles.contains("Bookmark “MyFile.swift”"))
         XCTAssertTrue(itemTitles.contains("Cut"))
@@ -122,7 +129,8 @@ final class TextViewControllerContextMenuTests: XCTestCase {
         XCTAssertTrue(titles.contains("Extract to Variable"))
         XCTAssertTrue(titles.contains("Add Missing Switch Cases"))
         XCTAssertTrue(titles.contains("Generate Memberwise Initializer"))
-        XCTAssertTrue(titles.contains("Format Document"))
+        XCTAssertFalse(titles.contains("Format Document"))
+        XCTAssertFalse(titles.contains("Format Code"))
     }
 
     func test_findSubmenu() throws {

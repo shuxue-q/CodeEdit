@@ -9,7 +9,9 @@ import AppKit
 
 extension TextViewController {
     func reloadUI() {
-        configuration.didSetOnController(controller: self, oldConfig: nil)
+        // The configuration has already been applied by its `didSet` observer at this point. Pass it as the old
+        // configuration so this doesn't redundantly reapply everything (eg: re-theming the entire document).
+        configuration.didSetOnController(controller: self, oldConfig: configuration)
 
         styleScrollView()
         styleTextView()

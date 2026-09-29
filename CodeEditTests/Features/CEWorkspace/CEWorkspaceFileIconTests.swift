@@ -26,6 +26,16 @@ struct CEWorkspaceFileIconTests {
         #expect(file(name).systemImage == "cpp")
     }
 
+    @Test(arguments: ["main.c"])
+    func cIcons(name: String) {
+        #expect(file(name).systemImage == "c")
+    }
+
+    @Test(arguments: ["header.h"])
+    func cheaderIcons(name: String) {
+        #expect(file(name).systemImage == "cheader")
+    }
+
     @Test(arguments: ["header.hpp", "header.hh", "header.hxx"])
     func hppIcons(name: String) {
         #expect(file(name).systemImage == "hpp")
@@ -48,8 +58,17 @@ struct CEWorkspaceFileIconTests {
         #expect(file("run.zsh").systemImage == "terminal")
     }
 
-    @Test(arguments: ["cmake", "cpp", "hpp", "makefile"])
+    @Test(arguments: ["c", "cheader", "cmake", "cpp", "hpp", "makefile"])
     func customSymbolsExistInAppBundle(name: String) throws {
         #expect(NSImage(named: name) != nil)
+    }
+
+    @Test(arguments: ["c", "cheader", "cmake", "cpp", "hpp"])
+    func svgIconsAreIconSized(name: String) throws {
+        // SVG images render at their intrinsic size in the navigator and tabs,
+        // so they must be small enough to fit the icon slot.
+        let image = try #require(NSImage(named: name))
+        #expect(image.size.width <= 16)
+        #expect(image.size.height <= 16)
     }
 }

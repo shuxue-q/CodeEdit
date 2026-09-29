@@ -9,6 +9,10 @@ import SwiftUI
 
 struct EditorTabView: View {
 
+    @ObservedObject private var themeModel: ThemeModel = .shared
+
+    private var chrome: Theme.ChromePalette? { themeModel.activeChrome }
+
     @Environment(\.colorScheme)
     private var colorScheme
 
@@ -113,21 +117,30 @@ struct EditorTabView: View {
         self._fileObserver = StateObject(wrappedValue: EditorTabFileObserver(file: file))
     }
 
+    /// Side of the square slot every file icon is fitted into.
+    private static let iconSize: CGFloat = 16
+
+    /// Gap between the close button's trailing edge and the file icon.
+    private static let closeButtonGap: CGFloat = 5
+
     @ViewBuilder var content: some View {
         HStack(alignment: .center, spacing: 3) {
+            // Fit every icon asset to the same slot so none extends toward the close button.
             Image(nsImage: tabFile.nsIcon)
-                .frame(width: 16, height: 16)
+                .resizable()
+                .scaledToFit()
+                .frame(width: Self.iconSize, height: Self.iconSize)
                 .foregroundColor(
                     fileIconStyle == .color
                     && activeState != .inactive && isActiveEditor
                     ? tabFile.iconColor
-                    : .secondary
+                    : colorScheme == .dark ? Color(red: 0.616, green: 0.647, blue: 0.706) : .secondary
                 )
             Text(tabFile.name)
                 .font(
                     isTemporary
-                    ? .system(size: 11.0).italic()
-                    : .system(size: 11.0)
+                    ? .system(size: 13.0).italic()
+                    : .system(size: 13.0)
                 )
                 .lineLimit(1)
                 .strikethrough(fileObserver.isDeleted, color: .primary)
@@ -136,7 +149,8 @@ struct EditorTabView: View {
         .accessibilityElement(children: .ignore)
         .accessibilityAddTraits(.isStaticText)
         .accessibilityLabel(tabFile.name)
-        .padding(.horizontal, 20)
+        .padding(.leading, EditorTabCloseButton.trailingEdge + Self.closeButtonGap)
+        .padding(.trailing, 20)
         .overlay {
             ZStack {
                 // Close Button with is file changed indicator
@@ -156,16 +170,20 @@ struct EditorTabView: View {
             // Inactive states for tab bar item content.
             activeState != .inactive
             ? 1.0
-            : isActive ? 0.6 : 0.4
+            : isActive ? 0.8 : 0.7
         )
         .foregroundColor(
             isActive && isActiveEditor
             ? (
                 colorScheme != .dark
                 ? Color(nsColor: .controlAccentColor)
-                : .primary
+                : Color(red: 0.90, green: 0.93, blue: 0.95) // #E6EDF3
             )
-            : .primary
+            : (
+                colorScheme == .dark
+                ? Color(red: 0.616, green: 0.647, blue: 0.706) // #9DA5B4
+                : chrome?.tabInactiveText ?? .secondary
+            )
         )
         .frame(maxHeight: .infinity) // To vertically max-out the parent (tab bar) area.
         .contentShape(Capsule()) // Make the capsule clickable.
@@ -207,8 +225,8 @@ struct EditorTabView: View {
                     isDragging: isDragging,
                     isHovering: isHovering
                 )
-                .padding(.vertical, 3)
-                .padding(.horizontal, 2)
+                .padding(.vertical, EditorTabBackground.verticalInset)
+                .padding(.horizontal, EditorTabBackground.horizontalInset)
                 .animation(.easeInOut(duration: 0.08), value: isHovering)
             }
             // TODO: Enable the following code snippet when dragging-out behavior should be allowed.

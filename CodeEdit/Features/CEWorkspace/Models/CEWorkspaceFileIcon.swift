@@ -146,7 +146,7 @@ enum FileIcon {
         case .strings:
             return "text.quote"
         case .h:
-            return "h.square"
+            return "cheader"
         case .m:
             return "m.square"
         case .vue:
@@ -157,6 +157,8 @@ enum FileIcon {
             return "s.square"
         case .mod:
             return "m.square"
+        case .c:
+            return "c"
         case .cmake, .CMakeLists:
             return "cmake"
         case .cpp, .cc, .cxx:

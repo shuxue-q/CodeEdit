@@ -48,4 +48,24 @@ extension LanguageServer {
             throw error
         }
     }
+
+    /// Looks up symbols by name. Used when a completion item has no declaring header.
+    func requestWorkspaceSymbols(query: String) async throws -> WorkspaceSymbolResponse {
+        do {
+            return try await lspInstance.workspaceSymbol(WorkspaceSymbolParams(query: query))
+        } catch {
+            logger.warning("requestWorkspaceSymbols: Error \(error)")
+            throw error
+        }
+    }
+
+    /// Loads documentation and detail that the server left off the original completion item.
+    func requestCompletionResolve(_ item: CompletionItem) async throws -> CompletionItem {
+        do {
+            return try await lspInstance.completeItemResolve(item)
+        } catch {
+            logger.warning("requestCompletionResolve: Error \(error)")
+            throw error
+        }
+    }
 }

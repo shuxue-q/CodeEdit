@@ -19,6 +19,16 @@ class SuggestionViewController: NSViewController {
     var viewHeightConstraint: NSLayoutConstraint?
     var viewWidthConstraint: NSLayoutConstraint?
     var previewWidthConstraint: NSLayoutConstraint?
+    var footerView = NSView()
+    var footerSeparator = NSView()
+    var originLabel = NSTextField(labelWithString: "")
+    var footerHeightConstraint: NSLayoutConstraint?
+
+    /// Labels currently shown. A resolve replaces one item without changing these.
+    var displayedLabels: [String] = []
+    var isResettingItems = false
+    var resolveTask: Task<Void, Never>?
+    var resolveGeneration = 0
 
     var itemObserver: AnyCancellable?
     var cachedFont: NSFont?
@@ -60,9 +70,11 @@ class SuggestionViewController: NSViewController {
         previewView.translatesAutoresizingMaskIntoConstraints = false
         previewView.isHidden = true
         previewWidthConstraint = previewView.widthAnchor.constraint(equalToConstant: 0)
+        configureFooter()
 
         view.addSubview(noItemsLabel)
         view.addSubview(scrollView)
+        view.addSubview(footerView)
         view.addSubview(previewView)
 
         NSLayoutConstraint.activate([
@@ -71,19 +83,61 @@ class SuggestionViewController: NSViewController {
             tintView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             tintView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
 
+            // Centered, not pinned to the top and bottom. A hidden label pinned to both
+            // edges still reports its line height, and the next layout pass (arrowing
+            // through suggestions) collapses the window to that single line.
             noItemsLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            noItemsLabel.topAnchor.constraint(equalTo: view.topAnchor, constant: 10),
-            noItemsLabel.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -10),
+            noItemsLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor),
 
             scrollView.topAnchor.constraint(equalTo: view.topAnchor),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: previewView.leadingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            scrollView.bottomAnchor.constraint(equalTo: footerView.topAnchor),
+
+            footerView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            footerView.trailingAnchor.constraint(equalTo: previewView.leadingAnchor),
+            footerView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            footerHeightConstraint!,
 
             previewView.topAnchor.constraint(equalTo: view.topAnchor),
             previewView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             previewView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             previewWidthConstraint!
+        ])
+    }
+
+    private func configureFooter() {
+        footerView.translatesAutoresizingMaskIntoConstraints = false
+        footerView.clipsToBounds = true
+        footerView.isHidden = true
+        footerHeightConstraint = footerView.heightAnchor.constraint(equalToConstant: 0)
+
+        footerSeparator.translatesAutoresizingMaskIntoConstraints = false
+        footerSeparator.wantsLayer = true
+        footerSeparator.layer?.backgroundColor = NSColor.separatorColor.cgColor
+        footerView.addSubview(footerSeparator)
+
+        originLabel.translatesAutoresizingMaskIntoConstraints = false
+        originLabel.font = .systemFont(ofSize: 12)
+        originLabel.lineBreakMode = .byTruncatingMiddle
+        originLabel.maximumNumberOfLines = 1
+        originLabel.isEditable = false
+        originLabel.isSelectable = false
+        originLabel.isBezeled = false
+        originLabel.drawsBackground = false
+        originLabel.backgroundColor = .clear
+        originLabel.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
+        footerView.addSubview(originLabel)
+
+        NSLayoutConstraint.activate([
+            footerSeparator.topAnchor.constraint(equalTo: footerView.topAnchor),
+            footerSeparator.leadingAnchor.constraint(equalTo: footerView.leadingAnchor),
+            footerSeparator.trailingAnchor.constraint(equalTo: footerView.trailingAnchor),
+            footerSeparator.heightAnchor.constraint(equalToConstant: 1),
+
+            originLabel.leadingAnchor.constraint(equalTo: footerView.leadingAnchor, constant: 13),
+            originLabel.trailingAnchor.constraint(equalTo: footerView.trailingAnchor, constant: -13),
+            originLabel.centerYAnchor.constraint(equalTo: footerView.centerYAnchor, constant: 0.5)
         ])
     }
 
@@ -99,6 +153,7 @@ class SuggestionViewController: NSViewController {
 
     override func viewWillDisappear() {
         super.viewWillDisappear()
+        resolveTask?.cancel()
         if let monitor = localEventMonitor {
             NSEvent.removeMonitor(monitor)
             localEventMonitor = nil
@@ -130,8 +185,12 @@ class SuggestionViewController: NSViewController {
             windowController?.close()
             return nil
 
-        case 125, 126:  // Down/Up Arrow
-            tableView.keyDown(with: event)
+        case 125: // Down Arrow
+            moveSelection(by: 1)
+            return nil
+
+        case 126: // Up Arrow
+            moveSelection(by: -1)
             return nil
 
         case 36, 48:  // Return/Tab
@@ -143,210 +202,23 @@ class SuggestionViewController: NSViewController {
         }
     }
 
-    func styleView(using controller: TextViewController) {
-        noItemsLabel.font = controller.font
-        previewView.font = controller.font
-        previewView.documentationFont = controller.font
-        switch controller.systemAppearance {
-        case .aqua:
-            let color = controller.theme.background
-            if color != .clear {
-                let newColor = NSColor(
-                    red: color.redComponent * 0.95,
-                    green: color.greenComponent * 0.95,
-                    blue: color.blueComponent * 0.95,
-                    alpha: 1.0
-                )
-                tintView.layer?.backgroundColor = newColor.cgColor
-            } else {
-                tintView.layer?.backgroundColor = .clear
-            }
-        case .darkAqua:
-            tintView.layer?.backgroundColor = controller.theme.background.cgColor
-        default:
-            return
+    /// Moves the highlighted row and refreshes its documentation.
+    ///
+    /// Arrow keys are delivered through a local monitor because this panel cannot become key.
+    /// `NSTableView.keyDown` does not reliably change the selection in that case, so the preview
+    /// stayed on whatever item was drawn first.
+    func moveSelection(by delta: Int) {
+        let count = model?.items.count ?? 0
+        guard count > 0, delta != 0 else { return }
+        let current = tableView.selectedRow
+        let next: Int
+        if current < 0 {
+            next = delta > 0 ? 0 : count - 1
+        } else {
+            next = min(max(current + delta, 0), count - 1)
         }
-        updateSize(using: controller)
-    }
-
-    func updateSize(using controller: TextViewController?) {
-        guard model?.items.isEmpty == false && tableView.numberOfRows > 0 else {
-            previewWidthConstraint?.constant = 0
-            let size = NSSize(width: 256, height: noItemsLabel.fittingSize.height + 20)
-            preferredContentSize = size
-            windowController?.updateWindowSize(newSize: size)
-            return
-        }
-
-        if controller != nil {
-            cachedFont = controller?.font
-        }
-
-        guard let rowView = tableView.view(atColumn: 0, row: 0, makeIfNecessary: true) else {
-            return
-        }
-
-        let maxLength = min(
-            (model?.items.reduce(0, { max($0, $1.label.count + ($1.detail?.count ?? 0)) }) ?? 16) + 4,
-            64
-        )
-        let listWidth = max( // minimum width = 256px, horizontal item padding = 13px
-            CGFloat(maxLength) * (controller?.font ?? cachedFont ?? NSFont.systemFont(ofSize: 12)).charWidth + 26,
-            256
-        )
-
-        let rowHeight = rowView.fittingSize.height
-
-        let numberOfVisibleRows = min(CGFloat(model?.items.count ?? 0), SuggestionController.MAX_VISIBLE_ROWS)
-        let listHeight = rowHeight * numberOfVisibleRows + SuggestionController.WINDOW_PADDING * 2
-
-        // The documentation panel is shown to the right of the list with a fixed width and a
-        // height matching the list, scrolling when the content is taller than the panel.
-        let previewVisible = !previewView.isHidden
-        previewWidthConstraint?.constant = previewVisible ? SuggestionController.PREVIEW_WIDTH : 0
-        previewView.setPreferredMaxLayoutWidth(width: SuggestionController.PREVIEW_WIDTH - 26)
-
-        viewHeightConstraint?.isActive = false
-        viewWidthConstraint?.isActive = false
-
-        let newWidth = listWidth + (previewVisible ? SuggestionController.PREVIEW_WIDTH : 0)
-        viewHeightConstraint = view.heightAnchor.constraint(equalToConstant: listHeight)
-        viewWidthConstraint = view.widthAnchor.constraint(equalToConstant: newWidth)
-
-        viewHeightConstraint?.isActive = true
-        viewWidthConstraint?.isActive = true
-
-        view.updateConstraintsForSubtreeIfNeeded()
-        view.layoutSubtreeIfNeeded()
-
-        let newSize = NSSize(width: newWidth, height: listHeight)
-        preferredContentSize = newSize
-        windowController?.updateWindowSize(newSize: newSize)
-    }
-
-    func configureTableView() {
-        tableView.delegate = self
-        tableView.dataSource = self
-        tableView.headerView = nil
-        tableView.backgroundColor = .clear
-        tableView.intercellSpacing = .zero
-        tableView.allowsEmptySelection = false
-        tableView.selectionHighlightStyle = .regular
-        tableView.style = .plain
-        tableView.usesAutomaticRowHeights = true
-        tableView.gridStyleMask = []
-        tableView.target = self
-        tableView.action = #selector(tableViewClicked(_:))
-        let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("ItemsCell"))
-        tableView.addTableColumn(column)
-    }
-
-    func configureScrollView() {
-        scrollView.documentView = tableView
-        scrollView.hasVerticalScroller = true
-        scrollView.verticalScroller = NoSlotScroller()
-        scrollView.scrollerStyle = .overlay
-        scrollView.autohidesScrollers = true
-        scrollView.drawsBackground = false
-        scrollView.automaticallyAdjustsContentInsets = false
-        scrollView.translatesAutoresizingMaskIntoConstraints = false
-        scrollView.verticalScrollElasticity = .allowed
-        scrollView.contentInsets = NSEdgeInsets(
-            top: SuggestionController.WINDOW_PADDING,
-            left: 0,
-            bottom: SuggestionController.WINDOW_PADDING,
-            right: 0
-        )
-    }
-
-    func onItemsUpdated() {
-        resetScrollPosition()
-        if let model {
-            noItemsLabel.isHidden = !model.items.isEmpty
-            scrollView.isHidden = model.items.isEmpty
-            previewView.isHidden = model.items.isEmpty
-        }
-        tableView.reloadData()
-        if let activeTextView = model?.activeTextView {
-            updateSize(using: activeTextView)
-        }
-    }
-
-    @objc private func tableViewClicked(_ sender: Any?) {
-        if NSApp.currentEvent?.clickCount == 2 {
-            applySelectedItem()
-        }
-    }
-
-    private func resetScrollPosition() {
-        let clipView = scrollView.contentView
-
-        // Scroll to the top of the content
-        clipView.scroll(to: NSPoint(x: 0, y: -SuggestionController.WINDOW_PADDING))
-
-        // Select the first item
-        if model?.items.isEmpty == false {
-            tableView.selectRowIndexes(IndexSet(integer: 0), byExtendingSelection: false)
-        }
-    }
-
-    func applySelectedItem() {
-        let row = tableView.selectedRow
-        guard row >= 0, row < model?.items.count ?? 0 else {
-            return
-        }
-        if let model {
-            model.applySelectedItem(item: model.items[tableView.selectedRow], window: view.window)
-        }
-    }
-}
-
-extension SuggestionViewController: NSTableViewDataSource, NSTableViewDelegate {
-    public func numberOfRows(in tableView: NSTableView) -> Int {
-        model?.items.count ?? 0
-    }
-
-    public func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
-        guard let model = model,
-              row >= 0, row < model.items.count,
-              let textView = model.activeTextView else {
-            return nil
-        }
-        return NSHostingView(
-            rootView: CodeSuggestionLabelView(
-                suggestion: model.items[row],
-                labelColor: textView.theme.text.color,
-                secondaryLabelColor: textView.theme.text.color.withAlphaComponent(0.5),
-                font: textView.font
-            )
-        )
-    }
-
-    public func tableView(_ tableView: NSTableView, rowViewForRow row: Int) -> NSTableRowView? {
-        CodeSuggestionRowView { [weak self] in
-            self?.model?.activeTextView?.theme.background ?? NSColor.controlBackgroundColor
-        }
-    }
-
-    public func tableView(_ tableView: NSTableView, shouldSelectRow row: Int) -> Bool {
-        // Only allow selection through keyboard navigation or single clicks
-        NSApp.currentEvent?.type != .leftMouseDragged
-    }
-
-    public func tableViewSelectionDidChange(_ notification: Notification) {
-        guard tableView.selectedRow >= 0 else { return }
-        if let model {
-            // Update our preview view
-            let selectedItem = model.items[tableView.selectedRow]
-
-            previewView.sourcePreview = model.syntaxHighlights(forIndex: tableView.selectedRow)
-            previewView.documentation = selectedItem.documentation
-            previewView.pathComponents = selectedItem.pathComponents ?? []
-            previewView.targetRange = selectedItem.targetPosition
-            previewView.hideIfEmpty()
-            updateSize(using: nil)
-
-            model.didSelect(item: selectedItem)
-        }
+        guard next != current else { return }
+        tableView.selectRowIndexes(IndexSet(integer: next), byExtendingSelection: false)
+        tableView.scrollRowToVisible(next)
     }
 }

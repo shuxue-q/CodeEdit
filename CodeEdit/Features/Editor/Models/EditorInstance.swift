@@ -29,6 +29,9 @@ class EditorInstance: ObservableObject, Hashable {
 
     var rangeTranslator: RangeTranslator = RangeTranslator()
 
+    /// Source, preview, or split for Markdown files. Other documents ignore it.
+    let markdownPreview = MarkdownPreviewModel()
+
     private var cancellables: Set<AnyCancellable> = []
 
     // MARK: - Init
@@ -166,6 +169,11 @@ class EditorInstance: ObservableObject, Hashable {
         func moveLinesDown() {
             guard let controller = textViewController else { return }
             controller.moveLinesDown()
+        }
+
+        /// Formats the open file with the style chosen in Text Editing settings.
+        func formatCode() {
+            textViewController?.formatCode(nil)
         }
     }
 }

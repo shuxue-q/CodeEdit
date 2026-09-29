@@ -50,4 +50,23 @@ struct LineFoldStorageTests {
         storage.updateFolds(from: raw, collapsedRanges: collapsedSet((1, 0)))
         #expect(storage.folds(in: 0..<15).first?.isCollapsed == true)
     }
+
+    @Test
+    func foldsOverlappingIncludesEnclosingFolds() {
+        var storage = LineFoldStorage(documentLength: 100)
+        let raw: [LineFoldStorage.RawFold] = [
+            LineFoldStorage.RawFold(depth: 1, range: 0..<90),
+            LineFoldStorage.RawFold(depth: 2, range: 10..<50),
+            LineFoldStorage.RawFold(depth: 4, range: 20..<30),
+            LineFoldStorage.RawFold(depth: 2, range: 60..<80)
+        ]
+        storage.updateFolds(from: raw, collapsedRanges: [])
+
+        // The store only holds the innermost fold at each offset.
+        #expect(storage.folds(in: 22..<25).map(\.range) == [20..<30])
+        #expect(storage.folds(overlapping: 22..<25).map(\.range) == [0..<90, 10..<50, 20..<30])
+        // Shared ancestors are listed once.
+        #expect(storage.folds(overlapping: 25..<65).map(\.range) == [0..<90, 10..<50, 20..<30, 60..<80])
+        #expect(storage.folds(overlapping: 92..<95).isEmpty)
+    }
 }

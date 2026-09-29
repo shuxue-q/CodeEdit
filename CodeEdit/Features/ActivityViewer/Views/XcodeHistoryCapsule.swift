@@ -50,12 +50,12 @@ struct XcodeHistoryCapsule: View {
             }
         } label: {
             Image(toolbarSymbol: "chevron.left", size: 16, weight: .semibold)
-                .toolbarPillFeedback()
         } primaryAction: {
             activeEditor.goBackInHistory()
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
+        .toolbarCircleFeedback(iconSize: 16)
         .disabled(!canGoBack)
         .opacity(canGoBack ? 1.0 : 0.35)
         .buttonStyle(.plain)
@@ -85,12 +85,12 @@ struct XcodeHistoryCapsule: View {
             }
         } label: {
             Image(toolbarSymbol: "chevron.right", size: 16, weight: .semibold)
-                .toolbarPillFeedback()
         } primaryAction: {
             activeEditor.goForwardInHistory()
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
+        .toolbarCircleFeedback(iconSize: 16)
         .disabled(!canGoForward)
         .opacity(canGoForward ? 1.0 : 0.35)
         .buttonStyle(.plain)

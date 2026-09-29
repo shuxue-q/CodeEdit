@@ -72,7 +72,7 @@ private struct StopTaskButtonContent: View {
             Label("Stop", systemImage: "stop.fill")
                 .labelStyle(.iconOnly)
                 .font(.system(size: 17, weight: .regular))
-                .toolbarPillFeedback()
+                .toolbarCircleFeedback()
                 .opacity(activeState == .inactive ? 0.5 : 1.0)
         }
         .buttonStyle(.plain)

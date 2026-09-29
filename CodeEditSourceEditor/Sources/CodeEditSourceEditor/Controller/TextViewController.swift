@@ -30,14 +30,11 @@ public class TextViewController: NSViewController {
 
     public internal(set) var scrollView: NSScrollView!
     public internal(set) var textView: TextView!
-    var gutterView: GutterView!
+    public internal(set) var gutterView: GutterView!
     var minimapView: MinimapView!
 
     /// The reformatting guide view
     var reformattingGuideView: ReformattingGuideView!
-
-    /// The layout manager delegate proxy that constrains viewport size for reformatAtColumn.
-    var layoutManagerDelegate: SourceEditorLayoutManagerDelegate?
 
     /// Middleman between the text view to our invisible characters config, with knowledge of things like the
     ///  /// user's theme and indent option to help correctly draw invisible character placeholders.
@@ -99,6 +96,9 @@ public class TextViewController: NSViewController {
     /// Completion insertion must not trigger another automatic completion request.
     var isApplyingCompletion = false
 
+    /// True while Format Code is replacing the buffer, so edit filters do not rewrite that replacement.
+    var isApplyingFormat = false
+
     // MARK: - Config Helpers
 
     /// The font to use in the `textView`
@@ -150,7 +150,7 @@ public class TextViewController: NSViewController {
     /// The type of highlight to use when highlighting bracket pairs. Leave as `nil` to disable highlighting.
     public var bracketPairEmphasis: BracketPairEmphasis? { configuration.appearance.bracketPairEmphasis }
 
-    /// The column at which to show the reformatting guide
+    /// The column at which the reformatting guide is drawn. Lines are not wrapped at this column.
     public var reformatAtColumn: Int { configuration.behavior.reformatAtColumn }
 
     /// If true, uses the system cursor on macOS 14 or greater.
@@ -164,6 +164,12 @@ public class TextViewController: NSViewController {
 
     /// Toggle the visibility of the reformatting guide in the editor.
     public var showReformattingGuide: Bool { configuration.peripherals.showReformattingGuide }
+
+    /// Shows each completion's type on its row and the header under the list.
+    public var showInlineCompletionInfo: Bool { configuration.peripherals.showInlineCompletionInfo }
+
+    /// How many completion rows are visible before the list scrolls.
+    public var visibleCompletionCount: Int { configuration.peripherals.visibleCompletionCount }
 
     /// Configuration for drawing invisible characters.
     ///
@@ -197,6 +203,11 @@ public class TextViewController: NSViewController {
     var textFilters: [TextFormation.Filter] = []
 
     var jumpToDefinitionModel: JumpToDefinitionModel?
+
+    /// The inserted snippet whose tab stops Tab and Shift-Tab move through, if any.
+    var snippetSession: SnippetSession?
+    /// Layers outlining the active snippet's placeholders.
+    var snippetPlaceholderLayers: [CAShapeLayer] = []
 
     var cancellables = Set<AnyCancellable>()
 
@@ -266,10 +277,6 @@ public class TextViewController: NSViewController {
         )
         sourceTextView.controller = self
         self.textView = sourceTextView
-
-        let layoutDelegate = SourceEditorLayoutManagerDelegate(textView: sourceTextView, controller: self)
-        self.layoutManagerDelegate = layoutDelegate
-        sourceTextView.layoutManager.delegate = layoutDelegate
 
         textView.layoutManager.invisibleCharacterDelegate = invisibleCharactersCoordinator
 

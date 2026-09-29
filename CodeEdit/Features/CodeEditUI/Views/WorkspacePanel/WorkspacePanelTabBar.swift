@@ -86,9 +86,20 @@ struct WorkspacePanelTabBar<Tab: WorkspacePanelTab>: View {
         }
     }
 
+    /// The width each tab button should occupy.
+    ///
+    /// In the top position buttons shrink below their ideal width so that
+    /// all tabs stay visible when the sidebar becomes too narrow to fit
+    /// them at full width, instead of overflowing the tab bar.
+    private func buttonWidth(for size: CGSize) -> CGFloat {
+        guard position == .top else { return 24 }
+        guard !items.isEmpty, size.width > 0 else { return 42 }
+        return min(42, size.width / CGFloat(items.count))
+    }
+
     @ViewBuilder
     private func tabView(_ tab: Tab, size: CGSize) -> some View {
-        IconButton(tab: tab, size: size, position: position, selection: $selection)
+        IconButton(tab: tab, size: size, position: position, width: buttonWidth(for: size), selection: $selection)
             .offset(
                 x: (position == .top) ? (tabOffsets[tab] ?? 0) : 0,
                 y: (position == .side) ? (tabOffsets[tab] ?? 0) : 0

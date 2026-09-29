@@ -8,6 +8,11 @@
 import SwiftUI
 
 struct EditorTabBackground: View {
+    /// Inset of the capsule from the tab's leading and trailing edges.
+    static let horizontalInset: CGFloat = 2
+    /// Inset of the capsule from the top and bottom of the tab bar row.
+    static let verticalInset: CGFloat = 3
+
     var isActive: Bool
     var isPressing: Bool
     var isDragging: Bool
@@ -15,6 +20,11 @@ struct EditorTabBackground: View {
 
     @Environment(\.colorScheme)
     private var colorScheme
+
+    @ObservedObject private var themeModel: ThemeModel = .shared
+
+    @AppSettings(\.theme.useThemeBackground)
+    private var useThemeBackground
 
     @Environment(\.controlActiveState)
     private var activeState
@@ -30,7 +40,11 @@ struct EditorTabBackground: View {
         ZStack {
             if isActive {
                 // Opaque fill clips cleanly to a capsule; EffectView does not.
-                Color(nsColor: .controlBackgroundColor)
+                if useThemeBackground, let palette = themeModel.selectedTheme?.chrome {
+                    palette.activeTab
+                } else {
+                    Color(nsColor: .controlBackgroundColor)
+                }
 
                 // Accent color (visible if active)
                 Color(.controlAccentColor)

@@ -8,6 +8,7 @@
 import AppKit
 import SwiftUI
 import OSLog
+import Combine
 
 /// A `NSViewController` that handles the **ProjectNavigatorView** in the **NavigatorArea**.
 ///
@@ -18,6 +19,9 @@ final class ProjectNavigatorViewController: NSViewController {
         subsystem: Bundle.main.bundleIdentifier ?? "",
         category: "ProjectNavigatorViewController"
     )
+
+    /// Reloads the tree when the theme or the "use theme background" setting changes, so labels recolor.
+    private var themeCancellable: AnyCancellable?
 
     var scrollView: NSScrollView!
     var outlineView: NSOutlineView!
@@ -73,8 +77,18 @@ final class ProjectNavigatorViewController: NSViewController {
     /// Setup the ``scrollView`` and ``outlineView``
     override func loadView() {
         self.scrollView = NSScrollView()
+        self.scrollView.verticalScroller = NavigatorScroller()
         self.scrollView.hasVerticalScroller = true
         self.view = scrollView
+
+        themeCancellable = Publishers.CombineLatest(
+            ThemeModel.shared.$selectedTheme.map { $0?.name },
+            Settings.shared.$preferences.map(\.theme.useThemeBackground)
+        )
+        .removeDuplicates { $0 == $1 }
+        .dropFirst()
+        .receive(on: DispatchQueue.main)
+        .sink { [weak self] _ in self?.outlineView?.reloadData() }
 
         self.outlineView = ProjectNavigatorNSOutlineView()
         configureOutlineView()

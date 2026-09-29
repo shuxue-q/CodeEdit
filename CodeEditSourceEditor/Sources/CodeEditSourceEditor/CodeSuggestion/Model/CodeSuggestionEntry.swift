@@ -23,4 +23,13 @@ public protocol CodeSuggestionEntry {
     var imageColor: Color { get }
 
     var deprecated: Bool { get }
+
+    /// A trailing badge identifying the source that produced this entry (snippet, keyword, AI, …).
+    /// Returns `nil` by default, which draws no badge.
+    var badge: CodeSuggestionBadge? { get }
+}
+
+public extension CodeSuggestionEntry {
+    /// The default badge is `nil`; conformers opt in by overriding this property.
+    var badge: CodeSuggestionBadge? { nil }
 }

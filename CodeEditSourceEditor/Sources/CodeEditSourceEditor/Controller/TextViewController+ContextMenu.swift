@@ -90,6 +90,16 @@ extension TextViewController {
         addDocItem.isEnabled = isEditable
         menu.addItem(addDocItem)
 
+        let formatItem = NSMenuItem(
+            title: "Format Code",
+            action: #selector(formatCode(_:)),
+            keyEquivalent: "i"
+        )
+        formatItem.keyEquivalentModifierMask = [.control]
+        formatItem.target = self
+        formatItem.isEnabled = isEditable && (contextMenuDelegate?.canFormatCode(fileURL: fileURL) ?? true)
+        menu.addItem(formatItem)
+
         menu.addItem(.separator())
     }
 

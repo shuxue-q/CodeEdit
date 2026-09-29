@@ -20,6 +20,9 @@ extension EditorManager {
             }
         }
 
+        // Observe the file manager so tabs for externally deleted files can be closed.
+        workspace.workspaceFileManager?.addObserver(self)
+
         do {
             guard let data = workspace.getFromWorkspaceState(.openTabs) as? Data else {
                 return
@@ -41,7 +44,7 @@ extension EditorManager {
                 return
             }
 
-            try fixRestoredEditorLayout(state.groups, workspace: workspace)
+            fixRestoredEditorLayout(state.groups, workspace: workspace)
 
             self.editorLayout = state.groups
             self.activeEditor = activeEditor
@@ -59,18 +62,18 @@ extension EditorManager {
     /// so this function maps all those to 'real' files. Works recursively on all the tab groups.
     /// - Parameters:
     ///   - group: The tab group to fix.
-    ///   - fileManager: The file manager to use to map files.
-    private func fixRestoredEditorLayout(_ group: EditorLayout, workspace: WorkspaceDocument) throws {
+    ///   - workspace: The workspace whose file manager is used to map files.
+    private func fixRestoredEditorLayout(_ group: EditorLayout, workspace: WorkspaceDocument) {
         switch group {
         case let .one(data):
-            try fixEditor(data, workspace: workspace)
+            fixEditor(data, workspace: workspace)
         case let .vertical(splitData):
-            try splitData.editorLayouts.forEach { group in
-                try fixRestoredEditorLayout(group, workspace: workspace)
+            splitData.editorLayouts.forEach { group in
+                fixRestoredEditorLayout(group, workspace: workspace)
             }
         case let .horizontal(splitData):
-            try splitData.editorLayouts.forEach { group in
-                try fixRestoredEditorLayout(group, workspace: workspace)
+            splitData.editorLayouts.forEach { group in
+                fixRestoredEditorLayout(group, workspace: workspace)
             }
         }
     }
@@ -89,33 +92,44 @@ extension EditorManager {
     /// Fixes any hanging files after restoring from saved state.
     ///
     /// Resolves all file references with the workspace's file manager to ensure any referenced files use their shared
-    /// object representation.
+    /// object representation. Files that no longer exist on disk (for example files deleted while CodeEdit was not
+    /// running) are dropped, so no stale tabs are restored for them.
     ///
     /// - Parameters:
-    ///   - data: The tab group to fix.
-    ///   - fileManager: The file manager to use to map files.a
-    private func fixEditor(_ editor: Editor, workspace: WorkspaceDocument) throws {
+    ///   - editor: The editor to fix.
+    ///   - workspace: The workspace whose file manager is used to map files.
+    private func fixEditor(_ editor: Editor, workspace: WorkspaceDocument) {
         guard let fileManager = workspace.workspaceFileManager else { return }
         let resolvedTabs = editor
             .tabs
+            .filter({
+                CEWorkspaceFile.fileManager.fileExists(atPath: $0.file.url.path(percentEncoded: false))
+            })
             .compactMap({ fileManager.getFile($0.file.url.path(percentEncoded: false), createIfNotFound: true) })
             .map({ EditorInstance(workspace: workspace, file: $0) })
 
         for tab in resolvedTabs {
-            try tab.file.loadCodeFile()
+            do {
+                try tab.file.loadCodeFile()
+            } catch {
+                // Don't let a single unloadable file abort restoring the remaining tabs.
+                let path = tab.file.url.path()
+                logger.error(
+                    "Failed to load restored file \(path, privacy: .sensitive): \(error.localizedDescription)"
+                )
+            }
         }
 
         editor.workspace = workspace
         editor.tabs = OrderedSet(resolvedTabs)
 
         if let selectedTab = editor.selectedTab {
-            if let resolvedFile = fileManager.getFile(
-                selectedTab.file.url.path(percentEncoded: false),
-                createIfNotFound: true
-            ) {
+            let selectedPath = selectedTab.file.url.path(percentEncoded: false)
+            if CEWorkspaceFile.fileManager.fileExists(atPath: selectedPath),
+               let resolvedFile = fileManager.getFile(selectedPath, createIfNotFound: true) {
                 editor.setSelectedTab(resolvedFile)
             } else {
-                editor.setSelectedTab(nil)
+                editor.setSelectedTab(editor.tabs.first?.file)
             }
         }
     }

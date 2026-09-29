@@ -9,6 +9,15 @@ import SwiftUI
 import Combine
 import SwiftTerm
 
+extension Notification.Name {
+    /// Posted on the main actor when a task's process finishes (not when it is suspended).
+    ///
+    /// `object` is `nil`; `userInfo` contains `"taskName"` (`String`), `"status"`
+    /// (`String`: `"finished"`, `"failed"`, or `"cancelled"`), `"workspace"` (the task's
+    /// `URL?`), and `"duration"` (`TimeInterval`) when a start time was recorded.
+    static let ceActiveTaskDidFinish = Notification.Name("CEActiveTask.didFinishNotification")
+}
+
 /// Stores the state of a task once it's executed
 class CEActiveTask: ObservableObject, Identifiable, Hashable {
     /// The current progress of the task.
@@ -39,6 +48,9 @@ class CEActiveTask: ObservableObject, Identifiable, Hashable {
     /// exit code (shells exit with 128 + signal number when their foreground job dies).
     private var cancellationRequested = false
 
+    /// When the current run's process was started; used to report the run's duration.
+    private var lastStartDate: Date?
+
     private var cancellables = Set<AnyCancellable>()
 
     init(task: CETask) {
@@ -54,6 +66,7 @@ class CEActiveTask: ObservableObject, Identifiable, Hashable {
         self.workspaceURL = workspaceURL
         self.activeTaskID = UUID() // generate a new ID for this run
         self.cancellationRequested = false
+        self.lastStartDate = Date()
 
         createStatusTaskNotification()
         updateTaskStatus(to: .running)
@@ -73,9 +86,11 @@ class CEActiveTask: ObservableObject, Identifiable, Hashable {
         let terminatingSignal = terminationStatus & 0x7f
         let wasStopped = (terminationStatus & 0xff) == 0x7f
         let exitCode = (terminationStatus >> 8) & 0xff
+        let reportStatus: String?
 
         if wasStopped {
             updateTaskStatus(to: .stopped)
+            reportStatus = nil
         } else if cancellationRequested || terminatingSignal == SIGINT || terminatingSignal == SIGTERM {
             output?.newline()
             output?.sendOutputMessage("\(task.name) cancelled.")
@@ -87,6 +102,7 @@ class CEActiveTask: ObservableObject, Identifiable, Hashable {
                 message: "",
                 isLoading: false
             )
+            reportStatus = "cancelled"
         } else if terminatingSignal == 0 && exitCode == 0 {
             output?.newline()
             output?.sendOutputMessage("Finished running \(task.name).")
@@ -98,6 +114,7 @@ class CEActiveTask: ObservableObject, Identifiable, Hashable {
                 message: "",
                 isLoading: false
             )
+            reportStatus = "finished"
         } else {
             output?.newline()
             output?.sendOutputMessage("Failed to run \(task.name)")
@@ -109,10 +126,30 @@ class CEActiveTask: ObservableObject, Identifiable, Hashable {
                 message: "",
                 isLoading: false
             )
+            reportStatus = "failed"
         }
+
+        if let reportStatus {
+            postDidFinishNotification(status: reportStatus)
+        }
+        lastStartDate = nil
 
         cancellationRequested = false
         deleteStatusTaskNotification()
+    }
+
+    /// Posts ``Notification.Name/ceActiveTaskDidFinish`` with the task's name, final status,
+    /// workspace URL, and duration (when a start time was recorded).
+    private func postDidFinishNotification(status: String) {
+        var userInfo: [String: Any] = [
+            "taskName": task.name,
+            "status": status,
+            "workspace": workspaceURL as Any
+        ]
+        if let lastStartDate {
+            userInfo["duration"] = Date().timeIntervalSince(lastStartDate)
+        }
+        NotificationCenter.default.post(name: .ceActiveTaskDidFinish, object: nil, userInfo: userInfo)
     }
 
     @MainActor

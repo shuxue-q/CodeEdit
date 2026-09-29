@@ -16,7 +16,9 @@ extension CodeEditWindowController {
         toolbar.showsBaselineSeparator = false
         self.window?.titleVisibility = toolbarCollapsed ? .visible : .hidden
         self.window?.toolbarStyle = .unified
-        toolbar.displayMode = .labelOnly
+        // Custom items draw their own views. `.labelOnly` still reserves a label
+        // row under them, which leaves a gap between this row and the jump bar.
+        toolbar.displayMode = .iconOnly
         self.window?.titlebarSeparatorStyle = .automatic
         self.window?.toolbar = toolbar
     }
@@ -266,14 +268,16 @@ extension CodeEditWindowController {
                 content
                     .environmentObject(workspace)
                     .environmentObject(editorManager)
+                    .themedChromeText()
             )
         } else if let workspace = workspace {
             rootView = AnyView(
                 content
                     .environmentObject(workspace)
+                    .themedChromeText()
             )
         } else {
-            rootView = AnyView(content)
+            rootView = AnyView(content.themedChromeText())
         }
 
         return NSHostingView(rootView: rootView)

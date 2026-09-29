@@ -7,6 +7,14 @@
 
 import AppKit
 
+/// The result of a Format Code request.
+public enum FormatCodeResult {
+    /// `cursor` is a UTF-16 offset into `text`, or `nil` to keep the previous caret.
+    case formatted(text: String, cursor: Int?)
+    /// Formatting did not produce a replacement. The delegate has already reported the reason.
+    case failed
+}
+
 /// A delegate protocol for handling context menu actions in the source editor.
 public protocol SourceEditorContextMenuDelegate: AnyObject {
     /// Request to create a code snippet with the specified text and line number.
@@ -37,9 +45,28 @@ public protocol SourceEditorContextMenuDelegate: AnyObject {
     /// Returns true if handled by delegate, false to fall back to the default editor implementation.
     func refactorGenerateMemberwiseInit() -> Bool
 
-    /// Request to format the document.
-    /// Returns true if handled by delegate, false to fall back to the default editor implementation.
-    func refactorFormatDocument() -> Bool
+    /// Whether Format Code can run for the file at `fileURL`.
+    ///
+    /// The editor disables the menu item when this returns false. The default returns true.
+    func canFormatCode(fileURL: URL?) -> Bool
+
+    /// Formats the document text.
+    ///
+    /// - Parameters:
+    ///   - text: The full document text at the moment the command was invoked.
+    ///   - fileURL: The file being edited, used to choose a language and a project format file.
+    ///   - cursorUTF8: UTF-8 byte offset of the caret, or `nil` when there is no caret.
+    ///   - lineRanges: 1-based inclusive line ranges to format. An empty array formats the whole document.
+    ///   - completion: Called on the main thread with the formatted text, or ``FormatCodeResult/failed``.
+    ///     `cursor` on a formatted result is a UTF-16 offset into the new text.
+    /// - Returns: True when the delegate accepts the request. The completion is then called later.
+    func formatCode(
+        text: String,
+        fileURL: URL?,
+        cursorUTF8: Int?,
+        lineRanges: [ClosedRange<Int>],
+        completion: @escaping (FormatCodeResult) -> Void
+    ) -> Bool
 
     /// Request to find in workspace.
     func findInWorkspace(query: String?)
@@ -106,8 +133,16 @@ public extension SourceEditorContextMenuDelegate {
     func refactorAddMissingSwitchCases() -> Bool { false }
     /// Default implementation for refactorGenerateMemberwiseInit.
     func refactorGenerateMemberwiseInit() -> Bool { false }
-    /// Default implementation for refactorFormatDocument.
-    func refactorFormatDocument() -> Bool { false }
+    /// Default implementation for canFormatCode.
+    func canFormatCode(fileURL: URL?) -> Bool { true }
+    /// Default implementation for formatCode.
+    func formatCode(
+        text: String,
+        fileURL: URL?,
+        cursorUTF8: Int?,
+        lineRanges: [ClosedRange<Int>],
+        completion: @escaping (FormatCodeResult) -> Void
+    ) -> Bool { false }
     /// Default implementation for findInWorkspace.
     func findInWorkspace(query: String?) {}
     /// Default implementation for findSelectedTextInWorkspace.

@@ -116,7 +116,7 @@ struct LSPCompletionEntry: CodeSuggestionEntry {
     }
 
     var image: Image {
-        Image(systemName: iconName)
+        Self.image(for: category)
     }
 
     var imageColor: SwiftUI.Color {
@@ -177,6 +177,29 @@ struct LSPCompletionEntry: CodeSuggestionEntry {
         .reference: "link",
         .event: "bolt",
         .other: "cube"
+    ]
+
+    /// Asset catalog names (`CompletionIcons`) for each category's row icon.
+    private static let categoryAssetNames: [Category: String] = [
+        .function: "symbol-function",
+        .variable: "symbol-variable",
+        .class: "symbol-class",
+        .struct: "symbol-structure",
+        .interface: "symbol-interface",
+        .typeAlias: "symbol-parameter",
+        .enum: "symbol-enum",
+        .enumMember: "symbol-enum-member",
+        .macro: "symbol-constant",
+        .namespace: "symbol-namespace",
+        .keyword: "symbol-keyword",
+        .snippet: "symbol-snippet",
+        .file: "symbol-file",
+        .folder: "symbol-folder",
+        .text: "symbol-text",
+        .color: "symbol-color",
+        .reference: "symbol-reference",
+        .event: "symbol-event",
+        .other: "symbol-value"
     ]
 
     private static let categoryColors: [Category: SwiftUI.Color] = [
@@ -244,6 +267,16 @@ struct LSPCompletionEntry: CodeSuggestionEntry {
     /// The SF Symbol name used to represent a completion category.
     static func imageName(for category: Category) -> String {
         categoryIconNames[category] ?? "cube"
+    }
+
+    /// The asset catalog name of the icon shown for a completion category.
+    static func assetName(for category: Category) -> String {
+        categoryAssetNames[category] ?? "symbol-value"
+    }
+
+    /// The template-rendered icon shown for a completion category. Tinted by `foregroundStyle`.
+    static func image(for category: Category) -> Image {
+        CompletionIconImage.template(assetName(for: category))
     }
 
     /// The tint color used for a completion item's icon.

@@ -45,6 +45,9 @@ final class WorkspaceDocument: NSDocument, ObservableObject, NSToolbarDelegate {
     var workspaceSettingsManager: CEWorkspaceSettings?
     var cmakeWorkspace: CMakeWorkspace?
     var cmakeBuildController: CMakeBuildController?
+    /// History of past builds, debug sessions, and tasks for this workspace; created in
+    /// ``initWorkspaceState(_:)`` once the workspace URL is known.
+    var reportStore: ReportStore?
     var taskNotificationHandler: TaskNotificationHandler = TaskNotificationHandler()
 
     var undoRegistration: UndoManagerRegistration = UndoManagerRegistration()
@@ -160,20 +163,10 @@ final class WorkspaceDocument: NSDocument, ObservableObject, NSToolbarDelegate {
         self.openQuicklyViewModel = .init(fileURL: url)
         self.commandsPaletteState = .init()
         self.workspaceSettingsManager = CEWorkspaceSettings(workspaceURL: url)
+        let reportStore = ReportStore(workspaceURL: url)
+        self.reportStore = reportStore
         if CMakeProject.isCMakeProject(at: url) {
-            let cmakeWorkspace = CMakeWorkspace(sourceDirectory: url)
-            self.cmakeWorkspace = cmakeWorkspace
-            cmakeWorkspace.reload()
-            let buildController = CMakeBuildController(sourceDirectory: url, workspace: cmakeWorkspace)
-            buildController.onBuildFinished = { [weak self] success in
-                // Failed builds surface their diagnostics; a build the user stopped does not.
-                guard let self, !success, buildController.outcome != .cancelled else { return }
-                if self.utilityAreaModel?.isCollapsed == true {
-                    CommandManager.shared.executeCommand("open.drawer")
-                }
-                self.utilityAreaModel?.selectedTab = .problems
-            }
-            self.cmakeBuildController = buildController
+            configureCMakeWorkspace(url: url, reportStore: reportStore)
         }
         if let workspaceSettingsManager {
             self.taskManager = TaskManager(
@@ -183,6 +176,7 @@ final class WorkspaceDocument: NSDocument, ObservableObject, NSToolbarDelegate {
             self.taskManager?.cmakeBuildController = cmakeBuildController
         }
         self.taskNotificationHandler.workspaceURL = url
+        observeTaskReports(url: url)
 
         workspaceFileManager?.addObserver(undoRegistration)
         editorManager?.restoreFromState(self)
@@ -221,6 +215,7 @@ final class WorkspaceDocument: NSDocument, ObservableObject, NSToolbarDelegate {
         cmakeBuildController?.stop()
         cmakeBuildController = nil
         taskManager = nil
+        reportStore = nil
     }
 
     /// Determines the windows should be closed.
@@ -263,9 +258,9 @@ final class WorkspaceDocument: NSDocument, ObservableObject, NSToolbarDelegate {
             .filter(\.isDocumentEdited) ?? []
 
         // Present a panel giving the user the choice of canceling, discarding changes, or saving,
-        // one document at a time. `canClose` may invoke its delegate callback asynchronously,
-        // so the iteration continues from the callback and ends by invoking `shouldCloseSelector`.
-        canCloseEditedDocuments(editedCodeFiles[...]) { [weak self] in
+        // one document at a time. The sheet callback continues the iteration, then invokes
+        // `shouldCloseSelector`.
+        canCloseEditedDocuments(editedCodeFiles[...], window: windowController.window) { [weak self] in
             guard let self else { return }
             // Invoke shouldCloseSelector at delegate
             let implementation = object.method(for: shouldCloseSelector)
@@ -282,66 +277,86 @@ final class WorkspaceDocument: NSDocument, ObservableObject, NSToolbarDelegate {
 
     /// Iterates edited documents, presenting a panel for each, until all agree to close or the user cancels.
     ///
-    /// `canClose(withDelegate:shouldClose:contextInfo:)` may invoke its delegate callback
-    /// asynchronously, so each step continues from ``document(_:shouldClose:contextInfo:)``.
+    /// The sheet callback continues to the next document, or stops when the user cancels.
     ///
     /// - Parameters:
     ///   - documents: The edited documents that still need to be asked.
+    ///   - window: Window that hosts each sheet.
     ///   - completion: Invoked exactly once, when the iteration is done.
     private func canCloseEditedDocuments(
         _ documents: ArraySlice<CodeFileDocument>,
+        window: NSWindow?,
         completion: @escaping () -> Void
     ) {
         guard let editedCodeFile = documents.first else {
             completion()
             return
         }
-        // The context is retained until the delegate callback fires and releases it.
-        let context = CanCloseContext { [weak self] shouldClose in
+        editedCodeFile.confirmUnsavedClose(in: window) { [weak self] shouldClose in
             guard let self else { return }
             if shouldClose {
-                canCloseEditedDocuments(documents.dropFirst(), completion: completion)
+                self.canCloseEditedDocuments(documents.dropFirst(), window: window, completion: completion)
             } else {
-                // The user canceled on the panel, iteration is broken.
                 completion()
             }
         }
-        editedCodeFile.canClose(
-            withDelegate: self,
-            shouldClose: #selector(document(_:shouldClose:contextInfo:)),
-            contextInfo: Unmanaged.passRetained(context).toOpaque()
-        )
     }
+}
 
-    /// Box carrying a completion handler through `canClose(withDelegate:shouldClose:contextInfo:)`.
-    ///
-    /// Passed as a retained opaque `contextInfo` pointer; ``document(_:shouldClose:contextInfo:)``
-    /// takes over the retain when the delegate callback fires, exactly once, synchronously or not.
-    private final class CanCloseContext {
-        let completion: (Bool) -> Void
+// MARK: - Report recording
 
-        init(completion: @escaping (Bool) -> Void) {
-            self.completion = completion
+extension WorkspaceDocument {
+    /// Creates the CMake workspace and build controller, recording each finished build
+    /// (with its diagnostics and log) in the workspace's report store.
+    func configureCMakeWorkspace(url: URL, reportStore: ReportStore) {
+        let cmakeWorkspace = CMakeWorkspace(sourceDirectory: url)
+        self.cmakeWorkspace = cmakeWorkspace
+        cmakeWorkspace.reload()
+        let buildController = CMakeBuildController(sourceDirectory: url, workspace: cmakeWorkspace)
+        buildController.onBuildFinished = { [weak self, weak buildController] success in
+            guard let buildController else { return }
+            self?.reportStore?.recordBuild(
+                outcome: buildController.outcome,
+                diagnostics: buildController.diagnostics,
+                log: buildController.lastBuildLog,
+                startedAt: buildController.lastBuildStartDate
+            )
+            // Failed builds surface their diagnostics; a build the user stopped does not.
+            guard let self, !success, buildController.outcome != .cancelled else { return }
+            if self.utilityAreaModel?.isCollapsed == true {
+                CommandManager.shared.executeCommand("open.drawer")
+            }
+            self.utilityAreaModel?.selectedTab = .problems
         }
+        self.cmakeBuildController = buildController
     }
 
-    // MARK: NSDocument delegate
-
-    /// Receives the result of `canClose` and forwards it to the completion handler in `contextInfo`.
-    ///
-    /// - Parameters:
-    ///   - document: The document which may be closed.
-    ///   - shouldClose: The result of user selection.
-    ///      `shouldClose` is false if the user selects cancel, otherwise true.
-    ///   - contextInfo: A retained ``CanCloseContext`` as an opaque pointer; this method takes over
-    ///       the retain.
-    @objc
-    func document(
-        _ document: NSDocument,
-        shouldClose: Bool,
-        contextInfo: UnsafeMutableRawPointer
-    ) {
-        let context = Unmanaged<CanCloseContext>.fromOpaque(contextInfo).takeRetainedValue()
-        context.completion(shouldClose)
+    /// Records finished workspace tasks in the report store. The notification carries no
+    /// workspace identity, so reports are filtered by the task's workspace URL.
+    func observeTaskReports(url: URL) {
+        NotificationCenter.default.publisher(for: .ceActiveTaskDidFinish)
+            .sink { [weak self] notification in
+                let userInfo = notification.userInfo
+                Task { @MainActor [weak self] in
+                    guard let self,
+                          let name = userInfo?["taskName"] as? String,
+                          let statusString = userInfo?["status"] as? String,
+                          let taskWorkspace = userInfo?["workspace"] as? URL,
+                          taskWorkspace.standardizedFileURL == url.standardizedFileURL
+                    else { return }
+                    let status: ReportRecord.Status
+                    switch statusString {
+                    case "finished": status = .succeeded
+                    case "failed": status = .failed
+                    default: status = .cancelled
+                    }
+                    self.reportStore?.recordTask(
+                        name: name,
+                        status: status,
+                        duration: userInfo?["duration"] as? TimeInterval
+                    )
+                }
+            }
+            .store(in: &cancellables)
     }
 }

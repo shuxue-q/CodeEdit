@@ -10,6 +10,8 @@ import AppKit
 /// Used to draw a custom selection highlight for the table row
 final class CodeSuggestionRowView: NSTableRowView {
     var getSelectionColor: (() -> NSColor)?
+    /// Draws the system accent behind the row. Used by the inline completion layout.
+    var usesAccentSelection = false
 
     init(getSelectionColor: (() -> NSColor)? = nil) {
         self.getSelectionColor = getSelectionColor
@@ -41,7 +43,10 @@ final class CodeSuggestionRowView: NSTableRowView {
         )
         let cornerRadius: CGFloat = 5
         let path = NSBezierPath(roundedRect: selectionRect, xRadius: cornerRadius, yRadius: cornerRadius)
-        let selectionColor = getSelectionColor?() ??  NSColor.controlBackgroundColor
+        // The panel cannot become key, so the usual selected-row color would draw gray.
+        let selectionColor = usesAccentSelection
+            ? NSColor.controlAccentColor
+            : (getSelectionColor?() ?? NSColor.controlBackgroundColor)
 
         context.setFillColor(selectionColor.cgColor)
         path.fill()

@@ -96,17 +96,6 @@ extension TextViewController {
         memberwiseInit.target = self
         memberwiseInit.isEnabled = isEditable
         menu.addItem(memberwiseInit)
-
-        menu.addItem(.separator())
-
-        let formatDoc = NSMenuItem(
-            title: "Format Document",
-            action: #selector(contextMenuRefactorFormatDocument(_:)),
-            keyEquivalent: ""
-        )
-        formatDoc.target = self
-        formatDoc.isEnabled = isEditable
-        menu.addItem(formatDoc)
     }
 
     func createFindMenuItem() -> NSMenuItem {

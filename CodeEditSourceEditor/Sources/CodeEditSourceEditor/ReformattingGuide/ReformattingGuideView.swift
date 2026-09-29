@@ -38,40 +38,17 @@ class ReformattingGuideView: NSView {
         return nil
     }
 
-    // Draw the reformatting guide line and shaded area
+    /// Draws only the hint line. The editor background continues on both sides.
     override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
 
-        // Determine if we should use light or dark colors based on the theme's background color
         let isLightMode = theme.background.brightnessComponent > 0.5
+        let lineColor = isLightMode
+            ? NSColor.black.withAlphaComponent(0.075)
+            : NSColor.white.withAlphaComponent(0.175)
 
-        // Set the line color based on the theme
-        let lineColor = isLightMode ?
-            NSColor.black.withAlphaComponent(0.075) :
-            NSColor.white.withAlphaComponent(0.175)
-
-        // Set the shaded area color (slightly more transparent)
-        let shadedColor = isLightMode ?
-            NSColor.black.withAlphaComponent(0.025) :
-            NSColor.white.withAlphaComponent(0.025)
-
-        // Draw the shaded area to the right of the line
-        shadedColor.setFill()
-        let shadedRect = NSRect(
-            x: bounds.minX,
-            y: bounds.minY,
-            width: bounds.width,
-            height: bounds.height
-        )
-        shadedRect.fill()
-
-        // Draw the vertical line (accounting for inverted Y coordinate system)
-        lineColor.setStroke()
-        let linePath = NSBezierPath()
-        linePath.move(to: NSPoint(x: bounds.minX + 0.5, y: bounds.maxY))  // Start at top
-        linePath.line(to: NSPoint(x: bounds.minX + 0.5, y: bounds.minY))  // Draw down to bottom
-        linePath.lineWidth = 1.0
-        linePath.stroke()
+        lineColor.setFill()
+        bounds.fill()
     }
 
     func updatePosition(in controller: TextViewController) {
@@ -83,27 +60,18 @@ class ReformattingGuideView: NSView {
             + leftInset
         )
 
-        // Get the scroll view's content size
         guard let scrollView = controller.scrollView else { return }
         let contentSize = scrollView.documentVisibleRect.size
-
-        // Ensure the frame has at least 1.0 width so the vertical line is always renderable,
-        // and cover the full document/visible width to the right of the line.
-        let totalWidth = max(
-            scrollView.documentVisibleRect.maxX,
-            scrollView.documentView?.frame.width ?? 0,
-            contentSize.width
-        )
-        let maxWidth = max(1.0, totalWidth - xPosition)
         let totalHeight = max(contentSize.height, scrollView.documentView?.frame.height ?? 0)
 
-        // Update the frame to be a vertical line at the specified column with a shaded area to the right
-        let newFrame = NSRect(
+        // A 1pt line at the column. Text lays out across it; the line does not paint a second background.
+        var newFrame = NSRect(
             x: xPosition,
             y: 0,
-            width: maxWidth,
+            width: 1,
             height: totalHeight
         ).pixelAligned
+        newFrame.size.width = 1
 
         frame = newFrame
         needsDisplay = true

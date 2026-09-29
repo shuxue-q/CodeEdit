@@ -13,6 +13,7 @@ import SwiftUI
 struct XcodeLayoutModesCapsule: View {
     var workspace: WorkspaceDocument?
     @EnvironmentObject private var editorManager: EditorManager
+    @ObservedObject private var settings: Settings = .shared
 
     private var isMultiEditor: Bool {
         editorManager.flattenedEditors.count > 1
@@ -94,7 +95,7 @@ struct XcodeLayoutModesCapsule: View {
         } label: {
             Image(systemName: "arrow.left.arrow.right")
                 .font(.system(size: 16, weight: .regular))
-                .modifier(LayoutModeIconModifier(isActive: isCodeReviewActive))
+                .modifier(LayoutModeIconModifier(isActive: isCodeReviewActive, iconSize: 16))
         }
         .buttonStyle(.plain)
         .help("Code Review (Source Control)")
@@ -135,8 +136,14 @@ struct XcodeLayoutModesCapsule: View {
         }
     }
 
+    /// The edge new auxiliary editors open on, following the Layout menu selection.
+    private var preferredAuxiliaryEdge: Edge {
+        settings.preferences.general.canvasLayout == .bottom ? .bottom : .trailing
+    }
+
     private func splitActiveEditor() {
         guard let workspace else { return }
+        let edge = preferredAuxiliaryEdge
         let activeEditor = editorManager.activeEditor
         let newEditor: Editor
         if let tab = activeEditor.selectedTab {
@@ -147,20 +154,21 @@ struct XcodeLayoutModesCapsule: View {
 
         if let parent = activeEditor.parent {
             let index = parent.editorLayouts.firstIndex(of: .one(activeEditor)) ?? 0
-            parent.split(.trailing, at: index, new: newEditor)
+            parent.split(edge, at: index, new: newEditor)
         } else {
             switch editorManager.editorLayout {
             case .horizontal(let data):
                 let index = data.editorLayouts.firstIndex(of: .one(activeEditor)) ?? 0
-                data.split(.trailing, at: index, new: newEditor)
+                data.split(edge, at: index, new: newEditor)
             case .vertical(let data):
                 let index = data.editorLayouts.firstIndex(of: .one(activeEditor)) ?? 0
-                data.split(.trailing, at: index, new: newEditor)
+                data.split(edge, at: index, new: newEditor)
             case .one:
                 let oldLayout = editorManager.editorLayout
-                let data = SplitViewData(.horizontal, editorLayouts: [oldLayout])
-                data.split(.trailing, at: 0, new: newEditor)
-                editorManager.editorLayout = .horizontal(data)
+                let axis: Axis = edge == .bottom || edge == .top ? .vertical : .horizontal
+                let data = SplitViewData(axis, editorLayouts: [oldLayout])
+                data.split(edge, at: 0, new: newEditor)
+                editorManager.editorLayout = axis == .vertical ? .vertical(data) : .horizontal(data)
             }
         }
         editorManager.updateCachedFlattenedEditors = true
@@ -168,13 +176,14 @@ struct XcodeLayoutModesCapsule: View {
     }
 }
 
-/// Sizes a layout-mode icon and draws the capsule-shaped highlight for the active mode.
+/// Sizes a layout-mode icon and draws the circular highlight for the active mode.
 private struct LayoutModeIconModifier: ViewModifier {
     let isActive: Bool
+    var iconSize: CGFloat = 17
 
     func body(content: Content) -> some View {
         content
-            .foregroundColor(.primary)
-            .toolbarPillFeedback(isSelected: isActive)
+            .foregroundStyle(.primary)
+            .toolbarCircleFeedback(isSelected: isActive, iconSize: iconSize)
     }
 }
