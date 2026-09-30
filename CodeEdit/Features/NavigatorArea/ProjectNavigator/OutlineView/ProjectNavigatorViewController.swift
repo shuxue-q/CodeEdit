@@ -70,6 +70,9 @@ final class ProjectNavigatorViewController: NSViewController {
 
     var shouldReloadAfterDoneEditing: Bool = false
 
+    /// Hides dotfiles and excluded patterns; `nil` shows every file.
+    var visibilityFilter: NavigatorVisibilityFilter?
+
     var filterIsEmpty: Bool {
         workspace?.navigatorFilter.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == true
     }
@@ -239,6 +242,13 @@ final class ProjectNavigatorViewController: NSViewController {
         }
     }
 
+    /// The children of a folder that the navigator lists, after ``visibilityFilter``.
+    func visibleChildren(of item: CEWorkspaceFile) -> [CEWorkspaceFile]? {
+        guard let children = workspace?.workspaceFileManager?.childrenOfFile(item) else { return nil }
+        guard let visibilityFilter else { return children }
+        return children.filter { visibilityFilter.isVisible($0.url, isFolder: $0.isFolder) }
+    }
+
     /// Checks if the given filter matches the name of the item or any of its children.
     func fileSearchMatches(_ filter: String, for item: CEWorkspaceFile, sourceControlFilter: Bool) -> Bool {
         guard !filterIsEmpty || sourceControlFilter else {
@@ -256,7 +266,7 @@ final class ProjectNavigatorViewController: NSViewController {
             return true
         }
 
-        if let children = workspace?.workspaceFileManager?.childrenOfFile(item) {
+        if let children = visibleChildren(of: item) {
             return children.contains { fileSearchMatches(filter, for: $0, sourceControlFilter: sourceControlFilter) }
         }
 
@@ -269,7 +279,7 @@ final class ProjectNavigatorViewController: NSViewController {
     private func saveAllContentChildren(for item: CEWorkspaceFile) {
         guard item.isFolder, filteredContentChildren[item] == nil else { return }
 
-        if let children = workspace?.workspaceFileManager?.childrenOfFile(item) {
+        if let children = visibleChildren(of: item) {
             filteredContentChildren[item] = children
             for child in children.filter({ $0.isFolder }) {
                 saveAllContentChildren(for: child)

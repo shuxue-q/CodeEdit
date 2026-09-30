@@ -47,6 +47,8 @@ final class WorkspaceDocument: NSDocument, ObservableObject, NSToolbarDelegate {
     /// Toolchain, build, variable, and run settings edited in the project editor.
     var cmakeProjectSettings: CMakeProjectSettingsStore?
     var cmakeBuildController: CMakeBuildController?
+    /// Section selection and text files of the project editor shown for the workspace root.
+    var projectEditorState: ProjectEditorState?
     /// History of past builds, debug sessions, and tasks for this workspace; created in
     /// ``initWorkspaceState(_:)`` once the workspace URL is known.
     var reportStore: ReportStore?
@@ -177,12 +179,27 @@ final class WorkspaceDocument: NSDocument, ObservableObject, NSToolbarDelegate {
             )
             self.taskManager?.cmakeBuildController = cmakeBuildController
         }
+        configureProjectEditorState(url: url)
         self.taskNotificationHandler.workspaceURL = url
         observeTaskReports(url: url)
 
         workspaceFileManager?.addObserver(undoRegistration)
         editorManager?.restoreFromState(self)
         utilityAreaModel?.restoreFromState(self)
+    }
+
+    /// Creates the project editor state, reloading the models that own configuration files
+    /// after those files are saved as text.
+    private func configureProjectEditorState(url: URL) {
+        let state = ProjectEditorState(rootURL: url, includesCMakeSettings: cmakeProjectSettings != nil)
+        for file in state.configurationFiles {
+            if file.url == workspaceSettingsManager?.settingsURL.standardizedFileURL {
+                file.didSave = { [weak self] in self?.workspaceSettingsManager?.reloadFromDisk() }
+            } else if let store = cmakeProjectSettings, file.url == store.fileURL {
+                file.didSave = { [weak store] in store?.reloadFromDisk() }
+            }
+        }
+        projectEditorState = state
     }
 
     override func read(from url: URL, ofType typeName: String) throws {
@@ -216,6 +233,7 @@ final class WorkspaceDocument: NSDocument, ObservableObject, NSToolbarDelegate {
         cmakeWorkspace = nil
         cmakeProjectSettings?.close()
         cmakeProjectSettings = nil
+        projectEditorState = nil
         cmakeBuildController?.stop()
         cmakeBuildController = nil
         taskManager = nil
