@@ -51,6 +51,35 @@ final class CEWorkspaceSettings: ObservableObject {
         self.settings = prefs
     }
 
+    /// Re-reads `.codeedit/settings.json` after it was edited as text, updating the existing
+    /// ``settings`` object in place because ``TaskManager`` keeps a reference to it.
+    /// - Returns: `false` when the file exists but cannot be decoded; the current values are kept.
+    @discardableResult
+    func reloadFromDisk() -> Bool {
+        let loaded: CEWorkspaceSettingsData
+        if fileManager.fileExists(atPath: settingsURL.path) {
+            guard let json = try? Data(contentsOf: settingsURL),
+                  let prefs = try? JSONDecoder().decode(CEWorkspaceSettingsData.self, from: json)
+            else { return false }
+            loaded = prefs
+        } else {
+            loaded = CEWorkspaceSettingsData()
+        }
+        settings.project = loaded.project
+        settings.tasks = loaded.tasks
+        settings.navigator = loaded.navigator
+        return true
+    }
+
+    /// Changes the navigator settings and saves them.
+    func updateNavigator(_ update: (inout NavigatorSettings) -> Void) {
+        var navigator = settings.navigator
+        update(&navigator)
+        guard navigator != settings.navigator else { return }
+        settings.navigator = navigator
+        try? savePreferences()
+    }
+
     /// Save``CEWorkspaceSettingsManager`` model to `.codeedit/settings.json`
     func savePreferences() throws {
         // If the user doesn't have any settings to save, don't save them.

@@ -30,18 +30,7 @@ struct ProjectNavigatorToolbarBottom: View {
     }
 
     @ViewBuilder private var leadingAccessories: some View {
-        FilterDropDownIconButton(menu: {
-            ForEach([(true, "Folders on top"), (false, "Alphabetically")], id: \.0) { value, title in
-                Toggle(title, isOn: Binding(get: {
-                    workspace.sortFoldersOnTop == value
-                }, set: { _ in
-                    // Avoid calling the handleFilterChange method
-                    if workspace.sortFoldersOnTop != value {
-                        workspace.sortFoldersOnTop = value
-                    }
-                }))
-            }
-        }, isOn: !workspace.navigatorFilter.isEmpty)
+        FilterDropDownIconButton(menu: { filterMenu }, isOn: !workspace.navigatorFilter.isEmpty)
         .padding(.leading, 4)
         .foregroundStyle(
             workspace.navigatorFilter.isEmpty
@@ -49,6 +38,23 @@ struct ProjectNavigatorToolbarBottom: View {
             : Color(nsColor: .controlAccentColor)
         )
         .help("Show files with matching name")
+    }
+
+    @ViewBuilder private var filterMenu: some View {
+        ForEach([(true, "Folders on top"), (false, "Alphabetically")], id: \.0) { value, title in
+            Toggle(title, isOn: Binding(get: {
+                workspace.sortFoldersOnTop == value
+            }, set: { _ in
+                // Avoid calling the handleFilterChange method
+                if workspace.sortFoldersOnTop != value {
+                    workspace.sortFoldersOnTop = value
+                }
+            }))
+        }
+        if let workspaceSettings = workspace.workspaceSettingsManager {
+            Divider()
+            ShowHiddenFilesToggle(workspaceSettings: workspaceSettings, settings: workspaceSettings.settings)
+        }
     }
 
     @ViewBuilder private var trailingAccessories: some View {
@@ -151,5 +157,18 @@ struct ProjectNavigatorToolbarBottom: View {
         }
         .buttonStyle(.plain)
         .opacity(activeState == .inactive ? 0.45 : 1)
+    }
+}
+
+/// Shows or hides dotfiles in the project navigator, saved in the workspace's settings.
+private struct ShowHiddenFilesToggle: View {
+    let workspaceSettings: CEWorkspaceSettings
+    @ObservedObject var settings: CEWorkspaceSettingsData
+
+    var body: some View {
+        Toggle("Show Hidden Files", isOn: Binding(
+            get: { settings.navigator.showHiddenFiles },
+            set: { value in workspaceSettings.updateNavigator { $0.showHiddenFiles = value } }
+        ))
     }
 }

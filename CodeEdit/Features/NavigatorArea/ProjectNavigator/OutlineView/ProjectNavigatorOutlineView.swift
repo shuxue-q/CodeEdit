@@ -23,6 +23,7 @@ struct ProjectNavigatorOutlineView: NSViewControllerRepresentable {
         controller.workspace = workspace
         controller.iconColor = prefs.preferences.general.fileIconStyle
         controller.editor = editorManager.activeEditor
+        controller.visibilityFilter = context.coordinator.visibilityFilter()
         workspace.workspaceFileManager?.addObserver(context.coordinator)
 
         context.coordinator.controller = controller
@@ -75,6 +76,26 @@ struct ProjectNavigatorOutlineView: NSViewControllerRepresentable {
                     self?.controller?.handleFilterChange()
                 }
                 .store(in: &cancellables)
+            workspace.workspaceSettingsManager?.settings.$navigator
+                .removeDuplicates()
+                .receive(on: RunLoop.main)
+                .sink { [weak self] _ in
+                    guard let self, let controller = self.controller else { return }
+                    let filter = self.visibilityFilter()
+                    guard controller.visibilityFilter != filter else { return }
+                    controller.visibilityFilter = filter
+                    controller.handleFilterChange()
+                }
+                .store(in: &cancellables)
+        }
+
+        /// The navigator's current hidden-file and exclusion rules.
+        func visibilityFilter() -> NavigatorVisibilityFilter? {
+            guard let workspace, let rootURL = workspace.workspaceFileManager?.folderUrl else { return nil }
+            return NavigatorVisibilityFilter(
+                settings: workspace.workspaceSettingsManager?.settings.navigator ?? .init(),
+                rootURL: rootURL
+            )
         }
 
         var cancellables: Set<AnyCancellable> = []

@@ -23,7 +23,7 @@ final class CMakeProjectSettingsStore {
         "CMakeProjectSettingsStore.configureInputsDidChange"
     )
 
-    /// The project editor pane last shown, kept here so it survives switching tabs.
+    /// A CMake section of the project editor.
     enum Pane: String, CaseIterable, Identifiable {
         case toolchain = "Toolchain"
         case build = "Build Settings"
@@ -35,12 +35,10 @@ final class CMakeProjectSettingsStore {
 
     var settings: CMakeProjectSettings {
         didSet {
-            guard settings != oldValue else { return }
+            guard settings != oldValue, !isReloading else { return }
             scheduleSave()
         }
     }
-
-    var selectedPane: Pane = .toolchain
 
     /// Why the settings file could not be read, if it exists but is unreadable. Saving
     /// replaces it.
@@ -62,6 +60,8 @@ final class CMakeProjectSettingsStore {
     private var scanTask: Task<Void, Never>?
     private var targetsTask: Task<Void, Never>?
     private var hasUnsavedChanges = false
+    /// Set while ``reloadFromDisk()`` replaces the settings, so the reload is not saved back.
+    private var isReloading = false
     private var lastNotifiedInputs: ConfigureInputs
 
     private static let logger = Logger(
@@ -136,6 +136,24 @@ final class CMakeProjectSettingsStore {
         loadError = nil
         saveError = nil
         notifyIfConfigureInputsChanged()
+    }
+
+    /// Re-reads the settings file after it was edited as text. An unreadable file sets
+    /// ``loadError`` and keeps the current settings.
+    func reloadFromDisk() {
+        saveTask?.cancel()
+        saveTask = nil
+        do {
+            let loaded = try Self.read(from: fileURL) ?? CMakeProjectSettings()
+            isReloading = true
+            settings = loaded
+            isReloading = false
+            hasUnsavedChanges = false
+            loadError = nil
+            notifyIfConfigureInputsChanged()
+        } catch {
+            loadError = error.localizedDescription
+        }
     }
 
     /// Saves pending edits immediately. Call before the workspace closes.

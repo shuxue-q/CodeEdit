@@ -175,7 +175,7 @@ struct DebugTargetPicker: View {
     var body: some View {
         if let store = workspace.cmakeProjectSettings {
             CMakeRunTargetMenu(store: store, fallbackName: executableName) {
-                openRunSettings(store)
+                openRunSettings()
             }
             .onAppear {
                 executablePath = defaultsKey.flatMap { UserDefaults.standard.string(forKey: $0) }
@@ -204,10 +204,10 @@ struct DebugTargetPicker: View {
     }
 
     /// Opens the workspace root's project editor on its Run / Debug pane.
-    private func openRunSettings(_ store: CMakeProjectSettingsStore) {
+    private func openRunSettings() {
         guard let rootURL = workspace.workspaceFileManager?.folderUrl,
               let root = workspace.workspaceFileManager?.getFile(rootURL.path) else { return }
-        store.selectedPane = .run
+        workspace.projectEditorState?.selectedSection = .cmake(.run)
         workspace.editorManager?.openTab(item: root)
     }
 
