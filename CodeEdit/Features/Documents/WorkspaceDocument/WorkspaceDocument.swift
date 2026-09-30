@@ -44,6 +44,8 @@ final class WorkspaceDocument: NSDocument, ObservableObject, NSToolbarDelegate {
     var taskManager: TaskManager?
     var workspaceSettingsManager: CEWorkspaceSettings?
     var cmakeWorkspace: CMakeWorkspace?
+    /// Toolchain, build, variable, and run settings edited in the project editor.
+    var cmakeProjectSettings: CMakeProjectSettingsStore?
     var cmakeBuildController: CMakeBuildController?
     /// History of past builds, debug sessions, and tasks for this workspace; created in
     /// ``initWorkspaceState(_:)`` once the workspace URL is known.
@@ -212,6 +214,8 @@ final class WorkspaceDocument: NSDocument, ObservableObject, NSToolbarDelegate {
         workspaceSettingsManager = nil
         cmakeWorkspace?.cancel()
         cmakeWorkspace = nil
+        cmakeProjectSettings?.close()
+        cmakeProjectSettings = nil
         cmakeBuildController?.stop()
         cmakeBuildController = nil
         taskManager = nil
@@ -312,7 +316,13 @@ extension WorkspaceDocument {
         let cmakeWorkspace = CMakeWorkspace(sourceDirectory: url)
         self.cmakeWorkspace = cmakeWorkspace
         cmakeWorkspace.reload()
-        let buildController = CMakeBuildController(sourceDirectory: url, workspace: cmakeWorkspace)
+        let projectSettings = CMakeProjectSettingsStore(sourceDirectory: url, workspace: cmakeWorkspace)
+        self.cmakeProjectSettings = projectSettings
+        let buildController = CMakeBuildController(
+            sourceDirectory: url,
+            workspace: cmakeWorkspace,
+            projectSettings: projectSettings
+        )
         buildController.onBuildFinished = { [weak self, weak buildController] success in
             guard let buildController else { return }
             self?.reportStore?.recordBuild(

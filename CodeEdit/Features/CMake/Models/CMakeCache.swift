@@ -65,6 +65,11 @@ enum CMakeCache {
 
     // MARK: - Cache file
 
+    /// The `KEY → VALUE` entries of the cache in `buildDirectory`, or `nil` when it has none.
+    static func entries(in buildDirectory: URL) -> [String: String]? {
+        readEntries(at: buildDirectory.appending(path: "CMakeCache.txt"))
+    }
+
     /// Parses `KEY:TYPE=VALUE` entries from a CMake cache file, skipping comments.
     private static func readEntries(at cacheFile: URL) -> [String: String]? {
         guard let contents = try? String(contentsOf: cacheFile, encoding: .utf8) else { return nil }

@@ -180,7 +180,8 @@ final class ProjectNavigatorViewController: NSViewController {
         self.select(by: .codeEditor(itemID), forcesReveal: forcesReveal)
     }
 
-    /// Expand or collapse the folder on double click
+    /// Expand or collapse the folder on double click. Double-clicking the workspace root keeps
+    /// its project editor tab open.
     @objc
     private func onItemDoubleClicked() {
         /// If there are multiples items selected, don't do anything, just like in Xcode.
@@ -188,7 +189,9 @@ final class ProjectNavigatorViewController: NSViewController {
 
         guard let item = outlineView.item(atRow: outlineView.clickedRow) as? CEWorkspaceFile else { return }
 
-        if item.isFolder {
+        if item.isProjectRoot {
+            workspace?.editorManager?.activeEditor.openTab(file: item, asTemporary: false)
+        } else if item.isFolder {
             if outlineView.isItemExpanded(item) {
                 outlineView.collapseItem(item)
             } else {

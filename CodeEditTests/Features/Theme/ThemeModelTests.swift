@@ -133,7 +133,7 @@ struct ThemeModelTests {
         let expected = [
             Expectation(name: "Tokyo Night", type: .dark, background: "#1A1B26"),
             Expectation(name: "Tokyo Night Storm", type: .dark, background: "#24283B"),
-            Expectation(name: "Tokyo Night Light", type: .light, background: "#E1E2E7"),
+            Expectation(name: "Tokyo Night Day", type: .light, background: "#E1E2E7"),
             Expectation(name: "One Dark Pro", type: .dark, background: "#282C34"),
             Expectation(name: "One Dark Pro Darker", type: .dark, background: "#23272E")
         ]

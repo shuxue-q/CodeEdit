@@ -137,6 +137,9 @@ final class CEWorkspaceFile: Codable, Comparable, Hashable, Identifiable, Editor
     /// Returns a boolean that is true if the file item is the root folder of the workspace.
     var isRoot: Bool { parent == nil }
 
+    /// Whether this item is the workspace's root folder, whose editor tab shows the project editor.
+    var isProjectRoot: Bool { isRoot && isFolder }
+
     /// Returns a boolean that is true if the file item actually exists in the file system
     var doesExist: Bool { CEWorkspaceFile.fileManager.fileExists(atPath: self.url.path) }
 
@@ -273,6 +276,8 @@ final class CEWorkspaceFile: Codable, Comparable, Hashable, Identifiable, Editor
     /// Loads the ``fileDocument`` property with a new ``CodeFileDocument`` and registers it with the shared
     /// ``CodeEditDocumentController``.
     func loadCodeFile() throws {
+        // Folders have no document; the workspace root's tab shows the project editor instead.
+        guard !isFolder else { return }
         let codeFile = try CodeFileDocument(contentsOf: resolvedURL, ofType: contentType?.identifier ?? "")
         CodeEditDocumentController.shared.addDocument(codeFile)
         self.fileDocument = codeFile

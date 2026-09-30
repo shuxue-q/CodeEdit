@@ -52,7 +52,13 @@ struct EditorAreaView: View {
 
         VStack {
             if let selected = editor.selectedTab {
-                if let codeFile = codeFile?() {
+                if selected.file.isProjectRoot {
+                    ProjectEditorView(file: selected.file)
+                        .transformEnvironment(\.edgeInsets) { insets in
+                            insets.top += editorInsetAmount
+                        }
+                        .opacity(dimEditorsWithoutFocus && editor != editorManager.activeEditor ? 0.5 : 1)
+                } else if let codeFile = codeFile?() {
                     EditorAreaFileView(editorInstance: selected, codeFile: codeFile)
                         .focusedObject(editor)
                         .transformEnvironment(\.edgeInsets) { insets in

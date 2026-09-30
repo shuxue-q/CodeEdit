@@ -16,6 +16,7 @@ import CodeEditSourceEditor
 struct Theme: Identifiable, Codable, Equatable, Hashable, Loopable {
     enum CodingKeys: String, CodingKey {
         case author, license, distributionURL, name, displayName, editor, terminal, version
+        case editorBracketHighlight
         case appearance = "type"
         case metadataDescription = "description"
     }
@@ -64,6 +65,17 @@ struct Theme: Identifiable, Codable, Equatable, Hashable, Loopable {
 
     /// Terminal colors of the theme
     var terminal: TerminalColors
+
+    /// Optional rainbow bracket colors, cycled by nesting depth (like VS Code's
+    /// `editorBracketHighlight.foreground1…6`). Themes that omit this get a built-in light or dark palette.
+    var editorBracketHighlight: [Attributes]?
+
+    /// The editor theme, including this theme's rainbow bracket colors if it defines any.
+    var resolvedEditorTheme: EditorTheme {
+        var theme = editor.editorTheme
+        theme.bracketColors = editorBracketHighlight?.map(\.nsColor)
+        return theme
+    }
 
     init(
         editor: EditorColors,

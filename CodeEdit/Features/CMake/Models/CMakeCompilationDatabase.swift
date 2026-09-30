@@ -107,30 +107,46 @@ enum CMakeCompilationDatabase {
     /// Locates an existing database or runs CMake configure to produce one. Runs off the main
     /// actor inside a detached task.
     private static func resolve(sourceDirectory: URL) -> URL? {
-        let defaultBuildDirectory = sourceDirectory.appending(path: "build")
         let selection = CMakeWorkspace.savedSelection(sourceDirectory: sourceDirectory)
+        let settings = CMakeProjectSettingsStore.savedSettings(sourceDirectory: sourceDirectory)
 
         // Cheap checks first when no preset is selected: no project parsing or shell
         // environment needed. With a selection the preset's binary directory takes
         // precedence over these fallbacks. A database next to a cache from another
         // source tree is ignored so clangd never attaches to foreign compile flags.
-        let fallbacks = [sourceDirectory, defaultBuildDirectory]
-        if selection.configure.isEmpty, let existing = firstUsableDatabase(in: fallbacks, source: sourceDirectory) {
-            return existing
+        let unpresetOptions = CMakeConfigureOptions(
+            sourceDirectory: sourceDirectory,
+            configurePreset: nil,
+            buildPreset: nil,
+            settings: settings
+        )
+        let fallbacks = [sourceDirectory, unpresetOptions.buildDirectory]
+        // A database in the source root is the user's own (often a symlink) and wins.
+        if selection.configure.isEmpty {
+            if CMakeCache.isUsableCompilationDatabase(in: sourceDirectory, sourceDirectory: sourceDirectory) {
+                return sourceDirectory
+            }
+            if isCurrent(unpresetOptions) {
+                return unpresetOptions.buildDirectory
+            }
         }
 
         let environment = LanguageServerDetector.userShellEnvironment()
         let project = CMakeProject.load(at: sourceDirectory, environment: environment)
         let configurePreset = project?.configurePresets.first { $0.name == selection.configure }
-        let buildDirectory = Self.buildDirectory(sourceDirectory: sourceDirectory, configurePreset: configurePreset)
+        let options = CMakeConfigureOptions(
+            sourceDirectory: sourceDirectory,
+            configurePreset: configurePreset,
+            buildPreset: nil,
+            settings: settings
+        )
 
-        if CMakeCache.isUsableCompilationDatabase(in: buildDirectory, sourceDirectory: sourceDirectory) {
-            return buildDirectory
+        if isCurrent(options) {
+            return options.buildDirectory
         }
 
         if let generated = generateDatabase(
-            sourceDirectory: sourceDirectory,
-            buildDirectory: buildDirectory,
+            options: options,
             configurePreset: configurePreset,
             environment: environment
         ) {
@@ -140,7 +156,20 @@ enum CMakeCompilationDatabase {
         // Degrade gracefully: reuse a pre-existing database even if it doesn't match the
         // selected preset — stale compile flags beat no compile flags. A database produced
         // for another source tree is never reused.
-        return firstUsableDatabase(in: fallbacks, source: sourceDirectory)
+        return firstUsableDatabase(in: [options.buildDirectory] + fallbacks, source: sourceDirectory)
+    }
+
+    /// Whether the build directory holds a database produced with the current arguments.
+    /// Databases configured before CodeEdit recorded its arguments are accepted as they are.
+    private static func isCurrent(_ options: CMakeConfigureOptions) -> Bool {
+        guard CMakeCache.isUsableCompilationDatabase(
+            in: options.buildDirectory,
+            sourceDirectory: options.sourceDirectory
+        ) else {
+            return false
+        }
+        let stamp = CMakeConfigureOptions.readStamp(in: options.buildDirectory)
+        return stamp == nil || stamp == options.configureArguments
     }
 
     private static func firstUsableDatabase(in directories: [URL], source: URL) -> URL? {
@@ -149,8 +178,7 @@ enum CMakeCompilationDatabase {
 
     /// Runs CMake configure to produce a compilation database, invalidating a foreign cache first.
     private static func generateDatabase(
-        sourceDirectory: URL,
-        buildDirectory: URL,
+        options: CMakeConfigureOptions,
         configurePreset: CMakePreset?,
         environment: [String: String]
     ) -> URL? {
@@ -159,33 +187,25 @@ enum CMakeCompilationDatabase {
             return nil
         }
 
-        let arguments: [String]
-        if let configurePreset {
-            arguments = ["--preset", configurePreset.name, "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"]
-        } else {
-            arguments = [
-                "-S", sourceDirectory.path,
-                "-B", buildDirectory.path,
-                "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
-            ]
-        }
+        let arguments = options.configureArguments
         logger.info("Generating compilation database: cmake \(arguments.joined(separator: " "))")
 
         var processEnvironment = environment
         configurePreset?.environment.forEach { processEnvironment[$0.key] = $0.value }
 
-        let cacheFile = buildDirectory.appending(path: "CMakeCache.txt")
-        if FileManager.default.fileExists(atPath: cacheFile.path),
-           !CMakeCache.isConfigured(sourceDirectory: sourceDirectory, buildDirectory: buildDirectory) {
+        let buildDirectory = options.buildDirectory
+        if options.requiredStep() == .configureFromScratch {
             CMakeCache.invalidateConfiguration(at: buildDirectory)
         }
+        CMakeExecutableTargets.writeQuery(buildDirectory: buildDirectory)
 
         if configure(
             cmake: cmake,
             arguments: arguments,
-            currentDirectory: sourceDirectory,
+            currentDirectory: options.sourceDirectory,
             environment: processEnvironment
         ), FileManager.default.fileExists(atPath: databaseFile(in: buildDirectory).path) {
+            options.writeStamp()
             return buildDirectory
         }
         logger.warning("CMake configure did not produce a compilation database")

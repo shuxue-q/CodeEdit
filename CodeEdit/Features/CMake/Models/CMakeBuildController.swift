@@ -11,9 +11,10 @@ import OSLog
 /// Runs `cmake --build` for a workspace and streams compiler diagnostics into the problems panel.
 ///
 /// The build runs with piped stdout/stderr (no pseudo-terminal) so output can be parsed while
-/// the build is still running. The build directory and presets come from the workspace's
-/// ``CMakeWorkspace`` selection; when the build directory has not been configured yet, a
-/// configure step (`cmake --preset …` or `cmake -S … -B …`) runs first, with
+/// the build is still running. The build directory and arguments come from the workspace's
+/// ``CMakeWorkspace`` preset selection and ``CMakeProjectSettingsStore`` (see
+/// ``CMakeConfigureOptions``); when the build directory has not been configured with those
+/// arguments yet, a configure step (`cmake --preset …` or `cmake -S … -B …`) runs first, with
 /// `CMAKE_EXPORT_COMPILE_COMMANDS=ON` so clangd keeps working afterwards.
 ///
 /// This class is the integration surface for build UI: any control that should trigger a
@@ -73,15 +74,19 @@ final class CMakeBuildController {
 
     private let sourceDirectory: URL
     private let workspace: CMakeWorkspace
+    /// Toolchain, build, and variable settings from the project editor; `nil` builds with the
+    /// presets alone and CodeEdit's defaults.
+    private weak var projectSettings: CMakeProjectSettingsStore?
     private var process: Process?
     private var parser = CMakeBuildOutputParser()
     /// Bumped on every start so completions from a replaced or stopped build are ignored.
     private var generation = 0
     private var stopRequested = false
 
-    init(sourceDirectory: URL, workspace: CMakeWorkspace) {
+    init(sourceDirectory: URL, workspace: CMakeWorkspace, projectSettings: CMakeProjectSettingsStore? = nil) {
         self.sourceDirectory = sourceDirectory.standardizedFileURL
         self.workspace = workspace
+        self.projectSettings = projectSettings
     }
 
     // MARK: - Controlling the build
@@ -152,9 +157,11 @@ final class CMakeBuildController {
 
         let configurePreset = workspace.configurePreset
         let buildPreset = workspace.buildPreset
-        let buildDirectory = CMakeCompilationDatabase.buildDirectory(
+        let options = CMakeConfigureOptions(
             sourceDirectory: sourceDirectory,
-            configurePreset: configurePreset
+            configurePreset: configurePreset,
+            buildPreset: buildPreset,
+            settings: projectSettings?.settings
         )
         let request = LaunchRequest(
             executable: cmake,
@@ -165,62 +172,40 @@ final class CMakeBuildController {
                 buildPreset: buildPreset
             )
         )
-        if CMakeCache.isConfigured(sourceDirectory: sourceDirectory, buildDirectory: buildDirectory) {
-            runBuild(request: request, buildDirectory: buildDirectory, buildPreset: buildPreset, generation: generation)
-            return
+        switch options.requiredStep() {
+        case .buildOnly:
+            runBuild(request: request, options: options, generation: generation)
+        case .configureFromScratch:
+            CMakeCache.invalidateConfiguration(at: options.buildDirectory)
+            configureThenBuild(request: request, options: options, generation: generation)
+        case .configure:
+            configureThenBuild(request: request, options: options, generation: generation)
         }
-        let cacheFile = buildDirectory.appending(path: "CMakeCache.txt")
-        if FileManager.default.fileExists(atPath: cacheFile.path) {
-            CMakeCache.invalidateConfiguration(at: buildDirectory)
-        }
-        configureThenBuild(
-            request: request,
-            buildDirectory: buildDirectory,
-            configurePreset: configurePreset,
-            buildPreset: buildPreset,
-            generation: generation
-        )
     }
 
     /// Runs the build step itself; shared by direct builds and post-configure builds.
-    private func runBuild(
-        request: LaunchRequest,
-        buildDirectory: URL,
-        buildPreset: CMakePreset?,
-        generation: Int
-    ) {
+    private func runBuild(request: LaunchRequest, options: CMakeConfigureOptions, generation: Int) {
         statusText = "Building…"
-        let arguments = Self.buildArguments(buildDirectory: buildDirectory, buildPreset: buildPreset)
+        let arguments = options.buildArguments
         Self.logger.info("cmake \(arguments.joined(separator: " "))")
         runProcess(request, arguments: arguments, generation: generation) { [weak self] exitCode in
             self?.finishRun(exitCode: exitCode, generation: generation)
         }
     }
 
-    /// Runs a configure step first when the build directory does not exist yet, then the build.
-    private func configureThenBuild(
-        request: LaunchRequest,
-        buildDirectory: URL,
-        configurePreset: CMakePreset?,
-        buildPreset: CMakePreset?,
-        generation: Int
-    ) {
+    /// Runs a configure step first, then the build. The configure asks CMake for the File API
+    /// codemodel (for run targets) and records its arguments so later builds skip it.
+    private func configureThenBuild(request: LaunchRequest, options: CMakeConfigureOptions, generation: Int) {
         statusText = "Configuring…"
-        let arguments = Self.configureArguments(
-            sourceDirectory: sourceDirectory,
-            buildDirectory: buildDirectory,
-            configurePreset: configurePreset
-        )
+        let arguments = options.configureArguments
+        CMakeExecutableTargets.writeQuery(buildDirectory: options.buildDirectory)
         Self.logger.info("cmake \(arguments.joined(separator: " "))")
         runProcess(request, arguments: arguments, generation: generation) { [weak self] exitCode in
             guard let self, self.generation == generation else { return }
             if exitCode == 0 {
-                self.runBuild(
-                    request: request,
-                    buildDirectory: buildDirectory,
-                    buildPreset: buildPreset,
-                    generation: generation
-                )
+                options.writeStamp()
+                self.projectSettings?.refreshExecutableTargets()
+                self.runBuild(request: request, options: options, generation: generation)
             } else {
                 self.finishRun(exitCode: exitCode, generation: generation)
             }
@@ -277,28 +262,6 @@ extension CMakeBuildController {
         configurePreset?.environment.forEach { environment[$0.key] = $0.value }
         buildPreset?.environment.forEach { environment[$0.key] = $0.value }
         return environment
-    }
-
-    private static func buildArguments(buildDirectory: URL, buildPreset: CMakePreset?) -> [String] {
-        if let buildPreset {
-            return ["--build", "--preset", buildPreset.name]
-        }
-        return ["--build", buildDirectory.path]
-    }
-
-    private static func configureArguments(
-        sourceDirectory: URL,
-        buildDirectory: URL,
-        configurePreset: CMakePreset?
-    ) -> [String] {
-        if let configurePreset {
-            return ["--preset", configurePreset.name, "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"]
-        }
-        return [
-            "-S", sourceDirectory.path,
-            "-B", buildDirectory.path,
-            "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
-        ]
     }
 
     /// Appends streamed process output to ``lastBuildLog``, keeping only the last

@@ -66,10 +66,13 @@ enum WorkspaceDiagnostics {
     }
 
     /// Resolves a compiler-printed path against the source directory, then the build directory.
+    /// - Parameter buildDirectory: The build directory in use; when `nil` it is derived from
+    ///   `configurePreset` alone.
     static func resolvePath(
         _ filePath: String,
         sourceDirectory: URL?,
-        configurePreset: CMakePreset?
+        configurePreset: CMakePreset?,
+        buildDirectory: URL? = nil
     ) -> URL {
         let fileManager = FileManager.default
         if filePath.hasPrefix("/") {
@@ -80,7 +83,7 @@ enum WorkspaceDiagnostics {
         if fileManager.fileExists(atPath: sourceRelative.path) {
             return sourceRelative
         }
-        let buildDirectory = CMakeCompilationDatabase.buildDirectory(
+        let buildDirectory = buildDirectory ?? CMakeCompilationDatabase.buildDirectory(
             sourceDirectory: sourceDirectory ?? URL(fileURLWithPath: "/"),
             configurePreset: configurePreset
         )
@@ -95,7 +98,8 @@ enum WorkspaceDiagnostics {
         let resolved = resolvePath(
             filePath,
             sourceDirectory: workspace.workspaceFileManager?.folderUrl,
-            configurePreset: workspace.cmakeWorkspace?.configurePreset
+            configurePreset: workspace.cmakeWorkspace?.configurePreset,
+            buildDirectory: workspace.cmakeProjectSettings?.configureOptions.buildDirectory
         )
         guard let file = workspace.workspaceFileManager?.getFile(
             resolved.path,

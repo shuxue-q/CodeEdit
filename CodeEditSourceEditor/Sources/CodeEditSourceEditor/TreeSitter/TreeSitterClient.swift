@@ -49,6 +49,9 @@ public final class TreeSitterClient: HighlightProviding {
     /// The end point of the previous edit.
     private var oldEndPoint: Point?
 
+    /// Whether the text replaced by the pending edit contained a bracket. Set in ``willApplyEdit(textView:range:)``.
+    private var replacedTextHadBrackets = false
+
     package var pendingEdits: Atomic<[InputEdit]> = Atomic([])
 
     /// Optional flag to force every operation to be done on the caller's thread.
@@ -152,6 +155,23 @@ public final class TreeSitterClient: HighlightProviding {
         completion: @escaping @MainActor (Result<IndexSet, Error>) -> Void
     ) {
         let oldEndPoint: Point = self.oldEndPoint ?? textView.pointForLocation(range.max) ?? .zero
+
+        // Adding or removing a bracket changes the nesting depth of everything nested after it, which tree-sitter's
+        // changed ranges don't report. Invalidate through the end of the document; only the visible part of it is
+        // re-queried right away.
+        let insertedRange = NSRange(location: range.location, length: max(range.length + delta, 0))
+        let touchesBrackets = replacedTextHadBrackets || textView.textStorage.substring(from: insertedRange)?
+            .utf16.contains(where: Self.isBracketCharacter) == true
+        replacedTextHadBrackets = false
+        let end = textView.documentRange.length
+        let completion: @MainActor (Result<IndexSet, Error>) -> Void = { result in
+            guard touchesBrackets, case .success(var invalidated) = result else { return completion(result) }
+            if range.location < end {
+                invalidated.insert(integersIn: range.location..<end)
+            }
+            completion(.success(invalidated))
+        }
+
         guard let edit = InputEdit(range: range, delta: delta, oldEndPoint: oldEndPoint, textView: textView) else {
             completion(.failure(TreeSitterClientError.invalidEdit))
             return
@@ -197,6 +217,8 @@ public final class TreeSitterClient: HighlightProviding {
     ///   - range: The range that will be edited.
     public func willApplyEdit(textView: TextView, range: NSRange) {
         oldEndPoint = textView.pointForLocation(range.max)
+        replacedTextHadBrackets = textView.textStorage.substring(from: range)?
+            .utf16.contains(where: Self.isBracketCharacter) == true
     }
 
     /// Initiates a highlight query.

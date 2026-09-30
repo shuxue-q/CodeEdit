@@ -40,6 +40,15 @@ extension TreeSitterClient {
             highlights.append(contentsOf: queryResult)
         }
 
+        // Rainbow brackets: layered over grammar captures so bracket tokens always take their depth color.
+        if let primary = state.layers.first {
+            let brackets = bracketHighlights(layer: primary, range: range)
+            if !brackets.isEmpty {
+                let sorted = highlights.sorted { $0.range.location < $1.range.location }
+                highlights = Self.overlay(brackets: brackets, on: sorted)
+            }
+        }
+
         return highlights
     }
 

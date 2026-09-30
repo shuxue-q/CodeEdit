@@ -24,9 +24,12 @@ extension ProjectNavigatorViewController: NSOutlineViewDelegate {
         guard let tableColumn else { return nil }
 
         let frameRect = NSRect(x: 0, y: 0, width: tableColumn.width, height: rowHeight)
+        let file = item as? CEWorkspaceFile
         let cell = ProjectNavigatorTableViewCell(
             frame: frameRect,
-            item: item as? CEWorkspaceFile,
+            item: file,
+            // Clicking the selected root opens the project editor rather than renaming the workspace folder.
+            isEditable: file?.isRoot != true,
             delegate: self,
             navigatorFilter: workspace?.navigatorFilter
         )
@@ -44,7 +47,8 @@ extension ProjectNavigatorViewController: NSOutlineViewDelegate {
 
         guard let item = outlineView.item(atRow: selectedIndex) as? CEWorkspaceFile else { return }
 
-        if !item.isFolder && shouldSendSelectionUpdate {
+        // The workspace root opens the project editor; other folders only expand.
+        if (!item.isFolder || item.isProjectRoot) && shouldSendSelectionUpdate {
             shouldSendSelectionUpdate = false
             if workspace?.editorManager?.activeEditor.selectedTab?.file != item {
                 workspace?.editorManager?.activeEditor.openTab(file: item, asTemporary: true)

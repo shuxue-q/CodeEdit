@@ -8,10 +8,11 @@
 import Foundation
 
 extension LSPService {
-    /// The selected CMake configure preset changed, so the compilation database a running
-    /// clangd was started with may be stale. Drop the cached database directory and restart
-    /// the C-family servers for the workspace to pick up the new compile flags.
-    /// - Parameter sourceDirectoryPath: The path of the CMake workspace whose preset changed.
+    /// The selected CMake configure preset or the project's CMake settings changed, so the
+    /// compilation database a running clangd was started with may be stale. Drop the cached
+    /// database directory and restart the C-family servers for the workspace to pick up the
+    /// new compile flags.
+    /// - Parameter sourceDirectoryPath: The path of the CMake workspace whose configuration changed.
     func handleConfigurePresetChange(sourceDirectoryPath: String) {
         let sourcePath = URL(fileURLWithPath: sourceDirectoryPath).standardizedFileURL.path
         Task {

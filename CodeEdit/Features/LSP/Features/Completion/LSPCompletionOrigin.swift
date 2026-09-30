@@ -205,7 +205,9 @@ extension LSPCompletionProvider {
             return item
         }
         let name = LSPCompletionOrigin.qualifiedName(from: entry.label).name
-        guard name.count >= 3, let response = try? await client.requestWorkspaceSymbols(query: name) else {
+        guard name.count >= 3,
+              client.supportsWorkspaceSymbols,
+              let response = try? await client.requestWorkspaceSymbols(query: name) else {
             return item
         }
         guard let header = LSPCompletionOrigin.declaringHeader(for: entry.label, response: response) else {

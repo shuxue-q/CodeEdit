@@ -62,7 +62,8 @@ enum Query {
 
         static func getProjectNavigatorRow(fileTitle: String, index: Int = 0, _ navigator: XCUIElement) -> XCUIElement {
             return getRows(navigator)
-                .containing(.textField, identifier: "ProjectNavigatorTableViewCell-\(fileTitle)")
+                // Editable rows show a text field; the workspace root shows static text.
+                .containing(.any, identifier: "ProjectNavigatorTableViewCell-\(fileTitle)")
                 .element(boundBy: index)
         }
 

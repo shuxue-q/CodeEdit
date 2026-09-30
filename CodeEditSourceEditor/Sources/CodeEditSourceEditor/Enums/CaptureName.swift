@@ -36,6 +36,40 @@ public enum CaptureName: Int8, CaseIterable, Sendable {
     case constant
     case `operator`
     case label
+    /// Rainbow bracket nesting levels. Only produced by the bracket depth pass, never by grammar queries.
+    /// See ``bracketLevel(_:)``.
+    case bracketLevel0
+    case bracketLevel1
+    case bracketLevel2
+    case bracketLevel3
+    case bracketLevel4
+    case bracketLevel5
+
+    /// The number of distinct rainbow bracket levels before the colors cycle.
+    static let bracketLevelCount = 6
+
+    /// The capture used to color a bracket at the given nesting depth. Depths wrap around every
+    /// ``bracketLevelCount`` levels.
+    /// - Parameter depth: The zero-based nesting depth of the bracket pair.
+    static func bracketLevel(_ depth: Int) -> CaptureName {
+        let levels: [CaptureName] = [
+            .bracketLevel0, .bracketLevel1, .bracketLevel2, .bracketLevel3, .bracketLevel4, .bracketLevel5
+        ]
+        return levels[((depth % bracketLevelCount) + bracketLevelCount) % bracketLevelCount]
+    }
+
+    /// The rainbow level index (`0..<bracketLevelCount`) if this is a bracket level capture.
+    var bracketLevelIndex: Int? {
+        switch self {
+        case .bracketLevel0: return 0
+        case .bracketLevel1: return 1
+        case .bracketLevel2: return 2
+        case .bracketLevel3: return 3
+        case .bracketLevel4: return 4
+        case .bracketLevel5: return 5
+        default: return nil
+        }
+    }
 
     var alternate: CaptureName {
         switch self {
@@ -161,6 +195,18 @@ public enum CaptureName: Int8, CaseIterable, Sendable {
             return "operator"
         case .label:
             return "label"
+        case .bracketLevel0:
+            return "bracketLevel0"
+        case .bracketLevel1:
+            return "bracketLevel1"
+        case .bracketLevel2:
+            return "bracketLevel2"
+        case .bracketLevel3:
+            return "bracketLevel3"
+        case .bracketLevel4:
+            return "bracketLevel4"
+        case .bracketLevel5:
+            return "bracketLevel5"
         }
     }
 }

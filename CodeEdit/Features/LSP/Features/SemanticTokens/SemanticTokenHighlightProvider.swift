@@ -33,6 +33,9 @@ final class SemanticTokenHighlightProvider<
     typealias HighlightCallback = @MainActor (Result<[HighlightRange], any Error>) -> Void
 
     private var tokenMap: SemanticTokenMap?
+    /// Set once a language server is attached that does not provide semantic tokens. Queries then
+    /// answer with no highlights, leaving tree-sitter colors in place.
+    private var isUnsupported = false
     private var documentURI: String?
     weak var languageServer: LanguageServer<DocumentType>?
     private weak var textView: TextView?
@@ -61,6 +64,10 @@ final class SemanticTokenHighlightProvider<
         languageServer = server
         documentURI = document.languageServerURI
         tokenMap = server.highlightMap
+        isUnsupported = !server.supportsSemanticTokens || server.highlightMap == nil
+        if isUnsupported {
+            respondToPendingHighlights(with: .success([]))
+        }
     }
 
     // MARK: - Language Server Content Lifecycle
@@ -72,20 +79,32 @@ final class SemanticTokenHighlightProvider<
     ///
     /// If this object already has some tokens, it determines whether or not we can request a token delta and
     /// performs the request.
+    ///
+    /// When the server does not provide semantic tokens, no request is sent and queued queries are answered with no
+    /// highlights. When the first request fails, queued queries are answered the same way before the error is
+    /// rethrown, so the editor keeps its tree-sitter highlights.
     func documentDidChange() async throws {
         guard let languageServer, let textView else {
             return
         }
 
+        guard !isUnsupported else {
+            await respondToPendingHighlights(with: .success([]))
+            return
+        }
+
         guard storage.hasReceivedData else {
             // We have no semantic token info, request it!
-            try await requestTokens(languageServer: languageServer, textView: textView)
-            await MainActor.run {
-                for callback in pendingHighlightCallbacks {
-                    callback(.failure(HighlightProvidingError.operationCancelled))
-                }
-                pendingHighlightCallbacks.removeAll()
+            do {
+                try await requestTokens(languageServer: languageServer, textView: textView)
+            } catch {
+                await respondToPendingHighlights(with: .success([]))
+                throw error
             }
+            // Re-query pending ranges if tokens arrived. Otherwise answer them empty so they don't queue forever.
+            await respondToPendingHighlights(
+                with: storage.hasReceivedData ? .failure(HighlightProvidingError.operationCancelled) : .success([])
+            )
             return
         }
 
@@ -96,6 +115,15 @@ final class SemanticTokenHighlightProvider<
         }
 
         try await requestTokens(languageServer: languageServer, textView: textView)
+    }
+
+    @MainActor
+    private func respondToPendingHighlights(with result: Result<[HighlightRange], any Error>) {
+        let callbacks = pendingHighlightCallbacks
+        pendingHighlightCallbacks.removeAll()
+        for callback in callbacks {
+            callback(result)
+        }
     }
 
     // MARK: - LSP Token Requests
@@ -166,12 +194,23 @@ final class SemanticTokenHighlightProvider<
     }
 
     func queryHighlightsFor(textView: TextView, range: NSRange, completion: @escaping HighlightCallback) {
+        guard !isUnsupported else {
+            completion(.success([]))
+            return
+        }
+
         guard storage.hasReceivedData else {
             pendingHighlightCallbacks.append(completion)
             return
         }
 
-        guard let lspRange = textView.lspRangeFrom(nsRange: range), let tokenMap else {
+        guard let tokenMap else {
+            // Tokens without a legend can't be decoded. Leave tree-sitter highlights in place.
+            completion(.success([]))
+            return
+        }
+
+        guard let lspRange = textView.lspRangeFrom(nsRange: range) else {
             completion(.failure(HighlightError.lspRangeFailure))
             return
         }

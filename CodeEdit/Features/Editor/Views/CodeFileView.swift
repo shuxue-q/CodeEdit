@@ -172,7 +172,7 @@ struct CodeFileView: View {
             language: codeFile.getLanguage(),
             configuration: SourceEditorConfiguration(
                 appearance: .init(
-                    theme: currentTheme.editor.editorTheme,
+                    theme: currentTheme.resolvedEditorTheme,
                     useThemeBackground: useThemeBackground,
                     font: font,
                     lineHeightMultiple: lineHeightMultiple,

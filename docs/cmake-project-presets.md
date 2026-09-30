@@ -34,6 +34,38 @@ and the folder name is used when a project name cannot be resolved statically.
 
 Reference: [CMake presets specification](https://cmake.org/cmake/help/latest/manual/cmake-presets.7.html).
 
+## Project editor
+
+Selecting the workspace root in the project navigator opens a project editor tab
+instead of renaming the folder (double-click keeps the tab open). In CMake
+workspaces it has four panes, saved to `.codeedit/cmake-settings.json` (created on
+the first edit):
+
+- **Toolchain** — C and C++ compilers found in the login shell `PATH`, `/usr/bin`,
+  `/opt/homebrew/bin`, `/usr/local/bin`, and the Homebrew LLVM keg, identified from
+  `--version` (Apple Clang, Clang, GCC), or a custom path; the detected `cmake` and its
+  version; and the generator (Ninja, Ninja Multi-Config, Unix Makefiles, Xcode).
+- **Build Settings** — the preset pickers above, the build configuration (`Debug`
+  by default), the build directory (`build`), and the C++ standard (17/20/23).
+- **CMake Variables** — ordered `-DNAME=VALUE` definitions that can be disabled
+  individually, with a preview of the resulting configure command.
+- **Run / Debug** — the executable target, working directory, arguments (split with
+  shell quoting, never passed through a shell), and environment variables used by
+  **Start Debugging** in the Debugger panel.
+
+Without a configure preset, these settings produce the configure step:
+`cmake -S <source> -B <build> [-G <generator>] -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+-DCMAKE_BUILD_TYPE=… [-DCMAKE_C_COMPILER=…] [-DCMAKE_CXX_COMPILER=…]
+[-DCMAKE_CXX_STANDARD=…] <variables>`. Multi-configuration generators omit
+`CMAKE_BUILD_TYPE` and build with `--config`. When a configure preset is selected it
+keeps control of the generator, build directory, compilers, build type, and
+standard (those controls are disabled); variables are still appended.
+
+Executable targets come from the CMake File API: CodeEdit writes a `codemodel-v2`
+query into the build directory before every configure it runs and reads the reply
+for each target's binary. Before the first configure, literal `add_executable()`
+calls in the project's `CMakeLists.txt` files are listed without binary paths.
+
 ## Building and the problems panel
 
 In a CMake workspace without configured tasks, the window's existing start/stop task
@@ -50,9 +82,14 @@ settings selection:
 - when the build directory has no `CMakeCache.txt`, or the cache was created for a
   different source or build directory, a configure step
   (`cmake --preset <name>` or `cmake -S <source> -B <build>` with
-  `CMAKE_EXPORT_COMPILE_COMMANDS=ON`) runs first. A leftover cache from another
-  tree is discarded (`CMakeCache.txt`, `CMakeFiles/`, and `compile_commands.json`)
-  before that configure.
+  `CMAKE_EXPORT_COMPILE_COMMANDS=ON` and the project editor's settings) runs first.
+  A leftover cache from another tree is discarded (`CMakeCache.txt`, `CMakeFiles/`,
+  and `compile_commands.json`) before that configure;
+- after a successful configure the arguments are recorded in
+  `CMakeFiles/codeedit-configure.json`. The next build configures again when they
+  differ, and starts from a fresh cache when the requested generator differs from
+  the cached `CMAKE_GENERATOR`. Directories without that record are built as they
+  are when no project settings exist.
 
 While the build runs, output is parsed incrementally for compiler diagnostics — Clang and
 GCC (`path:line:col: warning|error: message`, including `fatal error` and trailing
@@ -86,6 +123,8 @@ or when the clangd launch arguments already contain `--compile-commands-dir`.
 Versioned clangd binaries (`clangd-18`, `clangd-mp-19`, …) are treated the same
 as `clangd`.
 
-Selecting a different configure preset drops the cached database lookup and
-restarts the C-family language servers, so subsequent completion and diagnostics
-use the new preset's compile flags.
+Selecting a different configure preset, or saving project editor settings that
+change the configure step, drops the cached database lookup and restarts the
+C-family language servers, so subsequent completion and diagnostics use the new
+compile flags. The database uses the same build directory and arguments as
+builds, and is regenerated when the recorded configure arguments differ.

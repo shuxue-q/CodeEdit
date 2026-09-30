@@ -73,7 +73,7 @@ final class ProjectNavigatorMenu: NSMenu {
         newFileFromClipboard.keyEquivalentModifierMask = [.command]
         let newFolder = menuItem("New Folder", action: #selector(newFolder))
 
-        let rename = menuItem("Rename", action: #selector(renameFile))
+        let rename = menuItem("Rename", action: item.isRoot ? nil : #selector(renameFile))
 
         let trash = menuItem("Move to Trash", action:
                                 item.url != workspace?.workspaceFileManager?.folderUrl
