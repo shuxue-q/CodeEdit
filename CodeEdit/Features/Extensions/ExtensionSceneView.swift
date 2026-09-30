@@ -56,6 +56,20 @@ struct ExtensionSceneView: NSViewControllerRepresentable {
 
         var connection: NSXPCConnection?
 
+        /// Builds the `EnvironmentPublisherObjc` interface with `NSData` declared as the only allowed class for the
+        /// `data` argument. Swift `Data` is exposed to XPC as a plain object, so without this Foundation falls back
+        /// to an `NSObject` allow-list and logs a fault.
+        static func makeEnvironmentInterface() -> NSXPCInterface {
+            let interface = NSXPCInterface(with: EnvironmentPublisherObjc.self)
+            interface.setClasses(
+                NSSet(object: NSData.self) as? Set<AnyHashable> ?? [],
+                for: #selector(EnvironmentPublisherObjc.publishEnvironment(data:)),
+                argumentIndex: 0,
+                ofReply: false
+            )
+            return interface
+        }
+
         func publishEnvironment(data: Data) {
             guard let decodedCallbacks = try? JSONDecoder().decode(Callbacks.self, from: data) else { return }
             switch decodedCallbacks {
@@ -92,9 +106,9 @@ struct ExtensionSceneView: NSViewControllerRepresentable {
             isOnline = true
             do {
                 self.connection = try viewController.makeXPCConnection()
-                connection?.exportedInterface = .init(with: EnvironmentPublisherObjc.self)
+                connection?.exportedInterface = Self.makeEnvironmentInterface()
                 connection?.exportedObject = self
-                connection?.remoteObjectInterface = .init(with: EnvironmentPublisherObjc.self)
+                connection?.remoteObjectInterface = Self.makeEnvironmentInterface()
                 connection?.resume()
                 if let toPublish {
                     Task {

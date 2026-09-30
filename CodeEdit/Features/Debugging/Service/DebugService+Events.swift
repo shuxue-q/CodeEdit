@@ -60,7 +60,7 @@ extension DebugService {
     /// The adapter is ready to receive configuration. Per DAP this event may
     /// arrive before or after the `launch` response, so breakpoint sync and
     /// `configurationDone` are driven by the event itself, not by ordering
-    /// assumptions in `startDebugging(executable:arguments:workingDirectory:workspace:)`.
+    /// assumptions in `startDebugging(executable:arguments:workingDirectory:environment:workspace:)`.
     private func handleInitialized() async {
         let generation = sessionGeneration
         guard let client else { return }

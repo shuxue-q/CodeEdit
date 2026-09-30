@@ -165,16 +165,16 @@ final class LSPService: ObservableObject {
             }
         }
 
-        NotificationCenter.default.addObserver(
-            forName: CMakeWorkspace.configurePresetDidChangeNotification,
-            object: nil,
-            queue: .main
-        ) { notification in
-            MainActor.assumeIsolated {
-                guard let path = notification.userInfo?[CMakeWorkspace.sourceDirectoryUserInfoKey] as? String else {
-                    return
+        for name in [
+            CMakeWorkspace.configurePresetDidChangeNotification,
+            CMakeProjectSettingsStore.configureInputsDidChangeNotification
+        ] {
+            NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { notification in
+                MainActor.assumeIsolated {
+                    let key = CMakeWorkspace.sourceDirectoryUserInfoKey
+                    guard let path = notification.userInfo?[key] as? String else { return }
+                    self.handleConfigurePresetChange(sourceDirectoryPath: path)
                 }
-                self.handleConfigurePresetChange(sourceDirectoryPath: path)
             }
         }
     }

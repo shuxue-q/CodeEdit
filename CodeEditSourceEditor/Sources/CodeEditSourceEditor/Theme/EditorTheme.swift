@@ -42,6 +42,11 @@ public struct EditorTheme: Equatable {
     public var characters: Attribute
     public var comments: Attribute
 
+    /// Explicit rainbow bracket colors, cycled by nesting depth (like VS Code's
+    /// `editorBracketHighlight.foreground1…6`). When `nil` or empty, a palette suited to the theme's
+    /// background is used. See ``resolvedBracketColors``.
+    public var bracketColors: [NSColor]?
+
     public init(
         text: Attribute,
         insertionPoint: NSColor,
@@ -76,6 +81,36 @@ public struct EditorTheme: Equatable {
         self.strings = strings
         self.characters = characters
         self.comments = comments
+    }
+
+    /// Fallback rainbow bracket palette for dark backgrounds.
+    static let darkBracketColors: [NSColor] = [
+        NSColor(srgbRed: 1.0, green: 0.843, blue: 0.0, alpha: 1),      // #FFD700
+        NSColor(srgbRed: 0.855, green: 0.439, blue: 0.839, alpha: 1),  // #DA70D6
+        NSColor(srgbRed: 0.090, green: 0.624, blue: 1.0, alpha: 1)     // #179FFF
+    ]
+
+    /// Fallback rainbow bracket palette for light backgrounds.
+    static let lightBracketColors: [NSColor] = [
+        NSColor(srgbRed: 0.710, green: 0.537, blue: 0.0, alpha: 1),    // #B58900
+        NSColor(srgbRed: 0.545, green: 0.0, blue: 0.545, alpha: 1),    // #8B008B
+        NSColor(srgbRed: 0.0, green: 0.478, blue: 0.8, alpha: 1)       // #007ACC
+    ]
+
+    /// The rainbow palette in effect: ``bracketColors`` when provided, otherwise a light or dark fallback chosen from
+    /// the background's brightness.
+    ///
+    /// The palette always cycles evenly over ``CaptureName/bracketLevelCount`` levels, so its length is
+    /// normalized to a divisor of that count: lengths 1, 2, 3 and 6 are used as given, other lengths are truncated
+    /// to the largest usable prefix.
+    public var resolvedBracketColors: [NSColor] {
+        var palette = bracketColors ?? []
+        if palette.isEmpty {
+            let isLight = (background.usingColorSpace(.deviceRGB)?.brightnessComponent ?? 0) > 0.5
+            palette = isLight ? Self.lightBracketColors : Self.darkBracketColors
+        }
+        let usable = [6, 3, 2, 1].first(where: { $0 <= palette.count }) ?? 1
+        return Array(palette.prefix(usable))
     }
 
     /// Maps a capture type to the theme attribute for that capture.
@@ -120,6 +155,10 @@ public struct EditorTheme: Equatable {
     /// - Parameter capture: The capture name
     /// - Returns: A `NSColor`
     func colorFor(_ capture: CaptureName?) -> NSColor {
+        if let level = capture?.bracketLevelIndex {
+            let palette = resolvedBracketColors
+            return palette[level % palette.count]
+        }
         return mapCapture(capture).color
     }
 

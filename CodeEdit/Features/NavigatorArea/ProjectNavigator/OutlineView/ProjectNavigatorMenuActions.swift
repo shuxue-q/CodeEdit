@@ -69,8 +69,8 @@ extension ProjectNavigatorMenu {
             }
         }
 
-        /// Open the items in order.
-        sortedItems.forEach { item in
+        /// Open the items in order. Folders have no editor, except the root's project editor.
+        sortedItems.filter { !$0.isFolder || $0.isProjectRoot }.forEach { item in
             workspace?.editorManager?.openTab(item: item)
         }
     }

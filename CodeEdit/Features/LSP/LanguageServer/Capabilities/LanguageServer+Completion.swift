@@ -49,8 +49,24 @@ extension LanguageServer {
         }
     }
 
+    /// Whether the server advertised `workspace/symbol` support during initialization.
+    var supportsWorkspaceSymbols: Bool {
+        switch serverCapabilities.workspaceSymbolProvider {
+        case .optionA(let supported):
+            return supported
+        case .optionB:
+            return true
+        case .none:
+            return false
+        }
+    }
+
     /// Looks up symbols by name. Used when a completion item has no declaring header.
+    ///
+    /// Returns `nil` without contacting the server when it does not support `workspace/symbol`
+    /// (for example `neocmakelsp`), which would otherwise answer with `-32601 Method not found`.
     func requestWorkspaceSymbols(query: String) async throws -> WorkspaceSymbolResponse {
+        guard supportsWorkspaceSymbols else { return nil }
         do {
             return try await lspInstance.workspaceSymbol(WorkspaceSymbolParams(query: query))
         } catch {

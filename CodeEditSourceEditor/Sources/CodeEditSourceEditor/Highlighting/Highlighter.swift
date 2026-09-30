@@ -229,11 +229,12 @@ extension Highlighter: @preconcurrency NSTextStorageDelegate {
 
         styleContainer.storageUpdated(editedRange: editedRange, changeInLength: delta)
 
-        if delta > 0 {
-            visibleRangeProvider.visibleSet.insert(range: editedRange)
-        }
-
         visibleRangeProvider.visibleTextChanged()
+
+        // Layout hasn't caught up with this edit yet, so the recomputed visible set can end before the new text
+        // (e.g. accepting a completion near the end of the document). Keep the edited range visible so all of it is
+        // re-highlighted, not just the part that fits in the old layout.
+        visibleRangeProvider.visibleSet.insert(range: editedRange)
 
         let providerRange = NSRange(location: editedRange.location, length: editedRange.length - delta)
         highlightProviders.forEach { $0.storageDidUpdate(range: providerRange, delta: delta) }

@@ -73,7 +73,10 @@ extension TextSelectionManager {
 
             let maxRect: CGRect
             let endOfLine = fragmentRange.max <= range.max || range.contains(fragmentRange.max)
+            // Only the last line can end the document without a line break. A line whose break is the document's
+            // final character is followed by an empty last line, and a selection through that break fills the line.
             let endOfDocument = intersectionRange.max == layoutManager.lineStorage.length
+                && linePosition.index == layoutManager.lineStorage.count - 1
             let emptyLine = linePosition.range.isEmpty
 
             // If the selection is at the end of the line, or contains the end of the fragment, and is not the end

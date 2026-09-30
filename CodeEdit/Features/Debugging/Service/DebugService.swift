@@ -112,6 +112,7 @@ final class DebugService: ObservableObject {
     ///   - executable: The binary to debug.
     ///   - arguments: Command-line arguments for the debuggee.
     ///   - workingDirectory: The debuggee's working directory.
+    ///   - environment: Variables added to the debuggee's environment.
     ///   - workspace: The workspace whose editor shows stopped locations.
     /// - Throws: ``DebugServiceError/lldbDapNotFound`` when no adapter is
     ///   installed, or any ``DAPError`` from the initialize/launch handshake.
@@ -119,6 +120,7 @@ final class DebugService: ObservableObject {
         executable: URL,
         arguments: [String],
         workingDirectory: URL,
+        environment: [String: String] = [:],
         workspace: WorkspaceDocument
     ) async throws {
         guard sessionState == .inactive else { return }
@@ -154,7 +156,8 @@ final class DebugService: ObservableObject {
                 arguments: LaunchRequestArguments(
                     program: executable.path(percentEncoded: false),
                     args: arguments,
-                    cwd: workingDirectory.path(percentEncoded: false)
+                    cwd: workingDirectory.path(percentEncoded: false),
+                    env: environment.isEmpty ? nil : environment
                 )
             )
         } catch {

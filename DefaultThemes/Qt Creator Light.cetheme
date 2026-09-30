@@ -1,0 +1,125 @@
+{
+  "name": "qtcreator.light",
+  "displayName": "Qt Creator Light",
+  "description": "Qt Creator Light (2024) style scheme.",
+  "author": "CodeEdit",
+  "version": "0.0.1",
+  "license": "MIT",
+  "distributionURL": "https://github.com/CodeEditApp/CodeEdit",
+  "type": "light",
+  "editor": {
+    "background": {
+      "color": "#FCFCFC"
+    },
+    "selection": {
+      "color": "#CDCDCD"
+    },
+    "insertionPoint": {
+      "color": "#0A0A0A"
+    },
+    "lineHighlight": {
+      "color": "#C9E1FF"
+    },
+    "invisibles": {
+      "color": "#C0C0C0"
+    },
+    "text": {
+      "color": "#0A0A0A"
+    },
+    "comments": {
+      "color": "#008000"
+    },
+    "strings": {
+      "color": "#008000"
+    },
+    "characters": {
+      "color": "#008000"
+    },
+    "numbers": {
+      "color": "#000080"
+    },
+    "keywords": {
+      "color": "#808000"
+    },
+    "attributes": {
+      "color": "#808000"
+    },
+    "types": {
+      "color": "#800080"
+    },
+    "variables": {
+      "color": "#092E64"
+    },
+    "commands": {
+      "color": "#00677C"
+    },
+    "values": {
+      "color": "#CE5C00"
+    }
+  },
+  "terminal": {
+    "background": {
+      "color": "#FCFCFC"
+    },
+    "selection": {
+      "color": "#CDCDCD"
+    },
+    "cursor": {
+      "color": "#0A0A0A"
+    },
+    "text": {
+      "color": "#0A0A0A"
+    },
+    "boldText": {
+      "color": "#0A0A0A"
+    },
+    "black": {
+      "color": "#0A0A0A"
+    },
+    "red": {
+      "color": "#C00000"
+    },
+    "green": {
+      "color": "#008000"
+    },
+    "yellow": {
+      "color": "#808000"
+    },
+    "blue": {
+      "color": "#000080"
+    },
+    "magenta": {
+      "color": "#800080"
+    },
+    "cyan": {
+      "color": "#00677C"
+    },
+    "white": {
+      "color": "#D9D9D9"
+    },
+    "brightBlack": {
+      "color": "#595959"
+    },
+    "brightRed": {
+      "color": "#FF0000"
+    },
+    "brightGreen": {
+      "color": "#12A75D"
+    },
+    "brightYellow": {
+      "color": "#CE5C00"
+    },
+    "brightBlue": {
+      "color": "#0000FF"
+    },
+    "brightMagenta": {
+      "color": "#FF00FF"
+    },
+    "brightCyan": {
+      "color": "#007AF4"
+    },
+    "brightWhite": {
+      "color": "#FFFFFF"
+    }
+  }
+}

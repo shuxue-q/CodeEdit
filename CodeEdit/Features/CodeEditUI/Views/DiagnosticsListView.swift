@@ -170,7 +170,8 @@ struct DiagnosticsListView: View {
         WorkspaceDiagnostics.resolvePath(
             filePath,
             sourceDirectory: workspace.workspaceFileManager?.folderUrl,
-            configurePreset: workspace.cmakeWorkspace?.configurePreset
+            configurePreset: workspace.cmakeWorkspace?.configurePreset,
+            buildDirectory: workspace.cmakeProjectSettings?.configureOptions.buildDirectory
         )
     }
 
