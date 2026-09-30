@@ -1,0 +1,135 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to create (e.g. v1.2.3). Created on the selected commit if it does not exist."
+        required: true
+        type: string
+      prerelease:
+        description: "Mark the release as a pre-release"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and Publish Release
+    runs-on: macos-26 # Apple Silicon (arm64)
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history and tags for the changelog
+
+      - name: Validate tag
+        run: |
+          echo "DERIVED_DATA=$RUNNER_TEMP/DerivedData" >> "$GITHUB_ENV"
+          echo "DIST_DIR=$RUNNER_TEMP/dist" >> "$GITHUB_ENV"
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([-.+].*)?$ ]]; then
+            echo "::error::Tag '$TAG' is not of the form vX.Y.Z"
+            exit 1
+          fi
+
+      - name: Select latest Xcode
+        run: |
+          XCODE_APP=$(ls -d /Applications/Xcode*.app | sort -V | tail -n 1)
+          echo "Using $XCODE_APP"
+          sudo xcode-select -s "$XCODE_APP/Contents/Developer"
+          xcodebuild -version
+
+      - name: Build Release app
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project CodeEdit.xcodeproj \
+            -scheme CodeEdit \
+            -configuration Release \
+            -destination "generic/platform=macOS" \
+            -derivedDataPath "$DERIVED_DATA" \
+            -skipPackagePluginValidation \
+            -skipMacroValidation \
+            ARCHS=arm64 \
+            ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            build | xcbeautify --renderer github-actions
+
+      - name: Ad-hoc sign app bundle
+        # Apple Silicon refuses to launch arm64 code without at least an ad-hoc signature.
+        run: |
+          APP="$DERIVED_DATA/Build/Products/Release/CodeEdit.app"
+          codesign --force --deep --sign - "$APP"
+          codesign --verify --deep --strict "$APP"
+
+      - name: Package DMG
+        run: |
+          APP="$DERIVED_DATA/Build/Products/Release/CodeEdit.app"
+          STAGING="$RUNNER_TEMP/dmg-staging"
+          mkdir -p "$STAGING" "$DIST_DIR"
+          ditto "$APP" "$STAGING/CodeEdit.app"
+          ln -s /Applications "$STAGING/Applications"
+          DMG_NAME="CodeEdit-${TAG}-arm64.dmg"
+          hdiutil create \
+            -volname "CodeEdit" \
+            -srcfolder "$STAGING" \
+            -fs HFS+ \
+            -format UDZO \
+            -ov \
+            "$DIST_DIR/$DMG_NAME"
+          echo "DMG_PATH=$DIST_DIR/$DMG_NAME" >> "$GITHUB_ENV"
+
+      - name: Generate changelog
+        run: |
+          # Previous tag: the nearest tag reachable from this commit, excluding the release tag itself.
+          PREV_TAG=$(git describe --tags --abbrev=0 --exclude="$TAG" HEAD 2>/dev/null || true)
+          if [[ -n "$PREV_TAG" ]]; then
+            RANGE="$PREV_TAG..HEAD"
+            HEADER="## Changes since $PREV_TAG"
+          else
+            RANGE="HEAD"
+            HEADER="## Changes"
+          fi
+          {
+            echo "$HEADER"
+            echo
+            git log "$RANGE" --no-merges --max-count=300 --pretty=format:"- %s (%h)"
+            echo
+            echo
+            echo "---"
+            echo "This build is ad-hoc signed and not notarized. After copying CodeEdit to"
+            echo "Applications, run \`xattr -dr com.apple.quarantine /Applications/CodeEdit.app\`"
+            echo "or right-click the app and choose Open the first time."
+            if [[ -n "$PREV_TAG" ]]; then
+              echo
+              echo "**Full diff**: ${{ github.server_url }}/${{ github.repository }}/compare/${PREV_TAG}...${TAG}"
+            fi
+          } > "$RUNNER_TEMP/CHANGELOG.md"
+          cat "$RUNNER_TEMP/CHANGELOG.md"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PRERELEASE: ${{ github.event.inputs.prerelease }}
+        run: |
+          FLAGS=()
+          if [[ "$PRERELEASE" == "true" || "$TAG" == *-* ]]; then
+            FLAGS+=(--prerelease)
+          fi
+          gh release create "$TAG" "$DMG_PATH" \
+            --title "CodeEdit $TAG" \
+            --notes-file "$RUNNER_TEMP/CHANGELOG.md" \
+            --target "$GITHUB_SHA" \
+            "${FLAGS[@]}"
