@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.1 - 2026-10-01
+
+### Features
+- Completion: intent recognition. The editor works out what is being typed at the cursor (member access, include path, type name, new declaration name, comment, string, and more) and filters and ranks candidates accordingly; the popup no longer opens while typing where completions are unwanted, but can still be requested explicitly.
+
+### Fixes
+- Build: SwiftLint no longer lints agent worktrees under `.claude/` or `.build/`, which failed the build with thousands of violations from copied package checkouts.
+
 ## 0.4.0 - 2026-09-30
 
 ### Features
