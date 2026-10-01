@@ -73,6 +73,45 @@ final class CompletionAggregatorTests: XCTestCase {
         XCTAssertEqual(moved?.first?.label, "template")
     }
 
+    /// Typing a new declaration's name, a number, or a comment must not open the window.
+    func testTypingWhereAPopupGetsInTheWayRequestsNothing() async throws {
+        for source in ["int cou", "int x = 12", "// fo", "puts(\"he"] {
+            let (aggregator, editor) = try makeAggregator(source: source)
+            let result = await aggregator.completionSuggestionsRequested(
+                textView: editor,
+                cursorPosition: CursorPosition(range: NSRange(location: editor.textView.textStorage.length, length: 0)),
+                trigger: .typing
+            )
+            XCTAssertNil(result, "Unexpected completions while typing `\(source)`")
+        }
+    }
+
+    /// Where a value is expected, value keywords are offered and statement snippets are not.
+    func testExpressionIntentOffersValuesOnly() async throws {
+        let (aggregator, editor) = try makeAggregator(source: "x = nu")
+        let result = await aggregator.completionSuggestionsRequested(
+            textView: editor,
+            cursorPosition: CursorPosition(range: NSRange(location: editor.textView.textStorage.length, length: 0)),
+            trigger: .typing
+        )
+        let labels = result?.items.map(\.label) ?? []
+        XCTAssertEqual(labels.first, "nullptr", "Got \(labels)")
+        XCTAssertFalse(labels.contains("continue"), "Got \(labels)")
+    }
+
+    /// Inside template arguments, type keywords rank first.
+    func testTemplateArgumentOffersTypes() async throws {
+        let (aggregator, editor) = try makeAggregator(source: "std::vector<u")
+        let result = await aggregator.completionSuggestionsRequested(
+            textView: editor,
+            cursorPosition: CursorPosition(range: NSRange(location: editor.textView.textStorage.length, length: 0)),
+            trigger: .typing
+        )
+        let labels = result?.items.map(\.label) ?? []
+        XCTAssertTrue(labels.contains("unsigned"), "Got \(labels)")
+        XCTAssertFalse(labels.contains("using"), "`using` is a statement, not a type: \(labels)")
+    }
+
     private func makeAggregator(source: String) throws -> (CompletionAggregator, TextViewController) {
         let file = directory.appending(path: "main.cpp")
         try source.write(to: file, atomically: true, encoding: .utf8)

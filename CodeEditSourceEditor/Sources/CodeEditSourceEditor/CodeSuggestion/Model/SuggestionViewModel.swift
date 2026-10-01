@@ -23,6 +23,7 @@ final class SuggestionViewModel: ObservableObject {
         textView: TextViewController,
         delegate: CodeSuggestionDelegate,
         cursorPosition: CursorPosition,
+        trigger: CodeSuggestionTrigger = .explicit,
         showWindowOnParent: @escaping @MainActor (NSWindow, NSRect) -> Void
     ) {
         self.activeTextView = nil
@@ -43,7 +44,8 @@ final class SuggestionViewModel: ObservableObject {
             do {
                 let result = await delegate.completionSuggestionsRequested(
                     textView: textView,
-                    cursorPosition: cursorPosition
+                    cursorPosition: cursorPosition,
+                    trigger: trigger
                 )
                 guard let completionItems = result, !completionItems.items.isEmpty else {
                     return

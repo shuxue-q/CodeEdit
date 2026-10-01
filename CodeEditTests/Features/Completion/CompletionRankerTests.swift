@@ -41,7 +41,7 @@ final class CompletionRankerTests: XCTestCase {
             lspCandidate(label: "beta", sortText: "2"),
             lspCandidate(label: "alpha", sortText: "1")
         ]
-        let ranked = CompletionRanker.rank(candidates, prefix: "", syntax: .unknown)
+        let ranked = CompletionRanker.rank(candidates, prefix: "", intent: .unknown)
         XCTAssertEqual(ranked.map(\.label), ["alpha", "beta"])
     }
 
@@ -53,7 +53,7 @@ final class CompletionRankerTests: XCTestCase {
         let ranked = CompletionRanker.rank(
             candidates,
             prefix: "aa",
-            syntax: .unknown,
+            intent: .unknown,
             frequencies: ["aab": 50]
         )
         XCTAssertEqual(ranked.first?.label, "aab")
@@ -67,15 +67,15 @@ final class CompletionRankerTests: XCTestCase {
                 kind: .snippet, source: .snippet, payload: .snippet(body: "for")
             )
         ]
-        let ranked = CompletionRanker.rank(candidates, prefix: "", syntax: .memberAccess)
+        let ranked = CompletionRanker.rank(candidates, prefix: "", intent: .memberAccess)
         XCTAssertEqual(ranked.map(\.label), ["member"])
     }
 
     func testCommentContextExcludesEverythingUnlessExplicit() {
         let candidates = [lspCandidate(label: "member")]
-        XCTAssertTrue(CompletionRanker.rank(candidates, prefix: "", syntax: .comment).isEmpty)
+        XCTAssertTrue(CompletionRanker.rank(candidates, prefix: "", intent: .comment).isEmpty)
         XCTAssertFalse(
-            CompletionRanker.rank(candidates, prefix: "", syntax: .comment, isExplicit: true).isEmpty
+            CompletionRanker.rank(candidates, prefix: "", intent: .comment, isExplicit: true).isEmpty
         )
     }
 
@@ -89,13 +89,13 @@ final class CompletionRankerTests: XCTestCase {
             aiCandidate(label: "ai-one"),
             aiCandidate(label: "ai-two")
         ]
-        let ranked = CompletionRanker.rank(candidates, prefix: "", syntax: .unknown, weights: weights)
+        let ranked = CompletionRanker.rank(candidates, prefix: "", intent: .unknown, weights: weights)
         XCTAssertEqual(ranked.count, 3, "Only one AI candidate should survive the aiMaxItems cap")
         XCTAssertEqual(ranked[1].source, .ai, "The AI band must sit after aiInsertAfter non-AI items")
     }
 
     func testNonMatchingPrefixExcludesACandidate() {
         let candidates = [lspCandidate(label: "printf")]
-        XCTAssertTrue(CompletionRanker.rank(candidates, prefix: "zzz", syntax: .unknown).isEmpty)
+        XCTAssertTrue(CompletionRanker.rank(candidates, prefix: "zzz", intent: .unknown).isEmpty)
     }
 }

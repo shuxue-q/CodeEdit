@@ -14,8 +14,12 @@ import CodeEditTextView
 /// window.
 ///
 /// Installed per document by ``CodeFileView`` in place of a single ``LSPCompletionProvider``. Each
-/// provider is raced against its own deadline; a provider that answers late (in practice, the AI
-/// provider) has its result merged in on the next cursor move rather than blocking the window.
+/// request first recognizes the user's ``CompletionIntent`` at the cursor (member access, a type, a
+/// case label, a new declaration's name, …). The intent decides whether a typing-triggered request
+/// opens the window at all, which snippets and keywords are offered, and how candidates are ranked.
+///
+/// Each provider is raced against its own deadline; a provider that answers late (in practice, the
+/// AI provider) has its result merged in on the next cursor move rather than blocking the window.
 @MainActor
 final class CompletionAggregator: CodeSuggestionDelegate {
     /// Characters that are considered part of a symbol when finding the typed prefix.
@@ -75,10 +79,23 @@ final class CompletionAggregator: CodeSuggestionDelegate {
         textView: TextViewController,
         cursorPosition: CursorPosition
     ) async -> (windowPosition: CursorPosition, items: [CodeSuggestionEntry])? {
+        await completionSuggestionsRequested(textView: textView, cursorPosition: cursorPosition, trigger: .explicit)
+    }
+
+    func completionSuggestionsRequested(
+        textView: TextViewController,
+        cursorPosition: CursorPosition,
+        trigger: CodeSuggestionTrigger
+    ) async -> (windowPosition: CursorPosition, items: [CodeSuggestionEntry])? {
         guard let resolved = textView.resolveCursorPosition(cursorPosition) else { return nil }
         let location = resolved.range.location
         let string = textView.textView.textStorage.string as NSString
-        let context = buildContext(string: string, location: location, textView: textView)
+        let context = buildContext(string: string, location: location, isExplicit: trigger == .explicit)
+        // Typing in a comment, a string, a number, or a new declaration's name: stay out of the way
+        // without asking any provider.
+        guard context.isExplicit || CompletionIntentPolicy.allowsAutomaticCompletion(for: context.intent) else {
+            return nil
+        }
 
         requestContext = context
         requestOffset = location
@@ -165,23 +182,29 @@ final class CompletionAggregator: CodeSuggestionDelegate {
 
     // MARK: - Context
 
-    private func buildContext(string: NSString, location: Int, textView: TextViewController) -> CompletionContext {
+    private func buildContext(string: NSString, location: Int, isExplicit: Bool) -> CompletionContext {
         let prefixRange = wordRange(in: string, at: location)
         let prefix = string.substring(with: prefixRange)
         let lineStart = lineStart(in: string, before: location)
         let lineTextBeforeCursor = string.substring(with: NSRange(location: lineStart, length: location - lineStart))
         let languageId = document?.getLanguage().id.rawValue ?? ""
-        let resolver = SyntacticContextResolver(treeSitterClient: treeSitterClient)
-        let syntax = resolver.resolve(at: location, prefix: prefix, lineTextBeforeCursor: lineTextBeforeCursor)
+        let recognizer = CompletionIntentRecognizer(treeSitterClient: treeSitterClient)
+        let intent = recognizer.recognize(
+            at: location,
+            prefix: prefix,
+            lineTextBeforeCursor: lineTextBeforeCursor,
+            languageId: languageId
+        )
 
         return CompletionContext(
             prefix: prefix,
             prefixRange: prefixRange,
             triggerCharacter: location > 0 ? string.substring(with: NSRange(location: location - 1, length: 1)) : nil,
-            syntax: syntax,
+            intent: intent,
             languageId: languageId,
             documentText: string as String,
-            cursorOffset: location
+            cursorOffset: location,
+            isExplicit: isExplicit
         )
     }
 
@@ -213,7 +236,7 @@ final class CompletionAggregator: CodeSuggestionDelegate {
         return CompletionRanker.rank(
             deduped,
             prefix: prefix,
-            syntax: context.syntax,
+            intent: context.intent,
             isExplicit: context.isExplicit,
             frequencies: frequencies
         )

@@ -16,28 +16,35 @@ enum CompletionRanker {
         let matchLength: Int
     }
 
-    /// The inputs to ``score(_:prefix:options:)`` that stay constant across all candidates in a request.
+    /// The inputs to ``score(_:options:)`` that stay constant across all candidates in a request.
     private struct ScoringOptions {
-        let syntax: SyntacticContext
+        let intent: CompletionIntent
+        let prefix: String
         let isExplicit: Bool
         let frequencies: [String: Int]
         let weights: RankingWeights
     }
 
-    /// Filters `candidates` to those that match `prefix` and are allowed in `syntax`, then ranks
+    /// Filters `candidates` to those that match `prefix` and are allowed for `intent`, then ranks
     /// and returns them, with AI candidates placed in a fixed band after the top non-AI items.
     static func rank(
         _ candidates: [CompletionCandidate],
         prefix: String,
-        syntax: SyntacticContext,
+        intent: CompletionIntent,
         isExplicit: Bool = false,
         frequencies: [String: Int] = [:],
         weights: RankingWeights = .default
     ) -> [CompletionCandidate] {
         let normalizedPrefix = prefix.hasPrefix("#") ? String(prefix.dropFirst()) : prefix
         let ordered = orderedByServer(candidates)
-        let options = ScoringOptions(syntax: syntax, isExplicit: isExplicit, frequencies: frequencies, weights: weights)
-        let scored = score(ordered, prefix: normalizedPrefix, options: options)
+        let options = ScoringOptions(
+            intent: intent,
+            prefix: normalizedPrefix,
+            isExplicit: isExplicit,
+            frequencies: frequencies,
+            weights: weights
+        )
+        let scored = score(ordered, options: options)
         return assemble(scored, weights: weights)
     }
 
@@ -52,26 +59,27 @@ enum CompletionRanker {
         }.map(\.element)
     }
 
-    /// Computes the composite score for each candidate that survives context filtering and the
-    /// fuzzy match against `prefix`.
+    /// Computes the composite score for each candidate that survives intent filtering and the
+    /// fuzzy match against the typed prefix.
     private static func score(
         _ ordered: [CompletionCandidate],
-        prefix: String,
         options: ScoringOptions
     ) -> [ScoredCandidate] {
         let maxIndex = Double(max(ordered.count - 1, 1))
         var scored: [ScoredCandidate] = []
         for (index, candidate) in ordered.enumerated() {
-            guard let contextWeight = contextWeight(
+            guard let intentWeight = CompletionIntentPolicy.weight(
                 kind: candidate.kind,
                 source: candidate.source,
-                syntax: options.syntax,
+                intent: options.intent,
                 isExplicit: options.isExplicit
             ) else {
                 continue
             }
+            let contextWeight = intentWeight
+                + CompletionIntentPolicy.prefixShapeBonus(kind: candidate.kind, prefix: options.prefix)
             let matchText = candidate.filterText.isEmpty ? candidate.label : candidate.filterText
-            guard let fuzzy = FuzzyMatcher.match(pattern: prefix, candidate: matchText) else {
+            guard let fuzzy = FuzzyMatcher.match(pattern: options.prefix, candidate: matchText) else {
                 continue
             }
             let serverRank = 1.0 - Double(index) / maxIndex
@@ -113,47 +121,5 @@ enum CompletionRanker {
         var result = nonAICandidates
         result.insert(contentsOf: aiCandidates, at: min(weights.aiInsertAfter, result.count))
         return result
-    }
-
-    /// The context weight for a candidate, or `nil` when it should be excluded in this context.
-    ///
-    /// `.memberAccess` boosts variables and functions and excludes snippets/keywords entirely.
-    /// `.statement` boosts snippets and keywords. `.topLevel` boosts types and declaration
-    /// snippets. `.preprocessor` keeps only macros, files, and include snippets. In
-    /// `.comment`/`.string`, candidates are excluded unless the request was explicit.
-    static func contextWeight(
-        kind: LSPCompletionCategory,
-        source: CompletionSource,
-        syntax: SyntacticContext,
-        isExplicit: Bool
-    ) -> Double? {
-        switch syntax {
-        case .comment, .string:
-            return isExplicit ? 0.1 : nil
-        case .memberAccess:
-            return memberAccessWeight(kind: kind, source: source)
-        case .preprocessor:
-            return preprocessorWeight(kind: kind, source: source)
-        case .statement:
-            return [.snippet, .keyword].contains(kind) ? 1.0 : 0.5
-        case .topLevel:
-            return Self.typeKinds.union([.snippet]).contains(kind) ? 1.0 : 0.5
-        case .typePosition:
-            return Self.typeKinds.contains(kind) ? 1.0 : 0.3
-        case .unknown:
-            return 0.5
-        }
-    }
-
-    private static let typeKinds: Set<LSPCompletionCategory> = [.class, .struct, .interface, .enum, .typeAlias]
-
-    private static func memberAccessWeight(kind: LSPCompletionCategory, source: CompletionSource) -> Double? {
-        guard source != .snippet, source != .keyword else { return nil }
-        return kind == .variable || kind == .function ? 1.0 : 0.4
-    }
-
-    private static func preprocessorWeight(kind: LSPCompletionCategory, source: CompletionSource) -> Double? {
-        guard ![.macro, .file, .snippet].contains(kind) else { return 1.0 }
-        return source == .lsp ? 0.3 : nil
     }
 }

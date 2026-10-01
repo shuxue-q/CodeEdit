@@ -15,8 +15,8 @@ struct CompletionContext {
     var prefixRange: NSRange
     /// The character that opened the completion window, if any.
     var triggerCharacter: String?
-    /// The syntactic position of the cursor.
-    var syntax: SyntacticContext
+    /// What the user is most likely writing at the cursor.
+    var intent: CompletionIntent
     /// The language server / tree-sitter language identifier, for example `"cpp"`.
     var languageId: String
     /// A window of the document's text around the cursor.
