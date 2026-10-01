@@ -212,9 +212,12 @@ running, git integration, extensions, and more.
   install these tools. Explicit server paths and arguments come from LSP settings.
 - Document LSP attachment is language-driven and also works for standalone files,
   using their parent directory as the root. Keep CMake completion independent of
-  CMake workspace discovery. App-side completion is under `LSP/Features/Completion/`;
-  popup state and triggers live in the local `CodeEditSourceEditor` package's
-  `CodeSuggestion/Model/` and `Filters/` directories. Hover is under `LSP/Features/Hover/`.
+  CMake workspace discovery. App-side completion is `Features/Completion/`
+  (`CompletionAggregator`, providers, ranking; `Intent/` recognizes what the user is typing
+  and gates/weights candidates by it), with LSP item mapping under `LSP/Features/Completion/`;
+  popup state and triggers (including the typing/explicit `CodeSuggestionTrigger`) live in the
+  local `CodeEditSourceEditor` package's `CodeSuggestion/Model/` and `Filters/` directories.
+  Hover is under `LSP/Features/Hover/`.
 
 ## Code Navigation and Search
 

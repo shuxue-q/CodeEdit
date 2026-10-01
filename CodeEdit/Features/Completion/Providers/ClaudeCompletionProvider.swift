@@ -138,6 +138,7 @@ final class ClaudeCompletionProvider: AICompletionProvider {
         let (before, after) = splitContext(context)
         let userMessage = """
         Language: \(context.languageId)
+        The user is typing \(context.intent.promptDescription).
         Code before the cursor:
         \(before)<cursor/>\(after)
         """

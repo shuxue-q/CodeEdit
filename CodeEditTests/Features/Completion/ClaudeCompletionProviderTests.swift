@@ -66,7 +66,7 @@ final class ClaudeCompletionProviderTests: XCTestCase {
             prefix: prefix,
             prefixRange: NSRange(location: 0, length: prefix.utf16.count),
             triggerCharacter: nil,
-            syntax: .statement,
+            intent: .statement,
             languageId: "c",
             documentText: "int main() {\n    pri\n}\n",
             cursorOffset: 20,

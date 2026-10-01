@@ -9,9 +9,12 @@ import CodeEditSourceEditor
 import Foundation
 import LanguageServerProtocol
 
-/// Supplies context-gated code snippets and plain keywords from static per-language tables.
+/// Supplies intent-gated code snippets and keywords from static per-language tables.
 ///
-/// The first pass covers C and C++. The table structure allows more languages to be added later.
+/// Each snippet and keyword lists the ``CompletionIntent``s it makes sense for: `for` and `return`
+/// at the start of a statement, `nullptr` and `sizeof` where a value is expected, `const` and `int`
+/// where a type is, nothing after `.` or `::`. The tables cover C and C++; more languages can be
+/// added the same way.
 final class TreeSitterSnippetProvider: CompletionProvider {
     /// One snippet table entry.
     struct Snippet {
@@ -19,7 +22,13 @@ final class TreeSitterSnippetProvider: CompletionProvider {
         /// LSP snippet syntax: `${1:cond}`, `$0`.
         let body: String
         let detail: String
-        let allowedContexts: Set<SyntacticContext>
+        let intents: Set<CompletionIntent>
+    }
+
+    /// One keyword table entry.
+    struct Keyword {
+        let text: String
+        let intents: Set<CompletionIntent>
     }
 
     let source: CompletionSource = .snippet
@@ -28,14 +37,16 @@ final class TreeSitterSnippetProvider: CompletionProvider {
     func triggerCharacters() -> Set<String> { [] }
 
     func candidates(for context: CompletionContext, textView: TextViewController) async -> [CompletionCandidate] {
-        let snippets = Self.snippets[context.languageId] ?? []
-        let keywords = Self.keywords[context.languageId] ?? []
+        Self.candidates(languageId: context.languageId, intent: context.intent)
+    }
 
+    /// The snippets and keywords offered for `intent` in `languageId`.
+    static func candidates(languageId: String, intent: CompletionIntent) -> [CompletionCandidate] {
         var candidates: [CompletionCandidate] = []
-        for snippet in snippets where snippet.allowedContexts.contains(context.syntax) {
+        for snippet in snippets[languageId] ?? [] where snippet.intents.contains(intent) {
             candidates.append(
                 CompletionCandidate(
-                    id: "snippet.\(context.languageId).\(snippet.label)",
+                    id: "snippet.\(languageId).\(snippet.label)",
                     label: snippet.label,
                     filterText: snippet.label,
                     sortText: snippet.label,
@@ -47,18 +58,18 @@ final class TreeSitterSnippetProvider: CompletionProvider {
                 )
             )
         }
-        for keyword in keywords {
+        for keyword in keywords[languageId] ?? [] where keyword.intents.contains(intent) {
             candidates.append(
                 CompletionCandidate(
-                    id: "keyword.\(context.languageId).\(keyword)",
-                    label: keyword,
-                    filterText: keyword,
-                    sortText: keyword,
+                    id: "keyword.\(languageId).\(keyword.text)",
+                    label: keyword.text,
+                    filterText: keyword.text,
+                    sortText: keyword.text,
                     kind: .keyword,
                     source: .keyword,
                     detail: nil,
                     documentation: nil,
-                    payload: .plain(insertText: keyword)
+                    payload: .plain(insertText: keyword.text)
                 )
             )
         }
@@ -89,47 +100,105 @@ final class TreeSitterSnippetProvider: CompletionProvider {
 
     private static let wordCharacters = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "_$#"))
 
-    // MARK: - Tables
+    // MARK: - Keyword tables
 
-    private static let cKeywords = [
-        "for", "while", "if", "else", "return", "struct", "const", "static", "switch", "break",
-        "continue", "sizeof", "typedef", "void", "int", "char", "float", "double"
-    ]
-    private static let cppKeywords = cKeywords + [
-        "class", "namespace", "template", "public", "private", "protected", "virtual", "override",
-        "new", "delete", "nullptr", "auto", "constexpr"
-    ]
+    /// Where a declaration or statement can start.
+    private static let declarationStarts: Set<CompletionIntent> = [.statement, .topLevel, .typeName, .unknown]
+    private static let statementStarts: Set<CompletionIntent> = [.statement, .unknown]
+    private static let values: Set<CompletionIntent> = [.expression, .statement, .unknown]
+    private static let fileScope: Set<CompletionIntent> = [.topLevel, .unknown]
+
+    private static func keywords(_ texts: [String], _ intents: Set<CompletionIntent>) -> [Keyword] {
+        texts.map { Keyword(text: $0, intents: intents) }
+    }
+
+    private static let cKeywords: [Keyword] =
+        keywords(["if", "else", "for", "while", "do", "switch", "return", "break", "continue", "goto",
+                  "case", "default"], statementStarts)
+        + keywords(["void", "char", "short", "int", "long", "float", "double", "signed", "unsigned", "bool",
+                    "const", "volatile", "struct", "union", "enum", "static", "extern", "register",
+                    "inline"], declarationStarts)
+        + keywords(["typedef"], statementStarts.union(fileScope))
+        + keywords(["sizeof"], values)
+
+    private static let cppKeywords: [Keyword] = cKeywords
+        + keywords(["try", "catch", "throw", "delete"], statementStarts)
+        + keywords(["using", "static_assert"], statementStarts.union(fileScope))
+        + keywords(["class", "typename", "auto", "constexpr", "wchar_t", "char8_t", "char16_t", "char32_t",
+                    "mutable", "thread_local", "decltype"], declarationStarts)
+        + keywords(["namespace", "template", "public", "private", "protected", "virtual", "override",
+                    "explicit", "friend"], fileScope)
+        + keywords(["nullptr", "true", "false", "this", "new", "alignof", "noexcept", "static_cast",
+                    "dynamic_cast", "reinterpret_cast", "const_cast", "typeid"], values)
+
+    // MARK: - Snippet tables
 
     private static let cSnippets: [Snippet] = [
         Snippet(
             label: "for",
             body: "for (${1:int i = 0}; ${2:i < n}; ${3:++i}) {\n\t$0\n}",
             detail: "for (init; cond; inc) {…}",
-            allowedContexts: [.statement, .unknown]
+            intents: statementStarts
         ),
         Snippet(
             label: "while",
             body: "while (${1:cond}) {\n\t$0\n}",
             detail: "while (cond) {…}",
-            allowedContexts: [.statement, .unknown]
+            intents: statementStarts
+        ),
+        Snippet(
+            label: "do",
+            body: "do {\n\t$0\n} while (${1:cond});",
+            detail: "do {…} while (cond);",
+            intents: statementStarts
         ),
         Snippet(
             label: "if",
             body: "if (${1:cond}) {\n\t$0\n}",
             detail: "if (cond) {…}",
-            allowedContexts: [.statement, .unknown]
+            intents: statementStarts
+        ),
+        Snippet(
+            label: "else",
+            body: "else {\n\t$0\n}",
+            detail: "else {…}",
+            intents: statementStarts
+        ),
+        Snippet(
+            label: "switch",
+            body: "switch (${1:value}) {\ncase ${2:constant}:\n\t$0\n\tbreak;\ndefault:\n\tbreak;\n}",
+            detail: "switch (value) {…}",
+            intents: statementStarts
         ),
         Snippet(
             label: "struct",
             body: "struct ${1:Name} {\n\t$0\n};",
             detail: "struct Name {…};",
-            allowedContexts: [.topLevel, .unknown]
+            intents: fileScope
+        ),
+        Snippet(
+            label: "enum",
+            body: "enum ${1:Name} {\n\t$0\n};",
+            detail: "enum Name {…};",
+            intents: fileScope
+        ),
+        Snippet(
+            label: "main",
+            body: "int main(int argc, char *argv[]) {\n\t$0\n\treturn 0;\n}",
+            detail: "int main(int argc, char *argv[]) {…}",
+            intents: fileScope
         ),
         Snippet(
             label: "#include <insert>",
-            body: "include <$0>",
+            body: "#include <$0>",
             detail: "Include system header",
-            allowedContexts: [.preprocessor]
+            intents: [.preprocessor]
+        ),
+        Snippet(
+            label: "#include \"insert\"",
+            body: "#include \"$0\"",
+            detail: "Include user header",
+            intents: [.preprocessor]
         )
     ]
 
@@ -138,11 +207,29 @@ final class TreeSitterSnippetProvider: CompletionProvider {
             label: "class",
             body: "class ${1:Name} {\npublic:\n\t$0\n};",
             detail: "class Name {…};",
-            allowedContexts: [.topLevel, .unknown]
+            intents: fileScope
+        ),
+        Snippet(
+            label: "namespace",
+            body: "namespace ${1:name} {\n\n$0\n\n}",
+            detail: "namespace name {…}",
+            intents: fileScope
+        ),
+        Snippet(
+            label: "try",
+            body: "try {\n\t$0\n} catch (${1:const std::exception &e}) {\n}",
+            detail: "try {…} catch (…) {…}",
+            intents: statementStarts
+        ),
+        Snippet(
+            label: "for range",
+            body: "for (${1:const auto &}${2:item} : ${3:range}) {\n\t$0\n}",
+            detail: "for (const auto &item : range) {…}",
+            intents: statementStarts
         )
     ]
 
-    private static let keywords: [String: [String]] = [
+    private static let keywords: [String: [Keyword]] = [
         "c": cKeywords,
         "cpp": cppKeywords
     ]

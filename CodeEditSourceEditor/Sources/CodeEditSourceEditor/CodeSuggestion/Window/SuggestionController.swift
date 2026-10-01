@@ -66,12 +66,14 @@ public final class SuggestionController: NSWindowController {
         textView: TextViewController,
         delegate: CodeSuggestionDelegate,
         cursorPosition: CursorPosition,
+        trigger: CodeSuggestionTrigger = .explicit,
         asPopover: Bool = false
     ) {
         model.showCompletions(
             textView: textView,
             delegate: delegate,
-            cursorPosition: cursorPosition
+            cursorPosition: cursorPosition,
+            trigger: trigger
         ) { parentWindow, cursorRect in
             if asPopover {
                 self.popover?.close()
@@ -169,6 +171,7 @@ public final class SuggestionController: NSWindowController {
                     textView: textView,
                     delegate: delegate,
                     cursorPosition: position,
+                    trigger: .typing,
                     asPopover: asPopover
                 )
             }
