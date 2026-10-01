@@ -20,6 +20,8 @@ excluded:
   - CodeEditSourceEditor # Vendored package with its own .swiftlint.yml
   - CodeEditTextView # Vendored package with its own .swiftlint.yml
   - DerivedData
+  - .claude # Agent worktrees: full repo copies with their own DerivedData and package checkouts
+  - .build
 
 opt_in_rules:
   - attributes
