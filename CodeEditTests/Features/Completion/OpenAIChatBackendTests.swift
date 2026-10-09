@@ -56,7 +56,10 @@ final class OpenAIChatBackendTests: XCTestCase {
             JSONSerialization.jsonObject(with: XCTUnwrap(urlRequest.httpBody)) as? [String: Any]
         )
         XCTAssertEqual(json["model"] as? String, "gpt-5")
-        XCTAssertEqual(json["max_completion_tokens"] as? Int, 256)
+        XCTAssertEqual(
+            json["max_completion_tokens"] as? Int, 1_024,
+            "Reasoning tokens count against the limit, so OpenAI gets room for them"
+        )
         XCTAssertNil(json["max_tokens"], "OpenAI's current models reject max_tokens")
         XCTAssertNil(json["temperature"], "Some of OpenAI's models reject any temperature but the default")
         XCTAssertEqual(json["n"] as? Int, 1)
@@ -70,6 +73,17 @@ final class OpenAIChatBackendTests: XCTestCase {
         let user = try XCTUnwrap(messages.last?["content"] as? String)
         XCTAssertTrue(user.contains("pri<cursor/>\n}"))
         XCTAssertTrue(user.contains("Language: c"))
+    }
+
+    func testOpenAIKeepsItsLargerLimitWhenRetriedWithTheLegacyWording() throws {
+        let legacy = OpenAIChatBackend(kind: .openAI, parameterStyle: .legacy)
+        let urlRequest = try legacy.makeRequest(
+            request, configuration: AIBackendConfiguration(model: "gpt-4o", apiKey: "k")
+        )
+        let json = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: XCTUnwrap(urlRequest.httpBody)) as? [String: Any]
+        )
+        XCTAssertEqual(json["max_tokens"] as? Int, 1_024)
     }
 
     func testCompatibleServersKeepMaxTokensAndTemperature() throws {

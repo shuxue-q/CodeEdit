@@ -220,7 +220,9 @@ with the provider and the server's message. OpenAI's current models reject `max_
 `temperature`, so the **OpenAI** provider sends `max_completion_tokens` and no `temperature`, and the
 **OpenAI-compatible** provider sends `max_tokens` and `temperature: 0.2`. If a server answers 400 and names
 one of those parameters, the request is repeated once with the other wording, and the wording that works
-is used from then on, until the configuration changes.
+is used from then on, until the configuration changes. The **OpenAI** provider allows 1024 output tokens
+because OpenAI counts a reasoning model's hidden reasoning against the limit; the **OpenAI-compatible**
+provider allows 256.
 
 ## Local data
 
