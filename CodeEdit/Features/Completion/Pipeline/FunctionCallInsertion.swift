@@ -28,13 +28,26 @@ enum FunctionCallInsertion {
     ///   - detail: The item's detail, consulted for a signature when the label has none.
     ///   - nextCharacter: The character right after the completed word, if any. An existing `(`
     ///     means the call is already written.
+    ///   - commitCharacter: The character the user typed to accept the item, if any. `(`, `)` and `[`
+    ///     are part of the call syntax themselves, so nothing is inserted; for `.`, `,` and `;` the
+    ///     caret ends up after the parentheses so typing continues from there.
     /// - Returns: The caret goes between the parentheses when the signature has parameters or cannot
     ///   be determined, and after them when the function takes none.
-    static func insertion(label: String, detail: String?, nextCharacter: Character?) -> Insertion? {
+    static func insertion(
+        label: String,
+        detail: String?,
+        nextCharacter: Character?,
+        commitCharacter: Character? = nil
+    ) -> Insertion? {
         guard nextCharacter != "(" else { return nil }
         let name = label.drop { $0 == "•" || $0 == " " }
         // `operator()` and friends already name their own parentheses.
         guard !name.hasPrefix("operator") else { return nil }
+        if let commitCharacter {
+            return CommitCharacters.suppressesCallParentheses.contains(commitCharacter)
+                ? nil
+                : Insertion(text: "()", caretOffset: 2)
+        }
 
         let hasParameters = parameters(in: String(name)) ?? detail.flatMap(parameters(in:))
         if hasParameters == false {

@@ -30,6 +30,7 @@ extension SettingsData {
                 "Visible Completions",
                 "Apply Additional Completion Edits",
                 "Insert Parentheses for Functions",
+                "Accept Completions with Commit Characters",
                 "Bracket Pair Emphasis",
                 "Bracket Pair Highlight",
                 "Show Gutter",

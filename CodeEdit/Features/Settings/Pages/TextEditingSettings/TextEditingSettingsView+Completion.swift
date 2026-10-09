@@ -18,5 +18,9 @@ extension TextEditingSettingsView {
             Text("Insert Parentheses for Functions")
             Text("Adds () after an accepted function and shows its parameter hints.")
         }
+        Toggle(isOn: $textEditing.completion.commitCharactersEnabled) {
+            Text("Accept Completions with Commit Characters")
+            Text("Typing ( . ; , or similar after a word accepts the highlighted item and keeps the character.")
+        }
     }
 }

@@ -237,4 +237,36 @@ final class LSPCompletionApplyTests: XCTestCase {
         )
         wait(for: [requested], timeout: 1)
     }
+
+    @MainActor
+    func testCommittingWithAnOpeningParenthesisInsertsOnlyTheName() {
+        let source = "void f() { pri }"
+        let editor = makeEditor(source: source)
+        let cursor = (source as NSString).range(of: "pri").max
+        editor.textView.selectionManager.setSelectedRange(NSRange(location: cursor, length: 0))
+        LSPCompletionProvider(document: CodeFileDocument()).apply(
+            functionCandidate(label: "print(int value)", newText: "print"),
+            textView: editor,
+            cursorPosition: CursorPosition(range: NSRange(location: cursor, length: 0)),
+            commitCharacter: "("
+        )
+        XCTAssertEqual(editor.text, "void f() { print }")
+    }
+
+    @MainActor
+    func testCommittingWithASemicolonCompletesTheCallAndLeavesTheCaretAfterIt() {
+        let source = "void f() { pri }"
+        let editor = makeEditor(source: source)
+        let cursor = (source as NSString).range(of: "pri").max
+        editor.textView.selectionManager.setSelectedRange(NSRange(location: cursor, length: 0))
+        LSPCompletionProvider(document: CodeFileDocument()).apply(
+            functionCandidate(label: "print(int value)", newText: "print"),
+            textView: editor,
+            cursorPosition: CursorPosition(range: NSRange(location: cursor, length: 0)),
+            commitCharacter: ";"
+        )
+        XCTAssertEqual(editor.text, "void f() { print() }")
+        let caret = editor.textView.selectionManager.textSelections.first?.range.location
+        XCTAssertEqual(caret, ("void f() { print()" as NSString).length)
+    }
 }

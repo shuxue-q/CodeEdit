@@ -176,14 +176,30 @@ extension SuggestionViewController {
         clipView.scroll(to: NSPoint(x: 0, y: -SuggestionController.WINDOW_PADDING))
     }
 
-    func applySelectedItem() {
+    func applySelectedItem(commitCharacter: Character? = nil) {
         let row = tableView.selectedRow
         guard row >= 0, row < model?.items.count ?? 0 else {
             return
         }
         if let model {
-            model.applySelectedItem(item: model.items[tableView.selectedRow], window: view.window)
+            model.applySelectedItem(
+                item: model.items[tableView.selectedRow],
+                window: view.window,
+                commitCharacter: commitCharacter
+            )
         }
+    }
+
+    /// The commit character typed by `event`, if it should accept the highlighted row.
+    func commitCharacter(for event: NSEvent) -> Character? {
+        let row = tableView.selectedRow
+        guard let model,
+              row >= 0, row < model.items.count,
+              event.modifierFlags.isDisjoint(with: [.command, .control, .option]),
+              let characters = event.characters, characters.count == 1, let typed = characters.first else {
+            return nil
+        }
+        return model.commitCharacter(typed: typed, for: model.items[row])
     }
 
     private var visibleRowLimit: CGFloat {

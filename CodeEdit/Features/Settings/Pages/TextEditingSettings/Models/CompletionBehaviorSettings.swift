@@ -18,6 +18,10 @@ extension SettingsData.TextEditingSettings {
         /// the function takes parameters.
         var insertParenthesesForFunctions: Bool = true
 
+        /// Whether typing a commit character (`(`, `.`, `;`, …) accepts the highlighted item and
+        /// then inserts the character.
+        var commitCharactersEnabled: Bool = true
+
         /// Default initializer.
         init() {}
 
@@ -31,6 +35,10 @@ extension SettingsData.TextEditingSettings {
             self.insertParenthesesForFunctions = try container.decodeIfPresent(
                 Bool.self,
                 forKey: .insertParenthesesForFunctions
+            ) ?? true
+            self.commitCharactersEnabled = try container.decodeIfPresent(
+                Bool.self,
+                forKey: .commitCharactersEnabled
             ) ?? true
         }
     }

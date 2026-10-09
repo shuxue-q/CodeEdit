@@ -48,7 +48,12 @@ extension LSPCompletionProvider {
     }
 
     /// Applies `item`: its primary edit plus, when enabled, its `additionalTextEdits`, as one undo step.
-    func apply(item: CompletionItem, textView: TextViewController, cursorPosition: CursorPosition?) {
+    func apply(
+        item: CompletionItem,
+        textView: TextViewController,
+        cursorPosition: CursorPosition?,
+        commitCharacter: Character? = nil
+    ) {
         guard let primary = primaryEdit(for: item, textView: textView, cursorPosition: cursorPosition) else {
             return
         }
@@ -56,7 +61,7 @@ extension LSPCompletionProvider {
             ? additionalEdits(for: item, textView: textView)
             : []
         let plan = CompletionEditPlanner.plan(primary: primary.range, additional: additional)
-        let call = functionCall(for: item, primary: primary, textView: textView)
+        let call = functionCall(for: item, primary: primary, textView: textView, commitCharacter: commitCharacter)
 
         let undoManager = textView.textView.undoManager
         undoManager?.beginUndoGrouping()
@@ -88,7 +93,8 @@ extension LSPCompletionProvider {
     private func functionCall(
         for item: CompletionItem,
         primary: PrimaryEdit,
-        textView: TextViewController
+        textView: TextViewController,
+        commitCharacter: Character?
     ) -> FunctionCallInsertion.Insertion? {
         guard Settings[\.textEditing].completion.insertParenthesesForFunctions,
               !primary.isSnippet,
@@ -100,7 +106,12 @@ extension LSPCompletionProvider {
         let next: Character? = primary.range.max < string.length
             ? string.substring(with: NSRange(location: primary.range.max, length: 1)).first
             : nil
-        return FunctionCallInsertion.insertion(label: item.label, detail: item.detail, nextCharacter: next)
+        return FunctionCallInsertion.insertion(
+            label: item.label,
+            detail: item.detail,
+            nextCharacter: next,
+            commitCharacter: commitCharacter
+        )
     }
 
     /// The edit that completes the symbol under the cursor.

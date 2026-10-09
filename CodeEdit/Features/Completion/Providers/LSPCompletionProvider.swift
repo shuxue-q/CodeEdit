@@ -78,6 +78,15 @@ final class LSPCompletionProvider: CompletionProvider {
     }
 
     func apply(_ candidate: CompletionCandidate, textView: TextViewController, cursorPosition: CursorPosition?) {
+        apply(candidate, textView: textView, cursorPosition: cursorPosition, commitCharacter: nil)
+    }
+
+    func apply(
+        _ candidate: CompletionCandidate,
+        textView: TextViewController,
+        cursorPosition: CursorPosition?,
+        commitCharacter: Character?
+    ) {
         guard case .lsp(let payloadItem) = candidate.payload else { return }
         // A resolved copy (documentation, additional edits) supersedes the payload the row was built with.
         let item = itemsByCandidateID[candidate.id] ?? payloadItem
@@ -87,10 +96,15 @@ final class LSPCompletionProvider: CompletionProvider {
                 guard let self, let textView else { return }
                 let resolved = await self.resolveForApply(item, candidateID: candidate.id)
                 // The user may have kept typing while the server answered; apply at the current cursor.
-                self.apply(item: resolved, textView: textView, cursorPosition: textView.cursorPositions.first)
+                self.apply(
+                    item: resolved,
+                    textView: textView,
+                    cursorPosition: textView.cursorPositions.first,
+                    commitCharacter: commitCharacter
+                )
             }
         } else {
-            apply(item: item, textView: textView, cursorPosition: cursorPosition)
+            apply(item: item, textView: textView, cursorPosition: cursorPosition, commitCharacter: commitCharacter)
         }
     }
 

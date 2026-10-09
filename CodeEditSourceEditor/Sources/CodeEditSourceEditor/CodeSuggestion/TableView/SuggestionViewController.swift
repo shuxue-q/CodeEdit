@@ -198,6 +198,11 @@ class SuggestionViewController: NSViewController {
             return nil
 
         default:
+            // A commit character accepts the highlighted row; the event then goes on to the text view,
+            // which inserts the character after the completed text.
+            if let commitCharacter = commitCharacter(for: event) {
+                applySelectedItem(commitCharacter: commitCharacter)
+            }
             return event
         }
     }

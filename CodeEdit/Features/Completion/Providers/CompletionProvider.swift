@@ -29,12 +29,29 @@ protocol CompletionProvider: AnyObject {
     /// Applies `candidate` to the document.
     func apply(_ candidate: CompletionCandidate, textView: TextViewController, cursorPosition: CursorPosition?)
 
+    /// Applies `candidate`, which the user accepted by typing `commitCharacter` (`nil` for Return, Tab,
+    /// or a click). The editor inserts the character itself afterwards. The default ignores it.
+    func apply(
+        _ candidate: CompletionCandidate,
+        textView: TextViewController,
+        cursorPosition: CursorPosition?,
+        commitCharacter: Character?
+    )
+
     /// Fills in documentation/detail left off the original candidate. Returns `nil` to keep it as-is.
     func resolve(_ candidate: CompletionCandidate) async -> CompletionCandidate?
 }
 
 extension CompletionProvider {
     func triggerCharacters() -> Set<String> { [] }
+    func apply(
+        _ candidate: CompletionCandidate,
+        textView: TextViewController,
+        cursorPosition: CursorPosition?,
+        commitCharacter: Character?
+    ) {
+        apply(candidate, textView: textView, cursorPosition: cursorPosition)
+    }
     func resolve(_ candidate: CompletionCandidate) async -> CompletionCandidate? { nil }
 }
 

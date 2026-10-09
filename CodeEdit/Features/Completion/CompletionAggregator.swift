@@ -34,14 +34,14 @@ final class CompletionAggregator: CodeSuggestionDelegate {
     private var aiProvider: (any AICompletionProvider)?
 
     /// All providers, in fan-out order.
-    private var providers: [any CompletionProvider] {
+    var providers: [any CompletionProvider] {
         var all: [any CompletionProvider] = [lspProvider, snippetProvider]
         if let aiProvider { all.append(aiProvider) }
         return all
     }
 
     /// The provider that produced each candidate in the current session, keyed by candidate id.
-    private var candidateOwners: [String: any CompletionProvider] = [:]
+    var candidateOwners: [String: any CompletionProvider] = [:]
     /// The raw (pre-filter) candidate pool gathered for the current request, used to re-run the
     /// pipeline synchronously as the user keeps typing.
     private var rawCandidates: [CompletionCandidate] = []
@@ -52,9 +52,9 @@ final class CompletionAggregator: CodeSuggestionDelegate {
     private var requestOffset: Int?
     /// Results that arrived after the window opened, kept until the next cursor move so they can be
     /// merged in without blocking the window. Cleared when merged or when a new request starts.
-    private var lateResults: [(provider: any CompletionProvider, candidates: [CompletionCandidate])] = []
+    var lateResults: [(provider: any CompletionProvider, candidates: [CompletionCandidate])] = []
     /// Incremented on every request and on close so results from a superseded request are dropped.
-    private var requestGeneration = 0
+    var requestGeneration = 0
 
     init(
         document: CodeFileDocument,
@@ -153,10 +153,43 @@ final class CompletionAggregator: CodeSuggestionDelegate {
         textView: TextViewController,
         cursorPosition: CursorPosition?
     ) {
+        completionWindowApplyCompletion(
+            item: item,
+            textView: textView,
+            cursorPosition: cursorPosition,
+            commitCharacter: nil
+        )
+    }
+
+    func completionWindowApplyCompletion(
+        item: CodeSuggestionEntry,
+        textView: TextViewController,
+        cursorPosition: CursorPosition?,
+        commitCharacter: Character?
+    ) {
         guard let entry = item as? AggregatedCompletionEntry else { return }
         let candidate = entry.candidate
-        candidateOwners[candidate.id]?.apply(candidate, textView: textView, cursorPosition: cursorPosition)
+        candidateOwners[candidate.id]?.apply(
+            candidate,
+            textView: textView,
+            cursorPosition: cursorPosition,
+            commitCharacter: commitCharacter
+        )
         frequencyStore.recordAcceptance(label: candidate.label, languageId: requestContext?.languageId ?? "")
+    }
+
+    func completionCommitCharacters(for item: CodeSuggestionEntry) -> Set<Character> {
+        guard Settings[\.textEditing].completion.commitCharactersEnabled,
+              let entry = item as? AggregatedCompletionEntry,
+              let context = requestContext else {
+            return []
+        }
+        return CommitCharacters.characters(
+            for: entry.candidate,
+            languageId: context.languageId,
+            prefix: context.prefix,
+            pool: rawCandidates
+        )
     }
 
     func completionWindowResolve(item: CodeSuggestionEntry) async -> CodeSuggestionEntry? {
@@ -240,91 +273,5 @@ final class CompletionAggregator: CodeSuggestionDelegate {
             isExplicit: context.isExplicit,
             frequencies: frequencies
         )
-    }
-
-    // MARK: - Fan-out with per-provider deadlines
-
-    /// One provider's in-flight request for the current completion session.
-    @MainActor
-    private final class ProviderRun {
-        let provider: any CompletionProvider
-        var result: [CompletionCandidate]?
-        /// Set once the window has opened without this run; receives the result when it arrives.
-        var onLateResult: (([CompletionCandidate]) -> Void)?
-        var task: Task<Void, Never>?
-
-        init(provider: any CompletionProvider) {
-            self.provider = provider
-        }
-    }
-
-    /// Queries every provider concurrently.
-    ///
-    /// Providers with a zero `deadline` (language server, snippets) are awaited in full, as the
-    /// language server was before the aggregator existed. Providers with a deadline (AI) never
-    /// hold the window open once the others have answered: whatever they have returned by then is
-    /// included, and a later answer is kept in `lateResults` for the next cursor move. When the
-    /// blocking providers return nothing, a deadline provider is waited on for up to its deadline so
-    /// the window can still open with its items alone.
-    private func gatherCandidates(
-        context: CompletionContext,
-        textView: TextViewController,
-        generation: Int
-    ) async -> [CompletionCandidate] {
-        let runs = providers.map { ProviderRun(provider: $0) }
-        for run in runs {
-            run.task = Task { @MainActor in
-                let result = await run.provider.candidates(for: context, textView: textView)
-                run.result = result
-                run.onLateResult?(result)
-            }
-        }
-        let tasks = runs.compactMap(\.task)
-
-        return await withTaskCancellationHandler {
-            await self.collect(runs, generation: generation)
-        } onCancel: {
-            tasks.forEach { $0.cancel() }
-        }
-    }
-
-    /// Awaits zero-deadline runs in full, then takes whatever the deadline runs have returned.
-    private func collect(_ runs: [ProviderRun], generation: Int) async -> [CompletionCandidate] {
-        var gathered: [CompletionCandidate] = []
-        func take(_ run: ProviderRun) {
-            guard let result = run.result else { return }
-            for candidate in result { candidateOwners[candidate.id] = run.provider }
-            gathered.append(contentsOf: result)
-        }
-
-        for run in runs where run.provider.deadline == .zero {
-            await run.task?.value
-            take(run)
-        }
-        for run in runs where run.provider.deadline > .zero {
-            if run.result == nil, gathered.isEmpty, let task = run.task {
-                await Self.wait(for: task, upTo: run.provider.deadline)
-            }
-            if run.result != nil {
-                take(run)
-            } else {
-                let provider = run.provider
-                run.onLateResult = { [weak self] result in
-                    guard let self, self.requestGeneration == generation, !result.isEmpty else { return }
-                    self.lateResults.append((provider, result))
-                }
-            }
-        }
-        return gathered
-    }
-
-    /// Waits for `task` to finish or for `duration` to elapse, whichever comes first.
-    private static func wait(for task: Task<Void, Never>, upTo duration: Duration) async {
-        await withTaskGroup(of: Void.self) { group in
-            group.addTask { await task.value }
-            group.addTask { try? await Task.sleep(for: duration) }
-            await group.next()
-            group.cancelAll()
-        }
     }
 }
