@@ -21,8 +21,12 @@ final class LSPCompletionProvider: CompletionProvider {
     static let wordCharacters = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "_$#"))
 
     let source: CompletionSource = .lsp
-    /// Zero: the window waits for the server, as it did before the aggregator existed.
-    let deadline: Duration = .zero
+    /// The window waits this long for the server when nothing else was offered, then opens without it
+    /// (or stays closed) and merges the answer on the next cursor move.
+    let deadline: Duration = .milliseconds(800)
+    /// A fast server still lands in the first list: wait this long for it even when snippets, keywords
+    /// or words are already there.
+    let graceDeadline: Duration = .milliseconds(150)
 
     private weak var document: CodeFileDocument?
 
@@ -64,6 +68,8 @@ final class LSPCompletionProvider: CompletionProvider {
                 position: position,
                 location: context.cursorOffset
             )
+            // A newer request cancels this one; its state must not be overwritten by this stale answer.
+            try Task.checkCancellation()
             requestOffset = context.cursorOffset
             itemsByCandidateID = [:]
             resolvedCandidateIDs = []

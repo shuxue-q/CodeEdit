@@ -28,17 +28,21 @@ final class CompletionAggregator: CodeSuggestionDelegate {
     weak var document: CodeFileDocument?
     let treeSitterClient: TreeSitterClient
     private let frequencyStore: CompletionFrequencyStoring
+    /// Where popup, acceptance and latency measurements go.
+    let metrics: any CompletionMetricsRecording
 
     private let lspProvider: LSPCompletionProvider
     private let snippetProvider: TreeSitterSnippetProvider
     private let wordProvider: DocumentWordProvider
     private var aiProvider: (any AICompletionProvider)?
+    /// Extra providers queried alongside the built-in ones. Empty in the app; tests inject fakes here.
+    private let additionalProviders: [any CompletionProvider]
 
     /// All providers, in fan-out order.
     var providers: [any CompletionProvider] {
         var all: [any CompletionProvider] = [lspProvider, snippetProvider, wordProvider]
         if let aiProvider { all.append(aiProvider) }
-        return all
+        return all + additionalProviders
     }
 
     /// The provider that produced each candidate in the current session, keyed by candidate id.
@@ -57,6 +61,12 @@ final class CompletionAggregator: CodeSuggestionDelegate {
     /// Whether the current request already asked ``DocumentWordProvider`` for words. It does not for a
     /// one-character prefix; the words are then merged in once the prefix is long enough.
     private var wordCandidatesGathered = false
+    /// The provider requests of the current session, cancelled when a newer request or a close supersedes them.
+    var inFlightProviderTasks: [Task<Void, Never>] = []
+    /// The candidate ids in the order the window last showed them, to find an accepted item's rank.
+    private var presentedIDs: [String] = []
+    /// How many times the list was refreshed since the window opened.
+    private var refreshesSincePopup = 0
     /// What the frequency store knows for the current request's language and intent.
     private var statistics = CompletionStatistics()
     /// Incremented on every request and on close so results from a superseded request are dropped.
@@ -65,11 +75,15 @@ final class CompletionAggregator: CodeSuggestionDelegate {
     init(
         document: CodeFileDocument,
         treeSitterClient: TreeSitterClient,
-        frequencyStore: CompletionFrequencyStoring = CompletionFrequencyStore.shared
+        frequencyStore: CompletionFrequencyStoring = CompletionFrequencyStore.shared,
+        metrics: any CompletionMetricsRecording = CompletionMetricsStore.shared,
+        additionalProviders: [any CompletionProvider] = []
     ) {
         self.document = document
         self.treeSitterClient = treeSitterClient
         self.frequencyStore = frequencyStore
+        self.metrics = metrics
+        self.additionalProviders = additionalProviders
         self.lspProvider = LSPCompletionProvider(document: document)
         self.snippetProvider = TreeSitterSnippetProvider()
         self.wordProvider = DocumentWordProvider()
@@ -117,6 +131,8 @@ final class CompletionAggregator: CodeSuggestionDelegate {
             return nil
         }
 
+        inFlightProviderTasks.forEach { $0.cancel() }
+        inFlightProviderTasks = []
         requestContext = context
         requestOffset = location
         lateResults = []
@@ -141,6 +157,9 @@ final class CompletionAggregator: CodeSuggestionDelegate {
         let ranked = rank(gathered, prefix: context.prefix, context: context)
         let entries = CompletionPresenter.present(ranked.items)
         guard !entries.isEmpty else { return nil }
+        metrics.recordPopup()
+        presentedIDs = ranked.items.map(\.id)
+        refreshesSincePopup = 0
         return CodeSuggestionResult(
             windowPosition: cursorPosition,
             items: entries,
@@ -188,7 +207,10 @@ final class CompletionAggregator: CodeSuggestionDelegate {
         requestContext = context
         let ranked = rank(rawCandidates, prefix: context.prefix, context: context)
         let entries = CompletionPresenter.present(ranked.items)
-        return entries.isEmpty ? nil : CodeSuggestionUpdate(items: entries, preselectedIndex: ranked.preselectedIndex)
+        guard !entries.isEmpty else { return nil }
+        presentedIDs = ranked.items.map(\.id)
+        refreshesSincePopup += 1
+        return CodeSuggestionUpdate(items: entries, preselectedIndex: ranked.preselectedIndex)
     }
 
     func completionWindowApplyCompletion(
@@ -217,6 +239,10 @@ final class CompletionAggregator: CodeSuggestionDelegate {
             textView: textView,
             cursorPosition: cursorPosition,
             commitCharacter: commitCharacter
+        )
+        metrics.recordAcceptance(
+            rank: presentedIDs.firstIndex(of: candidate.id) ?? 0,
+            keystrokes: refreshesSincePopup
         )
         frequencyStore.recordAcceptance(
             label: candidate.label,
@@ -253,6 +279,9 @@ final class CompletionAggregator: CodeSuggestionDelegate {
     }
 
     func completionWindowDidClose() {
+        inFlightProviderTasks.forEach { $0.cancel() }
+        inFlightProviderTasks = []
+        presentedIDs = []
         rawCandidates = []
         candidateOwners = [:]
         requestContext = nil

@@ -28,26 +28,32 @@ extension CompletionAggregator {
 
     /// Queries every provider concurrently.
     ///
-    /// Providers with a zero `deadline` (language server, snippets) are awaited in full, as the
-    /// language server was before the aggregator existed. Providers with a deadline (AI) never
-    /// hold the window open once the others have answered: whatever they have returned by then is
-    /// included, and a later answer is kept in `lateResults` for the next cursor move. When the
-    /// blocking providers return nothing, a deadline provider is waited on for up to its deadline so
-    /// the window can still open with its items alone.
+    /// Providers with a zero `deadline` (snippets, document words) are awaited in full. A provider with
+    /// a deadline (the language server, AI) never holds the window open past it: whatever it has
+    /// returned by then is included, and a later answer is kept in `lateResults` and merged in on the
+    /// next cursor move. When the zero-deadline providers return nothing, a deadline provider is waited
+    /// on for up to its full deadline so the window can still open with its items alone; otherwise it
+    /// is only given its ``CompletionProvider/graceDeadline``. Each provider's latency is recorded in
+    /// the metrics store, including answers that arrive late.
     func gatherCandidates(
         context: CompletionContext,
         textView: TextViewController,
         generation: Int
     ) async -> [CompletionCandidate] {
         let runs = providers.map { ProviderRun(provider: $0) }
+        let metrics = self.metrics
         for run in runs {
             run.task = Task { @MainActor in
+                let start = ContinuousClock.now
                 let result = await run.provider.candidates(for: context, textView: textView)
+                guard !Task.isCancelled else { return }
+                metrics.recordProviderLatency(source: run.provider.source, duration: ContinuousClock.now - start)
                 run.result = result
                 run.onLateResult?(result)
             }
         }
         let tasks = runs.compactMap(\.task)
+        inFlightProviderTasks = tasks
 
         return await withTaskCancellationHandler {
             await self.collect(runs, generation: generation)
@@ -70,8 +76,13 @@ extension CompletionAggregator {
             take(run)
         }
         for run in runs where run.provider.deadline > .zero {
-            if run.result == nil, gathered.isEmpty, let task = run.task {
-                await Self.wait(for: task, upTo: run.provider.deadline)
+            if run.result == nil, let task = run.task {
+                let budget = gathered.isEmpty
+                    ? run.provider.deadline
+                    : min(run.provider.graceDeadline, run.provider.deadline)
+                if budget > .zero {
+                    await Self.wait(for: task, upTo: budget)
+                }
             }
             if run.result != nil {
                 take(run)
@@ -88,26 +99,12 @@ extension CompletionAggregator {
 
     /// The identifiers of the document, or none if tokenizing takes longer than 150 ms.
     func identifiers(from task: Task<[String: Int], Never>) async -> Set<String> {
-        let words = await withTaskGroup(of: [String: Int]?.self) { group in
-            group.addTask { await task.value }
-            group.addTask {
-                try? await Task.sleep(for: .milliseconds(150))
-                return nil
-            }
-            let first = await group.next() ?? nil
-            group.cancelAll()
-            return first
-        }
+        let words = await awaitValue(of: task, upTo: .milliseconds(150))
         return words.map { Set($0.keys) } ?? []
     }
 
     /// Waits for `task` to finish or for `duration` to elapse, whichever comes first.
-    private static func wait(for task: Task<Void, Never>, upTo duration: Duration) async {
-        await withTaskGroup(of: Void.self) { group in
-            group.addTask { await task.value }
-            group.addTask { try? await Task.sleep(for: duration) }
-            await group.next()
-            group.cancelAll()
-        }
+    static func wait(for task: Task<Void, Never>, upTo duration: Duration) async {
+        _ = await awaitValue(of: task, upTo: duration)
     }
 }

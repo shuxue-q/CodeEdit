@@ -32,16 +32,8 @@ extension LSPCompletionProvider {
     func resolveForApply(_ item: CompletionItem, candidateID: String) async -> CompletionItem {
         resolvedCandidateIDs.insert(candidateID)
         guard let client = languageClient() else { return item }
-        let resolved = await withTaskGroup(of: CompletionItem?.self) { group in
-            group.addTask { await self.resolveIfSupported(item, client: client) }
-            group.addTask {
-                try? await Task.sleep(for: Self.resolveTimeout)
-                return nil
-            }
-            let first = await group.next() ?? nil
-            group.cancelAll()
-            return first
-        }
+        let request = Task { await self.resolveIfSupported(item, client: client) }
+        let resolved = await awaitValue(of: request, upTo: Self.resolveTimeout)
         guard let resolved else { return item }
         itemsByCandidateID[candidateID] = resolved
         return resolved
