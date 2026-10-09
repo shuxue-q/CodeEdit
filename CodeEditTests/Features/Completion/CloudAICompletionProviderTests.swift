@@ -14,30 +14,7 @@ import XCTest
 final class CloudAICompletionProviderTests: XCTestCase {
     private typealias AISettings = SettingsData.TextEditingSettings.AICompletionSettings
 
-    /// Routes every request through a handler set per test, instead of touching the network.
-    private final class StubURLProtocol: URLProtocol {
-        static var handler: ((URLRequest) -> (HTTPURLResponse, Data))?
-
-        // `class` is required here: these override `URLProtocol`'s dynamically dispatched class
-        // methods, which `static` cannot do.
-        // swiftlint:disable:next static_over_final_class
-        override class func canInit(with request: URLRequest) -> Bool { true }
-        // swiftlint:disable:next static_over_final_class
-        override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
-
-        override func startLoading() {
-            guard let handler = Self.handler else {
-                client?.urlProtocolDidFinishLoading(self)
-                return
-            }
-            let (response, data) = handler(request)
-            client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-            client?.urlProtocol(self, didLoad: data)
-            client?.urlProtocolDidFinishLoading(self)
-        }
-
-        override func stopLoading() { }
-    }
+    private typealias StubURLProtocol = AIStubURLProtocol
 
     private func makeSession() -> URLSession {
         let configuration = URLSessionConfiguration.ephemeral
