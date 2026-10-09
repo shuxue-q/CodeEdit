@@ -63,6 +63,30 @@ final class CompletionDeduplicatorTests: XCTestCase {
         XCTAssertEqual(result.first?.mergedSources, [.lsp, .ai])
     }
 
+    func testAnAISnippetThatRepeatsAServerLabelIsDropped() {
+        let result = CompletionDeduplicator.deduplicate([
+            candidate(label: "printf", kind: .function, source: .lsp),
+            candidate(label: "printf", kind: .snippet, source: .ai)
+        ])
+        XCTAssertEqual(result.map(\.source), [.lsp])
+        XCTAssertEqual(result.first?.mergedSources, [.lsp, .ai])
+    }
+
+    func testAnAISuggestionWithANewLabelSurvives() {
+        let result = CompletionDeduplicator.deduplicate([
+            candidate(label: "printf", kind: .function, source: .lsp),
+            candidate(label: "printf(\"%d\", x);", kind: .snippet, source: .ai)
+        ])
+        XCTAssertEqual(result.map(\.source), [.lsp, .ai])
+    }
+
+    func testAnAISnippetAloneIsKept() {
+        XCTAssertEqual(
+            CompletionDeduplicator.deduplicate([candidate(label: "x", kind: .snippet, source: .ai)]).map(\.source),
+            [.ai]
+        )
+    }
+
     func testDifferentKindsWithTheSameLabelAreKeptSeparately() {
         let candidates = [
             candidate(label: "Point", kind: .class, source: .lsp),

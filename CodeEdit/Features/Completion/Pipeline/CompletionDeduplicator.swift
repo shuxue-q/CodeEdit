@@ -55,6 +55,15 @@ enum CompletionDeduplicator {
         if working.contains(where: { $0.source != .word }) {
             working.removeAll { $0.source == .word }
         }
+        // An AI suggestion that only repeats the label of a server or local candidate (and is not of a kind
+        // that merges with it) adds nothing; the other source shows it.
+        var droppedAI = false
+        if working.contains(where: { $0.source != .ai }) {
+            let otherKinds = Set(working.filter { $0.source != .ai }.map(\.kind))
+            let count = working.count
+            working.removeAll { $0.source == .ai && !otherKinds.contains($0.kind) }
+            droppedAI = working.count != count
+        }
         let hasSnippet = working.contains { $0.kind == .snippet }
         if hasSnippet {
             working = working.filter { $0.kind == .snippet || !isKeywordOrPlain($0) }
@@ -73,6 +82,7 @@ enum CompletionDeduplicator {
             let sorted = items.sorted { $0.source.priority > $1.source.priority }
             guard var winner = sorted.first else { return nil }
             winner.mergedSources = Set(sorted.map { $0.source })
+            if droppedAI { winner.mergedSources.insert(.ai) }
             return winner
         }
     }
