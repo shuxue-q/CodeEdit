@@ -35,10 +35,15 @@ extension CompletionAggregator {
     /// on for up to its full deadline so the window can still open with its items alone; otherwise it
     /// is only given its ``CompletionProvider/graceDeadline``. Each provider's latency is recorded in
     /// the metrics store, including answers that arrive late.
+    ///
+    /// The deadline providers share one budget: the first list is never held back past
+    /// ``firstListBudget`` after `start`, however many of them are slow. They are waited on in
+    /// order, so the language server takes what it needs of the budget and AI gets the rest.
     func gatherCandidates(
         context: CompletionContext,
         textView: TextViewController,
-        generation: Int
+        generation: Int,
+        since start: ContinuousClock.Instant
     ) async -> [CompletionCandidate] {
         let runs = providers.map { ProviderRun(provider: $0) }
         let metrics = self.metrics
@@ -56,14 +61,22 @@ extension CompletionAggregator {
         inFlightProviderTasks = tasks
 
         return await withTaskCancellationHandler {
-            await self.collect(runs, generation: generation)
+            await self.collect(runs, generation: generation, since: start)
         } onCancel: {
             tasks.forEach { $0.cancel() }
         }
     }
 
-    /// Awaits zero-deadline runs in full, then takes whatever the deadline runs have returned.
-    func collect(_ runs: [ProviderRun], generation: Int) async -> [CompletionCandidate] {
+    /// How long after the request started the first list may be held back for slow providers.
+    static let firstListBudget: Duration = .seconds(1)
+
+    /// Awaits zero-deadline runs in full, then takes whatever the deadline runs have returned, waiting
+    /// on each only as long as its own deadline and what remains of ``firstListBudget`` since `start`.
+    func collect(
+        _ runs: [ProviderRun],
+        generation: Int,
+        since start: ContinuousClock.Instant
+    ) async -> [CompletionCandidate] {
         var gathered: [CompletionCandidate] = []
         func take(_ run: ProviderRun) {
             guard let result = run.result else { return }
@@ -77,9 +90,11 @@ extension CompletionAggregator {
         }
         for run in runs where run.provider.deadline > .zero {
             if run.result == nil, let task = run.task {
-                let budget = gathered.isEmpty
+                let own = gathered.isEmpty
                     ? run.provider.deadline
                     : min(run.provider.graceDeadline, run.provider.deadline)
+                let remaining = Self.firstListBudget - (ContinuousClock.now - start)
+                let budget = min(own, max(.zero, remaining))
                 if budget > .zero {
                     await Self.wait(for: task, upTo: budget)
                 }

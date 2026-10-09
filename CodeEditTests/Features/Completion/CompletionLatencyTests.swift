@@ -30,13 +30,20 @@ final class CompletionLatencyTests: XCTestCase {
 
     /// A provider that answers after `delay`, standing in for a slow language server.
     private final class SlowProvider: CompletionProvider {
-        let source: CompletionSource = .lsp
+        let source: CompletionSource
         let deadline: Duration
         let graceDeadline: Duration
         let delay: Duration
         let labels: [String]
 
-        init(delay: Duration, deadline: Duration, grace: Duration = .zero, labels: [String]) {
+        init(
+            source: CompletionSource = .lsp,
+            delay: Duration,
+            deadline: Duration,
+            grace: Duration = .zero,
+            labels: [String]
+        ) {
+            self.source = source
             self.delay = delay
             self.deadline = deadline
             self.graceDeadline = grace
@@ -47,7 +54,7 @@ final class CompletionLatencyTests: XCTestCase {
             try? await Task.sleep(for: delay)
             return labels.map {
                 CompletionCandidate(
-                    id: "slow.\($0)", label: $0, filterText: $0, kind: .variable, source: .lsp,
+                    id: "slow.\($0)", label: $0, filterText: $0, kind: .variable, source: source,
                     payload: .plain(insertText: $0)
                 )
             }
@@ -73,7 +80,7 @@ final class CompletionLatencyTests: XCTestCase {
 
     private func makeAggregator(
         source: String,
-        provider: SlowProvider,
+        providers: [SlowProvider],
         metrics: any CompletionMetricsRecording
     ) throws -> (CompletionAggregator, TextViewController) {
         let file = directory.appending(path: "main.cpp")
@@ -97,9 +104,17 @@ final class CompletionLatencyTests: XCTestCase {
             treeSitterClient: TreeSitterClient(),
             frequencyStore: EmptyFrequencyStore(),
             metrics: metrics,
-            additionalProviders: [provider]
+            additionalProviders: providers
         )
         return (aggregator, editor)
+    }
+
+    private func makeAggregator(
+        source: String,
+        provider: SlowProvider,
+        metrics: any CompletionMetricsRecording
+    ) throws -> (CompletionAggregator, TextViewController) {
+        try makeAggregator(source: source, providers: [provider], metrics: metrics)
     }
 
     private func request(_ aggregator: CompletionAggregator, in editor: TextViewController) async -> [String]? {
@@ -176,6 +191,33 @@ final class CompletionLatencyTests: XCTestCase {
 
         let labels = await request(aggregator, in: editor)
         XCTAssertEqual(labels, ["size"])
+    }
+
+    func testSlowServerAndSlowAIShareOneSecondForTheFirstList() async throws {
+        let server = SlowProvider(delay: .milliseconds(1_500), deadline: .milliseconds(800), labels: ["size"])
+        let cloud = SlowProvider(
+            source: .ai, delay: .milliseconds(1_400), deadline: .milliseconds(2_500), labels: ["data"]
+        )
+        let (aggregator, editor) = try makeAggregator(
+            source: "obj.", providers: [server, cloud], metrics: RecordingMetrics()
+        )
+
+        let start = ContinuousClock.now
+        let first = await request(aggregator, in: editor)
+        let elapsed = ContinuousClock.now - start
+        XCTAssertNil(first, "Neither provider answered within the budget")
+        XCTAssertGreaterThanOrEqual(elapsed, .milliseconds(900), "The server was given its deadline")
+        XCTAssertLessThan(elapsed, .milliseconds(1_100), "AI was only waited for what remained of one second")
+
+        var labels: [String] = []
+        for _ in 0..<40 where !labels.contains("data") {
+            try await Task.sleep(for: .milliseconds(50))
+            labels = aggregator.completionOnCursorMove(
+                textView: editor,
+                cursorPosition: CursorPosition(range: NSRange(location: editor.textView.textStorage.length, length: 0))
+            )?.map(\.label) ?? []
+        }
+        XCTAssertTrue(labels.contains("data"), "The late AI answer is merged on a cursor move; got \(labels)")
     }
 
     // MARK: - Metrics

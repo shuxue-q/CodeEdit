@@ -163,8 +163,9 @@ The popup must open or update within 500 ms of a keystroke and never later than 
 - The language server has 800 ms. A fast server (150 ms) is included in the first list; a slower one is
   waited for only if there is nothing else to show. Its late answer is merged into the list on the next
   cursor move.
-- The AI provider has 2.5 s, but is only waited for when nothing else could be offered; otherwise its
-  answer is merged on a later cursor move.
+- The AI provider has 2.5 s of its own, but is only waited for when nothing else could be offered, and
+  never beyond one second after the keystroke: the language server and AI share that one second, so AI
+  gets whatever the server left of it. A later AI answer is merged on a later cursor move.
 - Expected-type lookups have 200 ms; chain completion has 800 ms in total.
 
 ## AI completions
