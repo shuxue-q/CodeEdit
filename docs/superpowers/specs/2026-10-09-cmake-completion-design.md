@@ -174,5 +174,9 @@ variable names from the file that the server may not know.
 
 `CMakeIntentRecognizerTests`, `CMakeLineScannerTests`, `CMakeCompletionPolicyTests` (weights, typing
 gate, end-to-end ranking through the deduplicator and ranker) and `CMakeCompletionTablesTests`, all in
-`CodeEditTests/Features/Completion/`. Recognizer cases run with node types where the tree is the deciding signal (continuation lines,
+`CodeEditTests/Features/Completion/`, plus `CMakeCompletionIntegrationTests`, which drives the aggregator on
+a `CMakeLists.txt` with a real `neocmakelsp`, syntax tree and editor controller (skipped when the server is not
+installed; headless, so no popup drawing or key handling). `neocmakelsp`'s 2 MB answer can miss the 800 ms
+server deadline in a debug build; it is then merged in on the next cursor move, which the tests reproduce.
+Recognizer cases run with node types where the tree is the deciding signal (continuation lines,
 multi-line comments and quotes, command names) and without where the line is. The existing C-family tests pass unchanged.
