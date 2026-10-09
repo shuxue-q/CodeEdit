@@ -84,6 +84,8 @@ extension LSPService {
         case let .windowLogMessage(message):
             client.logContainer.appendLog(message)
         case let .textDocumentPublishDiagnostics(params):
+            // Chain completion's scratch documents do not exist on disk; their errors are not the user's.
+            guard !LSPChainScratchServer.isScratchURI(params.uri) else { return }
             diagnosticsStore.update(params.diagnostics, for: params.uri, workspacePath: workspacePath)
 //        case let .windowShowMessage(params):
 //            print("windowShowMessage \(params.type)\n```\n\(params.message)\n```\n")

@@ -63,17 +63,18 @@ final class LSPCompletionProvider: CompletionProvider {
         }
 
         do {
-            let items = try await completionItems(
+            let scoredItems = try await completionItems(
                 textView: textView,
                 position: position,
                 location: context.cursorOffset
             )
+            let items = scoredItems.map(\.item)
             // A newer request cancels this one; its state must not be overwritten by this stale answer.
             try Task.checkCancellation()
             requestOffset = context.cursorOffset
             itemsByCandidateID = [:]
             resolvedCandidateIDs = []
-            let candidates = items.map { candidate(from: $0) }
+            let candidates = scoredItems.map { candidate(from: $0.item, score: $0.score) }
             for (item, candidate) in zip(items, candidates) {
                 itemsByCandidateID[candidate.id] = item
             }
@@ -141,6 +142,9 @@ final class LSPCompletionProvider: CompletionProvider {
 
     // MARK: - Requesting
 
+    /// A completion item with the relevance score the server attached to it, if any.
+    typealias ScoredItem = (item: CompletionItem, score: Double?)
+
     /// Requests completions after pending edits have been sent.
     ///
     /// If the server has dropped the file, open it again with the current buffer and retry once.
@@ -148,7 +152,7 @@ final class LSPCompletionProvider: CompletionProvider {
         textView: TextViewController,
         position: Position,
         location: Int
-    ) async throws -> [CompletionItem] {
+    ) async throws -> [ScoredItem] {
         guard let document,
               let uri = document.languageServerURI,
               let client = languageClient() else {
@@ -157,27 +161,27 @@ final class LSPCompletionProvider: CompletionProvider {
         try await document.languageServerObjects.textCoordinator.flushPendingChanges()
         try Task.checkCancellation()
         do {
-            let response = try await client.requestCompletion(for: uri, position: position, bypassCache: true)
+            let response = try await client.requestScoredCompletion(for: uri, position: position)
             return items(from: response, textView: textView, position: position, location: location)
         } catch {
             guard LSPService.LanguageServerType.isNonAddedDocument(error) else { throw error }
             try await client.reopenDocument(document)
             try Task.checkCancellation()
-            let response = try await client.requestCompletion(for: uri, position: position, bypassCache: true)
+            let response = try await client.requestScoredCompletion(for: uri, position: position)
             return items(from: response, textView: textView, position: position, location: location)
         }
     }
 
     private func items(
-        from response: CompletionResponse,
+        from response: ScoredCompletionResponse,
         textView: TextViewController,
         position: Position,
         location: Int
-    ) -> [CompletionItem] {
-        let rawItems = response?.items ?? []
+    ) -> [ScoredItem] {
         let string = textView.textView.textStorage.string as NSString
+        let scored = zip(response.items, response.scores).map { (item: $0, score: $1) }
         return augmentIncludeCompletions(
-            items: rawItems,
+            items: scored,
             textView: textView,
             position: position,
             location: location,
@@ -186,13 +190,14 @@ final class LSPCompletionProvider: CompletionProvider {
     }
 
     /// Maps an LSP completion item to a pipeline candidate.
-    private func candidate(from item: CompletionItem) -> CompletionCandidate {
+    private func candidate(from item: CompletionItem, score: Double? = nil) -> CompletionCandidate {
         let entry = LSPCompletionEntry(item: item)
         return CompletionCandidate(
             id: "lsp.\(UUID().uuidString)",
             label: entry.label,
             filterText: item.filterText ?? entry.label,
             sortText: item.sortText,
+            score: score,
             kind: LSPCompletionEntry.category(for: item),
             source: .lsp,
             detail: entry.detail,
@@ -203,6 +208,12 @@ final class LSPCompletionProvider: CompletionProvider {
     }
 
     // MARK: - Helpers
+
+    /// A scratch document on this provider's language server for chain completion, if one is running.
+    func makeChainScratchServer(for document: CodeFileDocument) -> ChainScratchServer? {
+        guard let client = languageClient(), let uri = document.languageServerURI else { return nil }
+        return LSPChainScratchServer(client: client, documentURI: uri, languageId: document.getLanguage().id.rawValue)
+    }
 
     /// The language client managing this provider's document, if one is running.
     func languageClient() -> LSPService.LanguageServerType? {
@@ -216,12 +227,12 @@ final class LSPCompletionProvider: CompletionProvider {
 extension LSPCompletionProvider {
     /// Augments completion items with `#include` options when completing preprocessor lines.
     private func augmentIncludeCompletions(
-        items: [CompletionItem],
+        items: [ScoredItem],
         textView: TextViewController,
         position: Position,
         location: Int,
         string: NSString
-    ) -> [CompletionItem] {
+    ) -> [ScoredItem] {
         var lineStart = location
         while lineStart > 0 && string.character(at: lineStart - 1) != 0x0A {
             lineStart -= 1
@@ -257,11 +268,11 @@ extension LSPCompletionProvider {
             textEdit: .optionA(TextEdit(range: editRange, newText: "include \"$0\""))
         )
 
-        let remaining = items.filter { item in
-            let label = item.label.trimmingCharacters(in: .whitespaces)
+        let remaining = items.filter { scored in
+            let label = scored.item.label.trimmingCharacters(in: .whitespaces)
             return label != "include" && !label.hasPrefix("#include")
         }
 
-        return [includeAngle, includeQuote] + remaining
+        return [(item: includeAngle, score: nil), (item: includeQuote, score: nil)] + remaining
     }
 }

@@ -49,6 +49,29 @@ extension LanguageServer {
         }
     }
 
+    /// Requests completion items together with the relevance `score` clangd attaches to each of them.
+    ///
+    /// `LanguageServerProtocol.CompletionItem` has no `score` field, so the generic response type is
+    /// replaced by ``ScoredCompletionResponse``, which decodes the same JSON and also keeps the score.
+    /// Servers that send no score yield `nil` scores. This always bypasses the response cache.
+    func requestScoredCompletion(
+        for documentURI: String,
+        position: Position
+    ) async throws -> ScoredCompletionResponse {
+        do {
+            let params = CompletionParams(
+                uri: documentURI,
+                position: position,
+                triggerKind: .invoked,
+                triggerCharacter: nil
+            )
+            return try await lspInstance.sendRequest(.completion(params, ClientRequest.NullHandler))
+        } catch {
+            logger.warning("requestScoredCompletion: Error \(error)")
+            throw error
+        }
+    }
+
     /// Whether the server advertised `workspace/symbol` support during initialization.
     var supportsWorkspaceSymbols: Bool {
         switch serverCapabilities.workspaceSymbolProvider {
@@ -83,5 +106,48 @@ extension LanguageServer {
             logger.warning("requestCompletionResolve: Error \(error)")
             throw error
         }
+    }
+}
+
+/// A `textDocument/completion` answer whose items keep the non-standard `score` clangd sends with them.
+///
+/// Decodes both response shapes (a bare array, or a list object with `items`) and `null`.
+struct ScoredCompletionResponse: Decodable, Sendable {
+    /// The completion items, in the order the server sent them.
+    var items: [CompletionItem] = []
+    /// `scores[i]` is the server's `score` for `items[i]`, or `nil` when the server sent none.
+    var scores: [Double?] = []
+
+    private struct ScoredItem: Decodable {
+        let item: CompletionItem
+        let score: Double?
+
+        private enum CodingKeys: String, CodingKey {
+            case score
+        }
+
+        init(from decoder: Decoder) throws {
+            item = try CompletionItem(from: decoder)
+            score = try decoder.container(keyedBy: CodingKeys.self).decodeIfPresent(Double.self, forKey: .score)
+        }
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case items
+    }
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let single = try decoder.singleValueContainer()
+        if single.decodeNil() { return }
+        let scored: [ScoredItem]
+        if let array = try? single.decode([ScoredItem].self) {
+            scored = array
+        } else {
+            scored = try decoder.container(keyedBy: CodingKeys.self).decode([ScoredItem].self, forKey: .items)
+        }
+        items = scored.map(\.item)
+        scores = scored.map(\.score)
     }
 }

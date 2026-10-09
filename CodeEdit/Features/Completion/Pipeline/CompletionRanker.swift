@@ -24,7 +24,12 @@ enum CompletionRanker {
         let frequencies: [String: Int]
         let intentFrequencies: [String: Int]
         let lastAccepted: [String: Date]
+        let receiverFrequencies: [String: Int]
+        let receiverLastAccepted: [String: Date]
         let documentIdentifiers: Set<String>
+        let expectedType: TypeText?
+        /// The highest server `score` among the candidates, which scales the others into `0...1`.
+        let maxServerScore: Double
         let now: Date
         let weights: RankingWeights
     }
@@ -40,7 +45,10 @@ enum CompletionRanker {
         frequencies: [String: Int] = [:],
         intentFrequencies: [String: Int] = [:],
         lastAccepted: [String: Date] = [:],
+        receiverFrequencies: [String: Int] = [:],
+        receiverLastAccepted: [String: Date] = [:],
         documentIdentifiers: Set<String> = [],
+        expectedType: TypeText? = nil,
         now: Date = Date(),
         weights: RankingWeights = .default
     ) -> RankedCompletions {
@@ -53,7 +61,11 @@ enum CompletionRanker {
             frequencies: frequencies,
             intentFrequencies: intentFrequencies,
             lastAccepted: lastAccepted,
+            receiverFrequencies: receiverFrequencies,
+            receiverLastAccepted: receiverLastAccepted,
             documentIdentifiers: documentIdentifiers,
+            expectedType: expectedType,
+            maxServerScore: ordered.compactMap(\.score).max() ?? 0,
             now: now,
             weights: weights
         )
@@ -95,36 +107,79 @@ enum CompletionRanker {
             guard let fuzzy = FuzzyMatcher.match(pattern: options.prefix, candidate: matchText) else {
                 continue
             }
-            let serverRank = 1.0 - Double(index) / maxIndex
-            let blendedServerRank = candidate.score.map { (serverRank + $0) / 2 } ?? serverRank
+            let serverSignal = serverSignal(of: candidate, index: index, maxIndex: maxIndex, options: options)
             let key = CompletionDeduplicator.normalizedLabel(candidate.label)
             let weights = options.weights
             let total = weights.fuzzy * fuzzy.score
-                + weights.server * blendedServerRank
+                + weights.server * serverSignal
                 + weights.context * contextWeight
                 + weights.frequency * log1p(frequency(of: key, options: options))
                 + weights.recency * recencyBonus(of: key, options: options)
                 + weights.proximity * proximityBonus(of: candidate, options: options)
+                + typeBonus(of: candidate, options: options)
+                + postfixBonus(of: candidate, options: options)
 
             scored.append(ScoredCandidate(candidate: candidate, score: total, matchLength: matchText.count))
         }
         return scored
     }
 
-    /// Acceptances of `key` in this intent, plus those in the language's other intents at half weight.
+    /// The server's opinion of `candidate`, in `0...1`.
+    ///
+    /// A server that sends a relevance `score` (clangd does) is trusted for it: the candidate's score
+    /// relative to the best score of the request. Without one, the position in the server's
+    /// `sortText` order stands in for it.
+    private static func serverSignal(
+        of candidate: CompletionCandidate,
+        index: Int,
+        maxIndex: Double,
+        options: ScoringOptions
+    ) -> Double {
+        if let score = candidate.score, options.maxServerScore > 0 {
+            return min(1, max(0, score / options.maxServerScore))
+        }
+        return 1.0 - Double(index) / maxIndex
+    }
+
+    /// A postfix template typed out in full (`expr.if`) beats the members that merely match `if`.
+    private static func postfixBonus(of candidate: CompletionCandidate, options: ScoringOptions) -> Double {
+        guard candidate.source == .postfix, !options.prefix.isEmpty, candidate.label == options.prefix else {
+            return 0
+        }
+        return options.weights.postfixExact
+    }
+
+    /// The expected-type bonus: full for a candidate of the expected type, partial for one that
+    /// converts to it, nothing otherwise (a candidate of another type is never penalized).
+    private static func typeBonus(of candidate: CompletionCandidate, options: ScoringOptions) -> Double {
+        guard let expected = options.expectedType,
+              let type = CandidateTypeParser.resultType(of: candidate) else {
+            return 0
+        }
+        switch expected.match(type, candidateIsEnumerator: candidate.kind == .enumMember) {
+        case .exact: return options.weights.expectedType
+        case .convertible: return options.weights.convertibleType
+        case .none: return 0
+        }
+    }
+
+    /// Acceptances of `key` in this intent, plus those in the language's other intents at half weight,
+    /// plus those on a receiver of the same type (member access), which count for that type only.
     ///
     /// The per-language table counts every intent, so the part not already counted for this intent
     /// is the fallback that keeps data recorded before intents were tracked useful.
     private static func frequency(of key: String, options: ScoringOptions) -> Double {
         let inIntent = Double(options.intentFrequencies[key] ?? 0)
         let inLanguage = Double(options.frequencies[key] ?? 0)
-        return inIntent + 0.5 * max(0, inLanguage - inIntent)
+        let onReceiver = Double(options.receiverFrequencies[key] ?? 0)
+        return onReceiver + inIntent + 0.5 * max(0, inLanguage - inIntent)
     }
 
-    /// `1` right after accepting `key` in this intent, falling off exponentially with the age of that
-    /// acceptance; `0` when it was never accepted.
+    /// `1` right after accepting `key` in this intent (or on this receiver type), falling off
+    /// exponentially with the age of that acceptance; `0` when it was never accepted.
     private static func recencyBonus(of key: String, options: ScoringOptions) -> Double {
-        guard let last = options.lastAccepted[key] else { return 0 }
+        let accepted = [options.lastAccepted[key], options.receiverLastAccepted[key]].compactMap { $0 }
+        guard let last = accepted.max() else { return 0 }
         let age = max(0, options.now.timeIntervalSince(last))
         return exp(-age / options.weights.recencyTimeConstant)
     }

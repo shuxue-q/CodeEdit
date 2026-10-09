@@ -38,20 +38,25 @@ struct CompletionIntentRecognizer {
     /// Creates a recognizer backed by a live `TreeSitterClient`.
     @MainActor
     init(treeSitterClient: TreeSitterClient) {
-        self.nodeTypesAt = { location in
-            guard let results = try? treeSitterClient.nodesAt(location: location) else { return [] }
-            var types: [String] = []
-            for result in results {
-                var node: Node? = result.node
-                while let current = node {
-                    if let type = current.nodeType {
-                        types.append(type)
-                    }
-                    node = current.parent
+        self.nodeTypesAt = { Self.nodeTypes(at: $0, in: treeSitterClient) }
+    }
+
+    /// The node types around `location` in the syntax tree, innermost first: each node of the
+    /// language layer(s) there, followed by its ancestors.
+    @MainActor
+    static func nodeTypes(at location: Int, in treeSitterClient: TreeSitterClient) -> [String] {
+        guard let results = try? treeSitterClient.nodesAt(location: location) else { return [] }
+        var types: [String] = []
+        for result in results {
+            var node: Node? = result.node
+            while let current = node {
+                if let type = current.nodeType {
+                    types.append(type)
                 }
+                node = current.parent
             }
-            return types
         }
+        return types
     }
 
     /// Recognizes the intent at `location`.

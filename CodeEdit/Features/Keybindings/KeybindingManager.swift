@@ -65,19 +65,16 @@ struct KeyboardShortcutWrapper: Codable, Hashable {
         return KeyboardShortcut.init(.init(Character(keybinding)), modifiers: parsedModifier)
     }
 
+    /// The modifiers named in `modifier`: one name, or several separated by commas (`control,shift`).
+    /// An unknown or empty value means `command`.
     var parsedModifier: EventModifiers {
-        switch modifier {
-        case "command":
-            return EventModifiers.command
-        case "shift":
-            return EventModifiers.shift
-        case "option":
-            return EventModifiers.option
-        case "control":
-            return EventModifiers.control
-        default:
-            return EventModifiers.command
+        let names: [String: EventModifiers] = [
+            "command": .command, "shift": .shift, "option": .option, "control": .control
+        ]
+        let parsed = modifier.split(separator: ",").compactMap {
+            names[$0.trimmingCharacters(in: .whitespaces)]
         }
+        return parsed.isEmpty ? .command : parsed.reduce(into: EventModifiers()) { $0.formUnion($1) }
     }
     var name: String
     var description: String
