@@ -45,6 +45,14 @@ final class PostfixTemplatesTests: XCTestCase {
         XCTAssertTrue(cLabels.contains("var"))
     }
 
+    func testObjectiveCIsCFamilyButNotCpp() {
+        for language in ["objc", "objective-c"] {
+            let objcLabels = labels("ok", isTypeName: true, language: language)
+            XCTAssertTrue(objcLabels.contains("fori"), language)
+            XCTAssertFalse(objcLabels.contains("new"), language)
+        }
+    }
+
     func testNewIsOnlyOfferedForTypeNames() {
         XCTAssertFalse(labels("widget").contains("new"))
         XCTAssertTrue(labels("Widget", isTypeName: true).contains("new"))

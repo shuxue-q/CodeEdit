@@ -13,9 +13,6 @@ enum CommitCharacters {
     /// typed yet, so the window's non-empty-prefix rule leaves it inert; it is listed for completeness.
     static let cFamily: Set<Character> = ["(", ".", ";", ",", ")", "[", ">"]
 
-    /// Language identifiers that use ``cFamily``.
-    private static let cFamilyLanguages: Set<String> = ["c", "cpp", "objc", "objcpp", "cuda"]
-
     /// Characters after which a function's own parentheses must not be inserted, because the
     /// character typed next is, or closes, the call.
     static let suppressesCallParentheses: Set<Character> = ["(", ")", "["]
@@ -50,6 +47,6 @@ enum CommitCharacters {
            let fromServer = item.commitCharacters, !fromServer.isEmpty {
             return Set(fromServer.compactMap(\.first))
         }
-        return cFamilyLanguages.contains(languageId) ? cFamily : []
+        return CFamilyKeywords.languageIds.contains(languageId) ? cFamily : []
     }
 }

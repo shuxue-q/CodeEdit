@@ -7,11 +7,15 @@
 
 /// C and C++ keyword groups used to recognize completion intent from the tokens before the cursor.
 enum CFamilyKeywords {
-    /// Language identifiers the C-family token rules apply to.
-    static let languageIds: Set<String> = ["c", "cpp", "objective-c", "objective-cpp"]
+    /// Language identifiers the C-family token rules apply to. The completion context carries the
+    /// editor's `CodeLanguage` id, which spells Objective-C `objc`; the language server's
+    /// `objective-c` / `objective-cpp` spellings are accepted too, so either source matches.
+    static let languageIds: Set<String> = ["c", "cpp", "objc", "objective-c", "objective-cpp"]
     /// Languages where an identifier followed by a space starts a declaration (`Point p`). Excludes
     /// Objective-C, where `[receiver message` has the same shape.
     static let identifierDeclarationLanguageIds: Set<String> = ["c", "cpp"]
+    /// The members of ``languageIds`` that are C or Objective-C rather than C++.
+    static let cLanguageIds: Set<String> = ["c", "objc", "objective-c"]
 
     /// Keywords after which only a value can follow.
     static let expressionLeads: Set<String> = [

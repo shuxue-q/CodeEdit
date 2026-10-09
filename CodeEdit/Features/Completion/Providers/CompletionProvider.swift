@@ -17,8 +17,9 @@ protocol CompletionProvider: AnyObject {
     /// The primary source this provider's candidates are badged with.
     var source: CompletionSource { get }
     /// `.zero` to always wait for this provider; otherwise the longest the window waits for it, and
-    /// only when no zero-deadline provider returned anything. A later answer is merged in on the next
-    /// cursor move.
+    /// only when no zero-deadline provider returned anything. The deadline providers share the
+    /// aggregator's one-second budget for the first list, so a later one may get less. A later answer
+    /// is merged in on the next cursor move.
     var deadline: Duration { get }
     /// How long the window waits for a provider with a `deadline` even when other providers already
     /// returned candidates, so a fast server's items are in the first list instead of the second.

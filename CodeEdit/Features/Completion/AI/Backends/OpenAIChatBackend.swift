@@ -69,19 +69,29 @@ struct OpenAIChatBackend: AICompletionBackend {
         }
         urlRequest.httpBody = try? JSONSerialization.data(
             withJSONObject: Self.requestBody(
-                request: request, model: configuration.model, parameterStyle: parameterStyle
+                request: request, model: configuration.model, kind: kind, parameterStyle: parameterStyle
             )
         )
         return urlRequest
     }
 
-    /// The most tokens the model may generate.
+    /// The most tokens a compatible server may generate.
     static let maxOutputTokens = 256
+
+    /// The most tokens an OpenAI model may generate. OpenAI counts a reasoning model's hidden reasoning
+    /// tokens against the limit, so 256 can be used up before any visible answer is written.
+    static let openAIMaxOutputTokens = 1024
+
+    /// The token limit a request to a backend of `kind` carries.
+    static func tokenLimit(for kind: AIBackendKind) -> Int {
+        kind == .openAI ? openAIMaxOutputTokens : maxOutputTokens
+    }
 
     /// Builds the `POST {baseURL}/chat/completions` request body.
     static func requestBody(
         request: AICompletionRequest,
         model: String,
+        kind: AIBackendKind,
         parameterStyle: ParameterStyle
     ) -> [String: Any] {
         var body: [String: Any] = [
@@ -93,11 +103,12 @@ struct OpenAIChatBackend: AICompletionBackend {
             "n": 1,
             "response_format": ["type": "json_object"]
         ]
+        let tokenLimit = tokenLimit(for: kind)
         switch parameterStyle {
         case .current:
-            body["max_completion_tokens"] = maxOutputTokens
+            body["max_completion_tokens"] = tokenLimit
         case .legacy:
-            body["max_tokens"] = maxOutputTokens
+            body["max_tokens"] = tokenLimit
             body["temperature"] = 0.2
         }
         return body

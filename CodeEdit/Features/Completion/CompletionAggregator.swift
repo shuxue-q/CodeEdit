@@ -174,7 +174,7 @@ final class CompletionAggregator: CodeSuggestionDelegate {
         var providerContext = context
         providerContext.awaitSemantics = { budget in await semantics.resolved(upTo: budget) }
         let gathered = await gatherCandidates(
-            context: providerContext, textView: textView, generation: requestGeneration
+            context: providerContext, textView: textView, generation: requestGeneration, since: requestStart
         )
         guard !Task.isCancelled else {
             semantics.cancel()
