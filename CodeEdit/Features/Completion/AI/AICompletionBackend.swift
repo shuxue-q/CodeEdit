@@ -66,9 +66,7 @@ extension AIBackendKind {
     var backend: any AICompletionBackend {
         switch self {
         case .anthropic: return AnthropicMessagesBackend()
-        // The OpenAI-compatible backend is added in the next step; until then these kinds are unreachable
-        // because no setting selects them.
-        case .openAI, .openAICompatible: return AnthropicMessagesBackend()
+        case .openAI, .openAICompatible: return OpenAIChatBackend(kind: self)
         }
     }
 }
