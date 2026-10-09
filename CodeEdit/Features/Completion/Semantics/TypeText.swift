@@ -175,6 +175,12 @@ struct TypeText: Equatable, Hashable, Sendable, CustomStringConvertible {
 
     private var isBool: Bool { pointerDepth == 0 && name == "bool" }
 
+    /// Whether values of this type have members: not a number, `bool`, `void` or `nullptr_t`, and not a
+    /// pointer to a pointer. A single pointer counts, because its members are reached with `->`.
+    var isClassLike: Bool {
+        pointerDepth <= 1 && !isNumeric && !isBool && name != "void" && name != "std::nullptr_t"
+    }
+
     private var isNullPointerType: Bool { pointerDepth == 0 && name == "std::nullptr_t" }
 
     /// How well a value of type `candidate` fits where this type is expected.

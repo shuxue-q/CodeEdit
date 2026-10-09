@@ -36,4 +36,7 @@ struct CompletionContext {
     /// `v.` when `v` is such a vector), when it could be worked out in time. Member statistics are kept
     /// per receiver type. `nil` means unknown.
     var receiverType: String?
+    /// `true` when the user asked for chain completion (members reachable through a symbol that fit the
+    /// expected type) instead of the regular list.
+    var isChain = false
 }

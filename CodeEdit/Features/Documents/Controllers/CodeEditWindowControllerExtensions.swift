@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Combine
+import CodeEditSourceEditor
 
 extension CodeEditWindowController {
     /// These are example items that added as commands to command palette
@@ -31,6 +32,25 @@ extension CodeEditWindowController {
             id: "toggle_right_sidebar",
             command: { [weak self] in self?.toggleLastPanel() }
         )
+
+        CommandManager.shared.addCommand(
+            name: "Complete Chain",
+            title: "Complete Chain",
+            id: "complete_chain",
+            command: { [weak self] in self?.completeChain() }
+        )
+    }
+
+    /// Asks the focused editor of this window for chain completions, like pressing Control-Shift-Space.
+    func completeChain() {
+        var responder: NSResponder? = window?.firstResponder
+        while let current = responder {
+            if let controller = current as? TextViewController {
+                controller.showCodeCompletions(trigger: .chain)
+                return
+            }
+            responder = current.nextResponder
+        }
     }
 
     // Listen to changes in all tabs/files

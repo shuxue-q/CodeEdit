@@ -27,7 +27,7 @@ final class CompletionAggregator: CodeSuggestionDelegate {
 
     weak var document: CodeFileDocument?
     let treeSitterClient: TreeSitterClient
-    private let frequencyStore: CompletionFrequencyStoring
+    let frequencyStore: CompletionFrequencyStoring
     /// Where popup, acceptance and latency measurements go.
     let metrics: any CompletionMetricsRecording
 
@@ -35,10 +35,12 @@ final class CompletionAggregator: CodeSuggestionDelegate {
     private let snippetProvider: TreeSitterSnippetProvider
     let wordProvider: DocumentWordProvider
     private let postfixProvider: PostfixCompletionProvider
+    /// The second stage of chain requests; not part of the regular fan-out.
+    let chainProvider: ChainCompletionProvider
     /// Works out the type the slot at the cursor expects. Replaceable so tests need no language server.
-    private let expectedTypeSource: (CompletionContext, TextViewController) async -> TypeText?
+    let expectedTypeSource: (CompletionContext, TextViewController) async -> TypeText?
     /// Works out the type of the object whose members are being completed.
-    private let receiverTypeSource: (CompletionContext, TextViewController) async -> String?
+    let receiverTypeSource: (CompletionContext, TextViewController) async -> String?
     private var aiProvider: (any AICompletionProvider)?
     /// Extra providers queried alongside the built-in ones. Empty in the app; tests inject fakes here.
     private let additionalProviders: [any CompletionProvider]
@@ -84,7 +86,8 @@ final class CompletionAggregator: CodeSuggestionDelegate {
         metrics: any CompletionMetricsRecording = CompletionMetricsStore.shared,
         additionalProviders: [any CompletionProvider] = [],
         expectedTypeSource: ((CompletionContext, TextViewController) async -> TypeText?)? = nil,
-        receiverTypeSource: ((CompletionContext, TextViewController) async -> String?)? = nil
+        receiverTypeSource: ((CompletionContext, TextViewController) async -> String?)? = nil,
+        chainServerFactory: (() -> ChainScratchServer?)? = nil
     ) {
         self.document = document
         self.treeSitterClient = treeSitterClient
@@ -97,6 +100,12 @@ final class CompletionAggregator: CodeSuggestionDelegate {
         self.wordProvider = DocumentWordProvider()
         self.postfixProvider = PostfixCompletionProvider(treeSitterClient: treeSitterClient)
         self.aiProvider = ClaudeCompletionProvider()
+        self.chainProvider = ChainCompletionProvider(
+            makeServer: chainServerFactory ?? { [weak lspProvider, weak document] in
+                guard let lspProvider, let document else { return nil }
+                return lspProvider.makeChainScratchServer(for: document)
+            }
+        )
         let sources = Self.semanticSources(
             document: document,
             treeSitterClient: treeSitterClient,
@@ -140,7 +149,8 @@ final class CompletionAggregator: CodeSuggestionDelegate {
         guard let resolved = textView.resolveCursorPosition(cursorPosition) else { return nil }
         let location = resolved.range.location
         let string = textView.textView.textStorage.string as NSString
-        var context = buildContext(string: string, location: location, isExplicit: trigger == .explicit)
+        var context = buildContext(string: string, location: location, isExplicit: trigger != .typing)
+        context.isChain = trigger == .chain
         // Typing in a comment, a string, a number, or a new declaration's name: stay out of the way
         // without asking any provider.
         guard context.isExplicit || CompletionIntentPolicy.allowsAutomaticCompletion(for: context.intent) else {
@@ -155,33 +165,19 @@ final class CompletionAggregator: CodeSuggestionDelegate {
         candidateOwners = [:]
         requestGeneration += 1
 
-        // Tokenizing runs alongside the providers; its result only feeds the ranker's proximity signal.
-        let documentText = context.documentText
-        let words = Task { await wordProvider.words(in: documentText) }
         let requestStart = ContinuousClock.now
-        let snapshot = context
-        let expectedTypeTask = Task { @MainActor in await expectedTypeSource(snapshot, textView) }
-        let receiverTypeTask = Task { @MainActor in await receiverTypeSource(snapshot, textView) }
+        let semantics = startSemanticTasks(context: context, textView: textView)
         let gathered = await gatherCandidates(context: context, textView: textView, generation: requestGeneration)
         guard !Task.isCancelled else {
-            words.cancel()
-            expectedTypeTask.cancel()
-            receiverTypeTask.cancel()
+            semantics.cancel()
             return nil
         }
-        context.documentIdentifiers = await identifiers(from: words)
-        context.expectedType = await expectedType(from: expectedTypeTask, since: requestStart)
-        context.receiverType = await receiverType(from: receiverTypeTask, since: requestStart)
-        statistics = frequencyStore.statistics(
-            languageId: context.languageId,
-            intent: context.intent,
-            receiverType: context.receiverType
-        )
+        let pool = await finishSemantics(semantics, context: &context, gathered: gathered, since: requestStart)
         requestContext = context
 
-        rawCandidates = gathered
+        rawCandidates = pool
         wordCandidatesGathered = context.isExplicit || context.prefix.count >= DocumentWordProvider.minimumPrefixLength
-        let ranked = rank(gathered, prefix: context.prefix, context: context)
+        let ranked = rank(pool, prefix: context.prefix, context: context)
         let entries = CompletionPresenter.present(ranked.items)
         guard !entries.isEmpty else { return nil }
         metrics.recordPopup()

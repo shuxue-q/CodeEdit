@@ -4,6 +4,9 @@
     },
     {
         "id": "paste", "name": "paste", "description": "Copy command", "context": "Global", "modifier": "command", "keybinding": "c"
+    },
+    {
+        "id": "complete_chain", "name": "complete_chain", "description": "Complete Chain", "context": "Editor", "modifier": "control,shift", "keybinding": " "
     }
 
 ]

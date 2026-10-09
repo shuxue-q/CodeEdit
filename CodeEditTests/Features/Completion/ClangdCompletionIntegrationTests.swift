@@ -161,4 +161,44 @@ final class ClangdCompletionIntegrationTests: XCTestCase {
 
         XCTAssertTrue(fixture.editor.text.contains("reset_all()"), "Got:\n\(fixture.editor.text)")
     }
+
+    /// Chain completion on a real clangd: `car.label` is offered where a `std::string` is expected.
+    ///
+    /// The first request opens the scratch document, which costs a preamble build and can miss the 800 ms
+    /// budget; later requests reuse it. The test repeats the request, like a user pressing the key again,
+    /// and records how long the first and the following ones took.
+    func testChainCompletionOffersAMemberOfTheExpectedTypeFromARealServer() async throws {
+        let source = "#include <string>\nstruct Car { std::string label; int doors; };\n"
+            + "int main() {\n    Car car;\n    std::string s = \n}\n"
+        let fixture = try await makeFixture(source: source)
+        let offset = (fixture.editor.text as NSString).range(of: "std::string s = ").max
+        fixture.editor.textView.selectionManager.setSelectedRange(NSRange(location: offset, length: 0))
+
+        var durations: [Duration] = []
+        var labels: [String] = []
+        var items: [CodeSuggestionEntry] = []
+        for _ in 0..<20 where !labels.contains("car.label") {
+            let start = ContinuousClock.now
+            let result = await fixture.aggregator.completionSuggestionsResult(
+                textView: fixture.editor,
+                cursorPosition: CursorPosition(range: NSRange(location: offset, length: 0)),
+                trigger: .chain
+            )
+            durations.append(ContinuousClock.now - start)
+            items = result?.items ?? []
+            labels = items.map(\.label)
+            if !labels.contains("car.label") { try await Task.sleep(for: .milliseconds(300)) }
+        }
+        print("CHAIN-LATENCY attempts=\(durations.count) durations=\(durations)")
+        XCTAssertTrue(labels.contains("car.label"), "No `car.label` among \(labels.prefix(10))")
+        XCTAssertFalse(labels.contains("car.doors"), "An int is not a std::string: \(labels.prefix(10))")
+        XCTAssertFalse(labels.contains("car"), "The chain list replaces the regular list: \(labels.prefix(10))")
+        XCTAssertTrue(durations.allSatisfy { $0 < .seconds(1) }, "A chain request took too long: \(durations)")
+
+        accept(try XCTUnwrap(items.first { $0.label == "car.label" }), at: offset, in: fixture)
+        XCTAssertTrue(
+            fixture.editor.text.contains("std::string s = car.label"),
+            "Got:\n\(fixture.editor.text)"
+        )
+    }
 }

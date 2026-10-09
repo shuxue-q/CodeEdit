@@ -209,6 +209,12 @@ final class LSPCompletionProvider: CompletionProvider {
 
     // MARK: - Helpers
 
+    /// A scratch document on this provider's language server for chain completion, if one is running.
+    func makeChainScratchServer(for document: CodeFileDocument) -> ChainScratchServer? {
+        guard let client = languageClient(), let uri = document.languageServerURI else { return nil }
+        return LSPChainScratchServer(client: client, documentURI: uri, languageId: document.getLanguage().id.rawValue)
+    }
+
     /// The language client managing this provider's document, if one is running.
     func languageClient() -> LSPService.LanguageServerType? {
         guard let fileURL = document?.fileURL else { return nil }

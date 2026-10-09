@@ -150,4 +150,74 @@ extension CompletionAggregator {
     static func wait(for task: Task<Void, Never>, upTo duration: Duration) async {
         _ = await awaitValue(of: task, upTo: duration)
     }
+
+    // MARK: - Semantic signals
+
+    /// The work that runs alongside the providers and only feeds the ranker.
+    struct SemanticTasks {
+        /// The document's identifiers, for the proximity signal.
+        let words: Task<[String: Int], Never>
+        /// The type the slot at the cursor expects.
+        let expectedType: Task<TypeText?, Never>
+        /// The type of the object whose members are being completed.
+        let receiverType: Task<String?, Never>
+
+        /// Stops all of it.
+        func cancel() {
+            words.cancel()
+            expectedType.cancel()
+            receiverType.cancel()
+        }
+    }
+
+    /// Starts tokenizing the document and resolving the expected and receiver types.
+    func startSemanticTasks(context: CompletionContext, textView: TextViewController) -> SemanticTasks {
+        let documentText = context.documentText
+        let wordProvider = self.wordProvider
+        return SemanticTasks(
+            words: Task { await wordProvider.words(in: documentText) },
+            expectedType: Task { @MainActor in await expectedTypeSource(context, textView) },
+            receiverType: Task { @MainActor in await receiverTypeSource(context, textView) }
+        )
+    }
+
+    /// Collects the semantic signals into `context` within their budget, fetches the statistics that
+    /// depend on them, and returns the pool to rank: for a chain request the chains if any were found,
+    /// otherwise `gathered`.
+    func finishSemantics(
+        _ tasks: SemanticTasks,
+        context: inout CompletionContext,
+        gathered: [CompletionCandidate],
+        since start: ContinuousClock.Instant
+    ) async -> [CompletionCandidate] {
+        context.documentIdentifiers = await identifiers(from: tasks.words)
+        context.expectedType = await expectedType(from: tasks.expectedType, since: start)
+        context.receiverType = await receiverType(from: tasks.receiverType, since: start)
+        statistics = frequencyStore.statistics(
+            languageId: context.languageId,
+            intent: context.intent,
+            receiverType: context.receiverType
+        )
+        guard context.isChain else { return gathered }
+        let chains = await chainCandidates(from: gathered, context: context, since: start)
+        return chains.isEmpty ? gathered : chains
+    }
+
+    // MARK: - Chains
+
+    /// The chain candidates for a chain request: members of the best symbols that fit the expected type.
+    /// Empty when no chain was found in time, in which case the regular list is shown.
+    func chainCandidates(
+        from gathered: [CompletionCandidate],
+        context: CompletionContext,
+        since start: ContinuousClock.Instant
+    ) async -> [CompletionCandidate] {
+        let remaining = ChainCompletionProvider.budget - (ContinuousClock.now - start)
+        guard remaining > .zero else { return [] }
+        // The symbols to chain through are the best of the regular list, whatever has been typed.
+        let symbols = rank(gathered, prefix: "", context: context).items
+        let chains = await chainProvider.chainCandidates(from: symbols, context: context, budget: remaining)
+        for chain in chains { candidateOwners[chain.id] = chainProvider }
+        return chains
+    }
 }

@@ -11,4 +11,7 @@ public enum CodeSuggestionTrigger: Sendable, Equatable {
     case typing
     /// The user asked for completions, for example with the show-completions key binding.
     case explicit
+    /// The user asked for chain completion (Control-Shift-Space): members reachable through a symbol
+    /// that fit where a value is expected. Delegates that know no chains treat it like `.explicit`.
+    case chain
 }

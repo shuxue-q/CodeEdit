@@ -285,6 +285,8 @@ extension TextViewController {
             return handleEscape(event: event)
         case (controlKey, " "):
             return handleShowCompletions(event)
+        case ([controlKey, .shift], " "):
+            return handleShowCompletions(event, trigger: .chain)
         case ([NSEvent.ModifierFlags.command, NSEvent.ModifierFlags.control], "j"):
             return handleJumpCommand(event: event)
         case (_, _):
@@ -338,20 +340,29 @@ extension TextViewController {
         return nil
     }
 
-    private func handleShowCompletions(_ event: NSEvent) -> NSEvent? {
-        if let completionDelegate = self.completionDelegate,
-           let cursorPosition = cursorPositions.first {
-            if SuggestionController.shared.isVisible {
-                SuggestionController.shared.close()
-                return event
-            }
-            SuggestionController.shared.showCompletions(
-                textView: self,
-                delegate: completionDelegate,
-                cursorPosition: cursorPosition
-            )
-            return nil
+    private func handleShowCompletions(_ event: NSEvent, trigger: CodeSuggestionTrigger = .explicit) -> NSEvent? {
+        // The explicit key toggles the window; the chain key always asks again.
+        if trigger == .explicit, SuggestionController.shared.isVisible,
+           completionDelegate != nil, !cursorPositions.isEmpty {
+            SuggestionController.shared.close()
+            return event
         }
-        return event
+        return showCodeCompletions(trigger: trigger) ? nil : event
+    }
+
+    /// Asks the completion delegate for completions at the cursor and shows the suggestion window.
+    ///
+    /// The same as pressing the show-completions key binding; `trigger` says which kind of request it is.
+    /// - Returns: `false` when there is no completion delegate or no cursor.
+    @discardableResult
+    public func showCodeCompletions(trigger: CodeSuggestionTrigger = .explicit) -> Bool {
+        guard let completionDelegate, let cursorPosition = cursorPositions.first else { return false }
+        SuggestionController.shared.showCompletions(
+            textView: self,
+            delegate: completionDelegate,
+            cursorPosition: cursorPosition,
+            trigger: trigger
+        )
+        return true
     }
 }
