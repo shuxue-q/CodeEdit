@@ -56,6 +56,7 @@ extension LSPCompletionProvider {
             ? additionalEdits(for: item, textView: textView)
             : []
         let plan = CompletionEditPlanner.plan(primary: primary.range, additional: additional)
+        let call = functionCall(for: item, primary: primary, textView: textView)
 
         let undoManager = textView.textView.undoManager
         undoManager?.beginUndoGrouping()
@@ -65,9 +66,41 @@ extension LSPCompletionProvider {
         }
         if primary.isSnippet {
             textView.insertSnippet(primary.newText, replacing: plan.primaryRange)
+        } else if let call {
+            textView.textView.replaceCharacters(in: plan.primaryRange, with: primary.newText + call.text)
+            let name = (primary.newText as NSString).length
+            textView.textView.selectionManager.setSelectedRange(
+                NSRange(location: plan.primaryRange.location + name + call.caretOffset, length: 0)
+            )
+            if call.caretOffset == 1 {
+                NotificationCenter.default.post(name: Self.signatureHelpRequestNotification, object: textView)
+            }
         } else {
             textView.textView.replaceCharacters(in: plan.primaryRange, with: primary.newText)
         }
+    }
+
+    /// Posted with the text view controller as `object` when a function was completed with its caret
+    /// between the new parentheses. ``LSPSignatureHelpCoordinator`` answers by showing parameter hints.
+    static let signatureHelpRequestNotification = Notification.Name("LSPCompletionProvider.signatureHelpRequest")
+
+    /// The parentheses to append when `item` is a plain-text function call that is not yet written.
+    private func functionCall(
+        for item: CompletionItem,
+        primary: PrimaryEdit,
+        textView: TextViewController
+    ) -> FunctionCallInsertion.Insertion? {
+        guard Settings[\.textEditing].completion.insertParenthesesForFunctions,
+              !primary.isSnippet,
+              LSPCompletionEntry.category(for: item) == .function,
+              !primary.newText.contains("(") else {
+            return nil
+        }
+        let string = textView.textView.textStorage.string as NSString
+        let next: Character? = primary.range.max < string.length
+            ? string.substring(with: NSRange(location: primary.range.max, length: 1)).first
+            : nil
+        return FunctionCallInsertion.insertion(label: item.label, detail: item.detail, nextCharacter: next)
     }
 
     /// The edit that completes the symbol under the cursor.

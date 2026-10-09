@@ -125,4 +125,116 @@ final class LSPCompletionApplyTests: XCTestCase {
         )
         XCTAssertTrue(decoded.applyAdditionalEdits)
     }
+
+    // MARK: - Function calls
+
+    @MainActor
+    private func functionCandidate(
+        label: String,
+        newText: String,
+        format: InsertTextFormat? = nil
+    ) -> CompletionCandidate {
+        let item = CompletionItem(
+            label: label,
+            kind: .function,
+            insertText: newText,
+            insertTextFormat: format
+        )
+        return CompletionCandidate(
+            id: "lsp.fn",
+            label: label,
+            filterText: newText,
+            kind: .function,
+            source: .lsp,
+            payload: .lsp(item)
+        )
+    }
+
+    @MainActor
+    private func accept(
+        _ candidate: CompletionCandidate,
+        source: String,
+        cursorAfter marker: String
+    ) -> TextViewController {
+        let editor = makeEditor(source: source)
+        let cursor = (source as NSString).range(of: marker).max
+        editor.textView.selectionManager.setSelectedRange(NSRange(location: cursor, length: 0))
+        LSPCompletionProvider(document: CodeFileDocument()).apply(
+            candidate,
+            textView: editor,
+            cursorPosition: CursorPosition(range: NSRange(location: cursor, length: 0))
+        )
+        return editor
+    }
+
+    @MainActor
+    func testFunctionWithParametersGetsParenthesesAndTheCaretInside() {
+        let editor = accept(
+            functionCandidate(label: "print(int value)", newText: "print"),
+            source: "void f() { pri }",
+            cursorAfter: "pri"
+        )
+        XCTAssertEqual(editor.text, "void f() { print() }")
+        let caret = editor.textView.selectionManager.textSelections.first?.range.location
+        XCTAssertEqual(caret, ("void f() { print(" as NSString).length)
+    }
+
+    @MainActor
+    func testFunctionWithoutParametersPutsTheCaretAfterTheParentheses() {
+        let editor = accept(
+            functionCandidate(label: "reset()", newText: "reset"),
+            source: "void f() { res }",
+            cursorAfter: "res"
+        )
+        XCTAssertEqual(editor.text, "void f() { reset() }")
+        let caret = editor.textView.selectionManager.textSelections.first?.range.location
+        XCTAssertEqual(caret, ("void f() { reset()" as NSString).length)
+    }
+
+    @MainActor
+    func testExistingParenthesisIsNotDuplicated() {
+        let editor = accept(
+            functionCandidate(label: "print(int value)", newText: "print"),
+            source: "void f() { pri(1); }",
+            cursorAfter: "pri"
+        )
+        XCTAssertEqual(editor.text, "void f() { print(1); }")
+    }
+
+    @MainActor
+    func testSnippetFunctionItemsAreInsertedAsTheyAre() {
+        let editor = accept(
+            functionCandidate(label: "print(int value)", newText: "print(${1:value})", format: .snippet),
+            source: "void f() { pri }",
+            cursorAfter: "pri"
+        )
+        XCTAssertEqual(editor.text, "void f() { print(value) }")
+    }
+
+    @MainActor
+    func testDisablingTheSettingInsertsOnlyTheName() {
+        let original = Settings.shared.preferences.textEditing.completion.insertParenthesesForFunctions
+        Settings.shared.preferences.textEditing.completion.insertParenthesesForFunctions = false
+        defer { Settings.shared.preferences.textEditing.completion.insertParenthesesForFunctions = original }
+        let editor = accept(
+            functionCandidate(label: "print(int value)", newText: "print"),
+            source: "void f() { pri }",
+            cursorAfter: "pri"
+        )
+        XCTAssertEqual(editor.text, "void f() { print }")
+    }
+
+    @MainActor
+    func testCaretBetweenParenthesesRequestsSignatureHelp() {
+        let requested = expectation(
+            forNotification: LSPCompletionProvider.signatureHelpRequestNotification,
+            object: nil
+        )
+        _ = accept(
+            functionCandidate(label: "print(int value)", newText: "print"),
+            source: "void f() { pri }",
+            cursorAfter: "pri"
+        )
+        wait(for: [requested], timeout: 1)
+    }
 }

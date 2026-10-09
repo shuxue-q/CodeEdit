@@ -14,6 +14,10 @@ extension SettingsData.TextEditingSettings {
         /// clangd's automatic `#include`) are applied together with the item.
         var applyAdditionalEdits: Bool = true
 
+        /// Whether accepting a function or method inserts `()`, putting the caret between them when
+        /// the function takes parameters.
+        var insertParenthesesForFunctions: Bool = true
+
         /// Default initializer.
         init() {}
 
@@ -23,6 +27,10 @@ extension SettingsData.TextEditingSettings {
             self.applyAdditionalEdits = try container.decodeIfPresent(
                 Bool.self,
                 forKey: .applyAdditionalEdits
+            ) ?? true
+            self.insertParenthesesForFunctions = try container.decodeIfPresent(
+                Bool.self,
+                forKey: .insertParenthesesForFunctions
             ) ?? true
         }
     }

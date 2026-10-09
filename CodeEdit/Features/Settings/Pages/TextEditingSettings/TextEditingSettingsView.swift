@@ -45,7 +45,7 @@ struct TextEditingSettingsView: View {
                 enableTypeOverCompletion
                 showInlineCompletionInfo
                 visibleCompletionCount
-                applyAdditionalCompletionEdits
+                completionBehaviorSettings
             }
             Section {
                 bracketPairHighlight
@@ -120,13 +120,6 @@ private extension TextEditingSettingsView {
             format: .number
         )
         .help("How many completions are shown before the list scrolls. Type a number or use the stepper.")
-    }
-
-    @ViewBuilder private var applyAdditionalCompletionEdits: some View {
-        Toggle(isOn: $textEditing.completion.applyAdditionalEdits) {
-            Text("Apply Additional Completion Edits")
-            Text("Lets the language server add related edits, such as an automatic #include, when you accept an item.")
-        }
     }
 
     @ViewBuilder private var wrapLinesToEditorWidth: some View {

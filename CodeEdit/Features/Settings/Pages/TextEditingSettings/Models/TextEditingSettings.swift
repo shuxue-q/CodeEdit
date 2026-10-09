@@ -29,6 +29,7 @@ extension SettingsData {
                 "Show Completion Info Beside the Name",
                 "Visible Completions",
                 "Apply Additional Completion Edits",
+                "Insert Parentheses for Functions",
                 "Bracket Pair Emphasis",
                 "Bracket Pair Highlight",
                 "Show Gutter",
