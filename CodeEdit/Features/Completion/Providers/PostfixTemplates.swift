@@ -67,12 +67,9 @@ enum PostfixTemplates {
         }
     }
 
-    /// Languages that are C rather than C++.
-    private static let cLanguages: Set<String> = ["c", "objective-c"]
-
     /// Whether `languageId` is C++ (as opposed to C) among the C-family languages.
     static func isCpp(_ languageId: String) -> Bool {
-        CFamilyKeywords.languageIds.contains(languageId) && !cLanguages.contains(languageId)
+        CFamilyKeywords.languageIds.contains(languageId) && !CFamilyKeywords.cLanguageIds.contains(languageId)
     }
 
     /// The templates that apply to `expression` in `languageId`, in table order.

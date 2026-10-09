@@ -34,6 +34,14 @@ final class CommitCharactersTests: XCTestCase {
         XCTAssertTrue(characters.isSuperset(of: ["(", ".", ";", ",", ")", "[", ">"]))
     }
 
+    func testObjectiveCDocumentsGetTheCFamilyDefaults() {
+        let item = candidate("foo")
+        for languageId in ["objc", "objective-c", "objective-cpp"] {
+            let characters = CommitCharacters.characters(for: item, languageId: languageId, prefix: "fo", pool: [item])
+            XCTAssertEqual(characters, CommitCharacters.cFamily, languageId)
+        }
+    }
+
     func testOtherLanguagesCommitNothingByDefault() {
         let item = candidate("foo")
         XCTAssertTrue(CommitCharacters.characters(for: item, languageId: "swift", prefix: "fo", pool: [item]).isEmpty)
