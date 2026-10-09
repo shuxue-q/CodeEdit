@@ -111,6 +111,24 @@ a slow server costs the type bonus, never the popup.
 
 The three settings are on the **Text Editing** page of the settings window and are on by default.
 
+## CMake files
+
+`CMakeLists.txt` and `*.cmake` files get their own intent rules and tables (the language server is
+`neocmakelsp`). CodeEdit recognizes three places in a CMake file:
+
+- **A command name**, the first word of a line (`add_|`). The popup lists commands first, then
+  snippets such as `add_executable`, `if`, `foreach`, `function`, `option`, `find_package`,
+  `install(TARGETS …)` and `add_custom_command`, which insert placeholders you tab through.
+- **An argument**, after the `(` or a space (`target_link_libraries(app PU|`). An `ALL_CAPS` prefix
+  looks for a keyword argument, so `PU` offers `PUBLIC` first. Targets, variables, modules and
+  paths from the server follow.
+- **A variable name** inside `${…}`, `$ENV{…}` or `$CACHE{…}`, also inside quoted text. Only
+  variables are offered there.
+
+Typing does not open the popup inside `#` comments (or `#[[ … ]]`) and inside quoted or bracket
+arguments, except after a `${`, since CMake expands variables inside quotes. Paths and versions
+(`src/main.cpp`, `3.20`) are plain arguments, so the popup stays available.
+
 ## Document words
 
 When there is no better source (the language server is not installed, still starting, or slow), the

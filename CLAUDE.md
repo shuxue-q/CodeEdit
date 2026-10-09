@@ -214,9 +214,13 @@ running, git integration, extensions, and more.
   using their parent directory as the root. Keep CMake completion independent of
   CMake workspace discovery. App-side completion is `Features/Completion/`
   (`CompletionAggregator`, providers, ranking; `Intent/` recognizes what the user is typing
-  and gates/weights candidates by it; `Semantics/` infers the expected and receiver types the
-  ranker rewards; `AI/` holds the cloud backends, prompt and shared back-off; `Providers/` also
-  has the postfix, chain and document-word providers), with LSP item mapping under
+  and gates/weights candidates by it: C-family token rules, plus CMake rules of their own in
+  `CMakeTokenRules`, `CMakeLineScanner` and `CMakeKeywords` (command position, arguments,
+  `${…}` references, `#` comments; the `argument` and `variableReference` intents);
+  `Semantics/` infers the expected and receiver types the ranker rewards; `AI/` holds the
+  cloud backends, prompt and shared back-off; `Providers/` also has the postfix, chain and
+  document-word providers, and the CMake keyword and snippet tables in
+  `CMakeCompletionTables.swift`), with LSP item mapping under
   `LSP/Features/Completion/`; popup state and triggers (including the typing/explicit/chain
   `CodeSuggestionTrigger`) live in the local `CodeEditSourceEditor` package's
   `CodeSuggestion/Model/` and `Filters/` directories. Hover is under `LSP/Features/Hover/`.
