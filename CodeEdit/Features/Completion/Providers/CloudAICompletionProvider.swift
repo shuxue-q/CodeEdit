@@ -23,6 +23,9 @@ final class CloudAICompletionProvider: AICompletionProvider {
     nonisolated static let minimumAutomaticPrefixLength = 2
     /// The minimum time between logged network/HTTP failures.
     static let errorLogInterval: TimeInterval = 60
+    /// How long a request waits for the semantic facts (expected type, function header) before it is sent
+    /// without them. They are usually ready already: they are resolved alongside the other providers.
+    static let semanticsBudget: Duration = .milliseconds(200)
 
     let source: CompletionSource = .ai
     let deadline: Duration = .milliseconds(2_500)
@@ -101,7 +104,9 @@ final class CloudAICompletionProvider: AICompletionProvider {
     ) async -> [CompletionCandidate] {
         guard !Task.isCancelled else { return [] }
         do {
-            let request = AICompletionPrompt.request(for: context)
+            let semantics = await context.awaitSemantics?(Self.semanticsBudget) ?? .none
+            guard !Task.isCancelled else { return [] }
+            let request = AICompletionPrompt.request(for: context, semantics: semantics)
             let urlRequest: URLRequest
             do {
                 urlRequest = try backend.makeRequest(request, configuration: configuration)

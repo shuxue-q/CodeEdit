@@ -16,6 +16,22 @@ final class CloudAICompletionProviderTests: XCTestCase {
 
     private typealias StubURLProtocol = AIStubURLProtocol
 
+    /// The request body as text. `URLSession` hands a protocol the body as a stream.
+    private static func bodyText(of request: URLRequest) -> String? {
+        if let data = request.httpBody { return String(data: data, encoding: .utf8) }
+        guard let stream = request.httpBodyStream else { return nil }
+        stream.open()
+        defer { stream.close() }
+        var data = Data()
+        var buffer = [UInt8](repeating: 0, count: 4_096)
+        while stream.hasBytesAvailable {
+            let bytesRead = stream.read(&buffer, maxLength: buffer.count)
+            guard bytesRead > 0 else { break }
+            data.append(buffer, count: bytesRead)
+        }
+        return String(data: data, encoding: .utf8)
+    }
+
     private func makeSession() -> URLSession {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [StubURLProtocol.self]
@@ -186,6 +202,34 @@ final class CloudAICompletionProviderTests: XCTestCase {
         )
         let result = await provider.candidates(for: context(), textView: makeEditor())
         XCTAssertTrue(result.isEmpty)
+    }
+
+    @MainActor
+    func testThePromptCarriesTheResolvedSemanticFacts() async throws {
+        var settings = AISettings()
+        settings.enabled = true
+        let keychain = CodeEditKeychain(keyPrefix: "test.\(UUID().uuidString).")
+        keychain.set("test-key", forKey: AISettings.keychainKey(for: .anthropic))
+        var body: String?
+        StubURLProtocol.handler = { [weak self] request in
+            body = Self.bodyText(of: request)
+            return self!.successResponse(json: ["stop_reason": "end_turn", "content": []])
+        }
+        defer { StubURLProtocol.handler = nil }
+        var enriched = context()
+        enriched.awaitSemantics = { _ in
+            ResolvedSemantics(
+                expectedType: TypeText.parse("std::string"), receiverType: nil, functionSignature: "int main()"
+            )
+        }
+        let provider = CloudAICompletionProvider(
+            session: makeSession(), keychain: keychain, settingsProvider: { settings }
+        )
+        _ = await provider.candidates(for: enriched, textView: makeEditor())
+        let sent = try XCTUnwrap(body)
+        XCTAssertTrue(sent.contains("should produce a `std::string`"), sent)
+        XCTAssertTrue(sent.contains("inside this function: `int main()`"), sent)
+        XCTAssertFalse(sent.contains("object before the cursor"), sent)
     }
 
     func testHTTPErrorYieldsNoCandidates() {

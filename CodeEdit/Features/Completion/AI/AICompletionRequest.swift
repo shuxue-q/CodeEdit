@@ -22,6 +22,10 @@ struct AICompletionRequest: Sendable, Equatable {
     let intentDescription: String
     /// The type the slot at the cursor expects, when it is known.
     let expectedType: String?
+    /// The normalized type of the object whose members are being completed, when it is known.
+    let receiverType: String?
+    /// The header of the function around the cursor, when there is one.
+    let functionSignature: String?
     /// The most suggestions the model is asked for.
     let maxSuggestions: Int
 
@@ -33,6 +37,8 @@ struct AICompletionRequest: Sendable, Equatable {
         languageId: String,
         intentDescription: String,
         expectedType: String? = nil,
+        receiverType: String? = nil,
+        functionSignature: String? = nil,
         maxSuggestions: Int = AICompletionPrompt.maxSuggestions
     ) {
         self.before = before
@@ -41,6 +47,8 @@ struct AICompletionRequest: Sendable, Equatable {
         self.languageId = languageId
         self.intentDescription = intentDescription
         self.expectedType = expectedType
+        self.receiverType = receiverType
+        self.functionSignature = functionSignature
         self.maxSuggestions = maxSuggestions
     }
 }
