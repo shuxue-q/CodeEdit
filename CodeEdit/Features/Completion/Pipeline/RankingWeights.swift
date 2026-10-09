@@ -27,6 +27,9 @@ struct RankingWeights: Equatable {
     var expectedType: Double = 1.2
     /// Bonus for a candidate whose type converts implicitly to the type the slot expects.
     var convertibleType: Double = 0.5
+    /// Bonus for a postfix template whose label is exactly what was typed after the `.`, which lifts
+    /// it over the members that merely match.
+    var postfixExact: Double = 2.0
     /// The most AI candidates shown per completion list.
     var aiMaxItems: Int = 3
     /// How many non-AI items are shown before the AI band, so AI never buries exact matches.

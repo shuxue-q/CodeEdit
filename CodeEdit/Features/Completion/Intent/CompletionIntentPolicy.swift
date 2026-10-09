@@ -32,6 +32,9 @@ enum CompletionIntentPolicy {
     /// The weight of a document word where it is offered: low, so any real symbol outranks it.
     static let documentWordWeight = 0.25
 
+    /// The weight of a postfix template after `.`: below the members the server offers there.
+    static let postfixWeight = 0.6
+
     /// The weight of a candidate of `kind` from `source` for `intent`, or `nil` to exclude it.
     static func weight(
         kind: LSPCompletionCategory,
@@ -41,6 +44,9 @@ enum CompletionIntentPolicy {
     ) -> Double? {
         if source == .word {
             return documentWordIntents.contains(intent) ? documentWordWeight : nil
+        }
+        if source == .postfix {
+            return intent == .memberAccess ? postfixWeight : nil
         }
         switch intent {
         case .comment, .string, .numberLiteral, .declarationName:

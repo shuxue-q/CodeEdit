@@ -34,6 +34,7 @@ final class CompletionAggregator: CodeSuggestionDelegate {
     private let lspProvider: LSPCompletionProvider
     private let snippetProvider: TreeSitterSnippetProvider
     private let wordProvider: DocumentWordProvider
+    private let postfixProvider: PostfixCompletionProvider
     /// Works out the type the slot at the cursor expects. Replaceable so tests need no language server.
     private let expectedTypeSource: (CompletionContext, TextViewController) async -> TypeText?
     private var aiProvider: (any AICompletionProvider)?
@@ -42,7 +43,7 @@ final class CompletionAggregator: CodeSuggestionDelegate {
 
     /// All providers, in fan-out order.
     var providers: [any CompletionProvider] {
-        var all: [any CompletionProvider] = [lspProvider, snippetProvider, wordProvider]
+        var all: [any CompletionProvider] = [lspProvider, snippetProvider, postfixProvider, wordProvider]
         if let aiProvider { all.append(aiProvider) }
         return all + additionalProviders
     }
@@ -91,6 +92,7 @@ final class CompletionAggregator: CodeSuggestionDelegate {
         self.lspProvider = lspProvider
         self.snippetProvider = TreeSitterSnippetProvider()
         self.wordProvider = DocumentWordProvider()
+        self.postfixProvider = PostfixCompletionProvider(treeSitterClient: treeSitterClient)
         self.aiProvider = ClaudeCompletionProvider()
         if let expectedTypeSource {
             self.expectedTypeSource = expectedTypeSource

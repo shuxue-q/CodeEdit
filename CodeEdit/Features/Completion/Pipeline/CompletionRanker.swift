@@ -111,6 +111,7 @@ enum CompletionRanker {
                 + weights.recency * recencyBonus(of: key, options: options)
                 + weights.proximity * proximityBonus(of: candidate, options: options)
                 + typeBonus(of: candidate, options: options)
+                + postfixBonus(of: candidate, options: options)
 
             scored.append(ScoredCandidate(candidate: candidate, score: total, matchLength: matchText.count))
         }
@@ -132,6 +133,14 @@ enum CompletionRanker {
             return min(1, max(0, score / options.maxServerScore))
         }
         return 1.0 - Double(index) / maxIndex
+    }
+
+    /// A postfix template typed out in full (`expr.if`) beats the members that merely match `if`.
+    private static func postfixBonus(of candidate: CompletionCandidate, options: ScoringOptions) -> Double {
+        guard candidate.source == .postfix, !options.prefix.isEmpty, candidate.label == options.prefix else {
+            return 0
+        }
+        return options.weights.postfixExact
     }
 
     /// The expected-type bonus: full for a candidate of the expected type, partial for one that
