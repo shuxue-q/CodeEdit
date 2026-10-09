@@ -26,6 +26,8 @@ class SuggestionViewController: NSViewController {
 
     /// Labels currently shown. A resolve replaces one item without changing these.
     var displayedLabels: [String] = []
+    /// The model's `preselectedIndex` as of the last list update, to notice a change that keeps the labels.
+    var displayedPreselectedIndex: Int?
     var isResettingItems = false
     var resolveTask: Task<Void, Never>?
     var resolveGeneration = 0

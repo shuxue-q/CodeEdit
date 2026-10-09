@@ -136,12 +136,17 @@ extension SuggestionViewController {
         let labels = model?.items.map(\.label) ?? []
         // Resolve writes one item back. Keep the highlight instead of jumping to the first row.
         if !labels.isEmpty, labels == displayedLabels {
+            if displayedPreselectedIndex != model?.preselectedIndex {
+                displayedPreselectedIndex = model?.preselectedIndex
+                refreshRows()
+            }
             applyPreview(resolving: false)
             updateSize(using: model?.activeTextView)
             return
         }
 
         displayedLabels = labels
+        displayedPreselectedIndex = model?.preselectedIndex
         resolveTask?.cancel()
         resetScrollPosition()
         if let model {
@@ -150,8 +155,13 @@ extension SuggestionViewController {
         }
         isResettingItems = true
         tableView.reloadData()
-        if model?.items.isEmpty == false, tableView.selectedRow != 0 {
-            tableView.selectRowIndexes(IndexSet(integer: 0), byExtendingSelection: false)
+        // A strong best match is selected and bolded; otherwise the first row is highlighted.
+        let initialRow = model?.preselectedIndex.flatMap { index in
+            model?.items.indices.contains(index) == true ? index : nil
+        } ?? 0
+        if model?.items.isEmpty == false, tableView.selectedRow != initialRow {
+            tableView.selectRowIndexes(IndexSet(integer: initialRow), byExtendingSelection: false)
+            tableView.scrollRowToVisible(initialRow)
         }
         isResettingItems = false
         // Selecting row 0 before the table has rows never posts selectionDidChange, so the

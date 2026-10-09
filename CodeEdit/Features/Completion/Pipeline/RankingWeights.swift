@@ -20,6 +20,8 @@ struct RankingWeights: Equatable {
     var aiMaxItems: Int = 3
     /// How many non-AI items are shown before the AI band, so AI never buries exact matches.
     var aiInsertAfter: Int = 2
+    /// How far the top candidate's score must beat the runner-up's for it to be preselected.
+    var preselectMargin: Double = 1.5
 
     /// The default production weights.
     static let `default` = RankingWeights()

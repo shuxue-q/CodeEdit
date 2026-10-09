@@ -169,7 +169,8 @@ extension SuggestionViewController {
             secondaryLabelColor: labelColor.withAlphaComponent(0.5),
             font: font,
             showsTrailingDetail: showsInlineCompletionInfo,
-            isSelected: showsInlineCompletionInfo && tableView.selectedRow == row
+            isSelected: showsInlineCompletionInfo && tableView.selectedRow == row,
+            isPreselected: model?.preselectedIndex == row
         )
     }
 }

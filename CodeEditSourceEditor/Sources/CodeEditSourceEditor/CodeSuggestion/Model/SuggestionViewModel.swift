@@ -11,6 +11,9 @@ import AppKit
 final class SuggestionViewModel: ObservableObject {
     /// The items to be displayed in the window
     @Published var items: [CodeSuggestionEntry] = []
+    /// The row of `items` that is a strong best match: selected when the list appears and drawn in
+    /// bold. Set before `items` so observers of the list see it. `nil` highlights the first row.
+    var preselectedIndex: Int?
     var itemsRequestTask: Task<Void, Never>?
     private var requestID: UUID?
     weak var activeTextView: TextViewController?
@@ -42,7 +45,7 @@ final class SuggestionViewModel: ObservableObject {
             }
 
             do {
-                let result = await delegate.completionSuggestionsRequested(
+                let result = await delegate.completionSuggestionsResult(
                     textView: textView,
                     cursorPosition: cursorPosition,
                     trigger: trigger
@@ -58,6 +61,7 @@ final class SuggestionViewModel: ObservableObject {
                         return
                     }
 
+                    self.preselectedIndex = completionItems.preselectedIndex
                     self.items = completionItems.items
                     self.syntaxHighlightedCache = [:]
                     showWindowOnParent(targetParentWindow, cursorRect)
@@ -93,16 +97,17 @@ final class SuggestionViewModel: ObservableObject {
             return
         }
 
-        guard let newItems = delegate.completionOnCursorMove(
+        guard let update = delegate.completionSuggestionsUpdated(
             textView: textView,
             cursorPosition: position
         ),
-              !newItems.isEmpty else {
+              !update.items.isEmpty else {
             close()
             return
         }
 
-        items = newItems
+        preselectedIndex = update.preselectedIndex
+        items = update.items
     }
 
     func didSelect(item: CodeSuggestionEntry) {
@@ -170,6 +175,7 @@ final class SuggestionViewModel: ObservableObject {
         itemsRequestTask = nil
         delegate?.completionWindowDidClose()
         delegate = nil
+        preselectedIndex = nil
         items.removeAll()
         activeTextView = nil
     }

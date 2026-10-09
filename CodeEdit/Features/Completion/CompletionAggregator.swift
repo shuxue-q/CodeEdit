@@ -87,6 +87,19 @@ final class CompletionAggregator: CodeSuggestionDelegate {
         cursorPosition: CursorPosition,
         trigger: CodeSuggestionTrigger
     ) async -> (windowPosition: CursorPosition, items: [CodeSuggestionEntry])? {
+        let result = await completionSuggestionsResult(
+            textView: textView,
+            cursorPosition: cursorPosition,
+            trigger: trigger
+        )
+        return result.map { ($0.windowPosition, $0.items) }
+    }
+
+    func completionSuggestionsResult(
+        textView: TextViewController,
+        cursorPosition: CursorPosition,
+        trigger: CodeSuggestionTrigger
+    ) async -> CodeSuggestionResult? {
         guard let resolved = textView.resolveCursorPosition(cursorPosition) else { return nil }
         let location = resolved.range.location
         let string = textView.textView.textStorage.string as NSString
@@ -108,15 +121,26 @@ final class CompletionAggregator: CodeSuggestionDelegate {
 
         rawCandidates = gathered
         let ranked = rank(gathered, prefix: context.prefix, context: context)
-        let entries = CompletionPresenter.present(ranked)
+        let entries = CompletionPresenter.present(ranked.items)
         guard !entries.isEmpty else { return nil }
-        return (cursorPosition, entries)
+        return CodeSuggestionResult(
+            windowPosition: cursorPosition,
+            items: entries,
+            preselectedIndex: ranked.preselectedIndex
+        )
     }
 
     func completionOnCursorMove(
         textView: TextViewController,
         cursorPosition: CursorPosition
     ) -> [CodeSuggestionEntry]? {
+        completionSuggestionsUpdated(textView: textView, cursorPosition: cursorPosition)?.items
+    }
+
+    func completionSuggestionsUpdated(
+        textView: TextViewController,
+        cursorPosition: CursorPosition
+    ) -> CodeSuggestionUpdate? {
         guard var context = requestContext,
               let requestOffset,
               let resolved = textView.resolveCursorPosition(cursorPosition) else {
@@ -144,8 +168,8 @@ final class CompletionAggregator: CodeSuggestionDelegate {
 
         requestContext = context
         let ranked = rank(rawCandidates, prefix: context.prefix, context: context)
-        let entries = CompletionPresenter.present(ranked)
-        return entries.isEmpty ? nil : entries
+        let entries = CompletionPresenter.present(ranked.items)
+        return entries.isEmpty ? nil : CodeSuggestionUpdate(items: entries, preselectedIndex: ranked.preselectedIndex)
     }
 
     func completionWindowApplyCompletion(
@@ -263,7 +287,7 @@ final class CompletionAggregator: CodeSuggestionDelegate {
         _ candidates: [CompletionCandidate],
         prefix: String,
         context: CompletionContext
-    ) -> [CompletionCandidate] {
+    ) -> RankedCompletions {
         let deduped = CompletionDeduplicator.deduplicate(candidates)
         let frequencies = frequencyStore.frequencies(for: context.languageId)
         return CompletionRanker.rank(

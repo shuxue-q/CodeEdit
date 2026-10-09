@@ -209,7 +209,7 @@ final class LSPCompletionTests: XCTestCase {
         XCTAssertTrue(labels.contains("x") && labels.contains("y"), "Expected Point members, got \(labels)")
         editor.textView.replaceCharacters(in: NSRange(location: offset + 1, length: 0), with: "y")
         let cursor = CursorPosition(range: NSRange(location: offset + 2, length: 0))
-        let filtered = CompletionRanker.rank(result, prefix: "y", intent: .memberAccess)
+        let filtered = CompletionRanker.rank(result, prefix: "y", intent: .memberAccess).items
         XCTAssertEqual(filtered.map { $0.label.trimmingCharacters(in: .whitespaces) }, ["y"])
         provider.apply(
             try XCTUnwrap(filtered.first), textView: editor, cursorPosition: cursor
