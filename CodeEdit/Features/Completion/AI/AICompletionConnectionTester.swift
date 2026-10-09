@@ -17,12 +17,19 @@ enum AICompletionConnectionResult: Equatable, Sendable {
 
 /// Sends one minimal request through a backend, to check the provider, key, base URL and model from the
 /// settings page. It never touches an editor, and it is bounded by ``timeout``.
+///
+/// A test is the user's explicit action, so it ignores any back-off the providers are in and always sends
+/// its request. When it succeeds, it ends the back-off for the tested configuration, so completion resumes
+/// at once instead of after the pause.
 struct AICompletionConnectionTester {
     /// How long a test may take before it is reported as a failure.
     static let timeout: TimeInterval = 5
 
     /// The session the request goes through. Injectable so tests can stub the network.
     var session: URLSession = .shared
+
+    /// Where the providers' back-off is recorded. Injectable so tests need not touch the app's store.
+    var backoffStore: AICompletionBackoffStore = .shared
 
     /// Tests `backend` with `configuration`.
     func test(
@@ -43,6 +50,7 @@ struct AICompletionConnectionTester {
                 request, backend: backend, configuration: configuration, session: session, timeout: Self.timeout
             )
             _ = try exchange.backend.suggestions(from: exchange.data, response: exchange.response)
+            backoffStore.clear(kind: backend.kind, configuration: configuration)
             let milliseconds = Int(Date().timeIntervalSince(start) * 1_000)
             return .success(model: configuration.model, milliseconds: milliseconds)
         } catch let AIBackendError.invalidConfiguration(reason) {
