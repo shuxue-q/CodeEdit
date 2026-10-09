@@ -10,7 +10,7 @@ import XCTest
 
 /// Runs every ``GoldenCase`` through the intent recognizer and the ranker.
 final class GoldenRankingTests: XCTestCase {
-    private let allCases = GoldenMemberAndScopeCases.all + GoldenPositionCases.all
+    private let allCases = GoldenMemberAndScopeCases.all + GoldenPositionCases.all + GoldenSemanticCases.all
 
     func testCaseNamesAreUnique() {
         let names = allCases.map(\.name)
@@ -18,16 +18,20 @@ final class GoldenRankingTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(allCases.count, 10)
     }
 
-    func testMemberAndScopeCases() {
-        GoldenMemberAndScopeCases.all.forEach(check)
+    func testMemberAndScopeCases() async {
+        for golden in GoldenMemberAndScopeCases.all { await check(golden) }
     }
 
-    func testPositionCases() {
-        GoldenPositionCases.all.forEach(check)
+    func testPositionCases() async {
+        for golden in GoldenPositionCases.all { await check(golden) }
     }
 
-    private func check(_ golden: GoldenCase) {
-        let (intent, ranked) = golden.run()
+    func testSemanticCases() async {
+        for golden in GoldenSemanticCases.all { await check(golden) }
+    }
+
+    private func check(_ golden: GoldenCase) async {
+        let (intent, ranked) = await golden.run()
         XCTAssertEqual(intent, golden.expectedIntent, "[\(golden.name)] intent")
 
         let labels = ranked.items.map(\.label)

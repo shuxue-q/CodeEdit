@@ -25,10 +25,22 @@ struct GoldenCase {
         var preselect = false
         /// The server's sort key; items without one keep the order they are listed in.
         var sortText: String?
+        /// The server's `detail`: the type of a variable or the return type of a function.
+        var detail: String?
 
         /// A language-server item.
-        static func lsp(_ label: String, _ kind: LSPCompletionCategory, preselect: Bool = false) -> Item {
-            Item(label: label, kind: kind, preselect: preselect)
+        static func lsp(
+            _ label: String,
+            _ kind: LSPCompletionCategory,
+            detail: String? = nil,
+            preselect: Bool = false
+        ) -> Item {
+            Item(label: label, kind: kind, preselect: preselect, detail: detail)
+        }
+
+        /// A postfix template offered after a `.`.
+        static func postfix(_ label: String) -> Item {
+            Item(label: label, kind: .snippet, source: .postfix)
         }
 
         /// A tree-sitter keyword.
@@ -73,6 +85,20 @@ struct GoldenCase {
     /// Identifiers that already occur in the document.
     var documentIdentifiers: Set<String> = []
     var isExplicit = false
+    /// The lines before `line`, for working out the slot (a `switch (…) {` before a `case`).
+    var precedingText = ""
+    /// The type the slot expects, given directly (for slots that need the syntax tree).
+    var expectedType: String?
+    /// The language server's answers to hover and signature help, to work the expected type out of the text.
+    var slotTypes: SlotTypes?
+
+    /// What hover and signature help would answer in a scenario.
+    struct SlotTypes {
+        /// The type of each symbol, by name.
+        var symbols: [String: String] = [:]
+        /// The type of the parameter the cursor is at in a call.
+        var parameter: String?
+    }
 
     /// The word at the end of `line`.
     var prefix: String {
@@ -92,13 +118,42 @@ struct GoldenCase {
                 sortText: item.sortText ?? String(format: "%04d", index),
                 kind: item.kind,
                 source: item.source,
+                detail: item.detail,
                 payload: payload
             )
         }
     }
 
+    /// The type the slot expects: given directly, or resolved from the text with the doubles in `slotTypes`.
+    func resolveExpectedType(intent: CompletionIntent) async -> TypeText? {
+        if let expectedType { return TypeText.parse(expectedType) }
+        guard let slotTypes else { return nil }
+        var environment = ExpectedTypeEnvironment()
+        let text = precedingText + line
+        let string = text as NSString
+        environment.typeOfSymbol = { offset in
+            var end = offset
+            while end < string.length, let scalar = Unicode.Scalar(string.character(at: end)),
+                  CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "_")).contains(scalar) {
+                end += 1
+            }
+            let symbol = string.substring(with: NSRange(location: offset, length: end - offset))
+            return slotTypes.symbols[symbol].flatMap(TypeText.parse)
+        }
+        environment.activeParameterType = { _ in
+            slotTypes.parameter.flatMap(LSPTypeExtraction.parameterType(fromLabel:))
+        }
+        return await ExpectedTypeResolver(environment: environment).resolve(
+            text: text,
+            prefixStart: string.length - (prefix as NSString).length,
+            cursor: string.length,
+            intent: intent,
+            languageId: languageId
+        )
+    }
+
     /// Recognizes the intent, ranks the candidates, and returns both.
-    func run(now: Date = Date()) -> (intent: CompletionIntent, ranked: RankedCompletions) {
+    func run(now: Date = Date()) async -> (intent: CompletionIntent, ranked: RankedCompletions) {
         let intent = CompletionIntentRecognizer { _ in nodeTypes }
             .recognize(at: 0, prefix: prefix, lineTextBeforeCursor: line, languageId: languageId)
         let lastAccepted = acceptedSecondsAgo.mapValues { now.addingTimeInterval(-$0) }
@@ -110,6 +165,7 @@ struct GoldenCase {
             intentFrequencies: intentFrequencies,
             lastAccepted: lastAccepted,
             documentIdentifiers: documentIdentifiers,
+            expectedType: await resolveExpectedType(intent: intent),
             now: now
         )
         return (intent, ranked)
