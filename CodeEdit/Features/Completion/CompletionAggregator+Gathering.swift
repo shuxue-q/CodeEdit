@@ -103,6 +103,16 @@ extension CompletionAggregator {
         return words.map { Set($0.keys) } ?? []
     }
 
+    /// How long after the request started the expected type may still be waited for. The type is
+    /// resolved while the providers run, so this only matters when they were faster.
+    static let expectedTypeBudget: Duration = .milliseconds(200)
+
+    /// The expected type, or none if resolving it takes until `expectedTypeBudget` after `start`.
+    func expectedType(from task: Task<TypeText?, Never>, since start: ContinuousClock.Instant) async -> TypeText? {
+        let remaining = Self.expectedTypeBudget - (ContinuousClock.now - start)
+        return await awaitValue(of: task, upTo: max(.zero, remaining)) ?? nil
+    }
+
     /// Waits for `task` to finish or for `duration` to elapse, whichever comes first.
     static func wait(for task: Task<Void, Never>, upTo duration: Duration) async {
         _ = await awaitValue(of: task, upTo: duration)

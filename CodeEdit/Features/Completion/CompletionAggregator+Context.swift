@@ -55,4 +55,23 @@ extension CompletionAggregator {
         }
         return start
     }
+
+    func rank(
+        _ candidates: [CompletionCandidate],
+        prefix: String,
+        context: CompletionContext
+    ) -> RankedCompletions {
+        let deduped = CompletionDeduplicator.deduplicate(candidates)
+        return CompletionRanker.rank(
+            deduped,
+            prefix: prefix,
+            intent: context.intent,
+            isExplicit: context.isExplicit,
+            frequencies: statistics.languageFrequencies,
+            intentFrequencies: statistics.intentFrequencies,
+            lastAccepted: statistics.lastAccepted,
+            documentIdentifiers: context.documentIdentifiers,
+            expectedType: context.expectedType
+        )
+    }
 }

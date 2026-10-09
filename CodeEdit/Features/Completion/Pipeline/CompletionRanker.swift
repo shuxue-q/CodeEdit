@@ -25,6 +25,9 @@ enum CompletionRanker {
         let intentFrequencies: [String: Int]
         let lastAccepted: [String: Date]
         let documentIdentifiers: Set<String>
+        let expectedType: TypeText?
+        /// The highest server `score` among the candidates, which scales the others into `0...1`.
+        let maxServerScore: Double
         let now: Date
         let weights: RankingWeights
     }
@@ -41,6 +44,7 @@ enum CompletionRanker {
         intentFrequencies: [String: Int] = [:],
         lastAccepted: [String: Date] = [:],
         documentIdentifiers: Set<String> = [],
+        expectedType: TypeText? = nil,
         now: Date = Date(),
         weights: RankingWeights = .default
     ) -> RankedCompletions {
@@ -54,6 +58,8 @@ enum CompletionRanker {
             intentFrequencies: intentFrequencies,
             lastAccepted: lastAccepted,
             documentIdentifiers: documentIdentifiers,
+            expectedType: expectedType,
+            maxServerScore: ordered.compactMap(\.score).max() ?? 0,
             now: now,
             weights: weights
         )
@@ -95,20 +101,51 @@ enum CompletionRanker {
             guard let fuzzy = FuzzyMatcher.match(pattern: options.prefix, candidate: matchText) else {
                 continue
             }
-            let serverRank = 1.0 - Double(index) / maxIndex
-            let blendedServerRank = candidate.score.map { (serverRank + $0) / 2 } ?? serverRank
+            let serverSignal = serverSignal(of: candidate, index: index, maxIndex: maxIndex, options: options)
             let key = CompletionDeduplicator.normalizedLabel(candidate.label)
             let weights = options.weights
             let total = weights.fuzzy * fuzzy.score
-                + weights.server * blendedServerRank
+                + weights.server * serverSignal
                 + weights.context * contextWeight
                 + weights.frequency * log1p(frequency(of: key, options: options))
                 + weights.recency * recencyBonus(of: key, options: options)
                 + weights.proximity * proximityBonus(of: candidate, options: options)
+                + typeBonus(of: candidate, options: options)
 
             scored.append(ScoredCandidate(candidate: candidate, score: total, matchLength: matchText.count))
         }
         return scored
+    }
+
+    /// The server's opinion of `candidate`, in `0...1`.
+    ///
+    /// A server that sends a relevance `score` (clangd does) is trusted for it: the candidate's score
+    /// relative to the best score of the request. Without one, the position in the server's
+    /// `sortText` order stands in for it.
+    private static func serverSignal(
+        of candidate: CompletionCandidate,
+        index: Int,
+        maxIndex: Double,
+        options: ScoringOptions
+    ) -> Double {
+        if let score = candidate.score, options.maxServerScore > 0 {
+            return min(1, max(0, score / options.maxServerScore))
+        }
+        return 1.0 - Double(index) / maxIndex
+    }
+
+    /// The expected-type bonus: full for a candidate of the expected type, partial for one that
+    /// converts to it, nothing otherwise (a candidate of another type is never penalized).
+    private static func typeBonus(of candidate: CompletionCandidate, options: ScoringOptions) -> Double {
+        guard let expected = options.expectedType,
+              let type = CandidateTypeParser.resultType(of: candidate) else {
+            return 0
+        }
+        switch expected.match(type, candidateIsEnumerator: candidate.kind == .enumMember) {
+        case .exact: return options.weights.expectedType
+        case .convertible: return options.weights.convertibleType
+        case .none: return 0
+        }
     }
 
     /// Acceptances of `key` in this intent, plus those in the language's other intents at half weight.

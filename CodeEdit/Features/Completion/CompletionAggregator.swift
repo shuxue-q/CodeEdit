@@ -34,6 +34,8 @@ final class CompletionAggregator: CodeSuggestionDelegate {
     private let lspProvider: LSPCompletionProvider
     private let snippetProvider: TreeSitterSnippetProvider
     private let wordProvider: DocumentWordProvider
+    /// Works out the type the slot at the cursor expects. Replaceable so tests need no language server.
+    private let expectedTypeSource: (CompletionContext, TextViewController) async -> TypeText?
     private var aiProvider: (any AICompletionProvider)?
     /// Extra providers queried alongside the built-in ones. Empty in the app; tests inject fakes here.
     private let additionalProviders: [any CompletionProvider]
@@ -68,7 +70,7 @@ final class CompletionAggregator: CodeSuggestionDelegate {
     /// How many times the list was refreshed since the window opened.
     private var refreshesSincePopup = 0
     /// What the frequency store knows for the current request's language and intent.
-    private var statistics = CompletionStatistics()
+    var statistics = CompletionStatistics()
     /// Incremented on every request and on close so results from a superseded request are dropped.
     var requestGeneration = 0
 
@@ -77,17 +79,31 @@ final class CompletionAggregator: CodeSuggestionDelegate {
         treeSitterClient: TreeSitterClient,
         frequencyStore: CompletionFrequencyStoring = CompletionFrequencyStore.shared,
         metrics: any CompletionMetricsRecording = CompletionMetricsStore.shared,
-        additionalProviders: [any CompletionProvider] = []
+        additionalProviders: [any CompletionProvider] = [],
+        expectedTypeSource: ((CompletionContext, TextViewController) async -> TypeText?)? = nil
     ) {
         self.document = document
         self.treeSitterClient = treeSitterClient
         self.frequencyStore = frequencyStore
         self.metrics = metrics
         self.additionalProviders = additionalProviders
-        self.lspProvider = LSPCompletionProvider(document: document)
+        let lspProvider = LSPCompletionProvider(document: document)
+        self.lspProvider = lspProvider
         self.snippetProvider = TreeSitterSnippetProvider()
         self.wordProvider = DocumentWordProvider()
         self.aiProvider = ClaudeCompletionProvider()
+        if let expectedTypeSource {
+            self.expectedTypeSource = expectedTypeSource
+        } else {
+            let service = ExpectedTypeService(
+                document: document,
+                treeSitterClient: treeSitterClient,
+                clientProvider: { [weak lspProvider] in lspProvider?.languageClient() }
+            )
+            self.expectedTypeSource = { context, textView in
+                await service.expectedType(for: context, textView: textView)
+            }
+        }
     }
 
     // MARK: - CodeSuggestionDelegate
@@ -144,12 +160,17 @@ final class CompletionAggregator: CodeSuggestionDelegate {
         // Tokenizing runs alongside the providers; its result only feeds the ranker's proximity signal.
         let documentText = context.documentText
         let words = Task { await wordProvider.words(in: documentText) }
+        let requestStart = ContinuousClock.now
+        let snapshot = context
+        let expectedTypeTask = Task { @MainActor in await expectedTypeSource(snapshot, textView) }
         let gathered = await gatherCandidates(context: context, textView: textView, generation: requestGeneration)
         guard !Task.isCancelled else {
             words.cancel()
+            expectedTypeTask.cancel()
             return nil
         }
         context.documentIdentifiers = await identifiers(from: words)
+        context.expectedType = await expectedType(from: expectedTypeTask, since: requestStart)
         requestContext = context
 
         rawCandidates = gathered
@@ -301,23 +322,5 @@ final class CompletionAggregator: CodeSuggestionDelegate {
         wordCandidatesGathered = true
         for word in words { candidateOwners[word.id] = wordProvider }
         rawCandidates.append(contentsOf: words)
-    }
-
-    private func rank(
-        _ candidates: [CompletionCandidate],
-        prefix: String,
-        context: CompletionContext
-    ) -> RankedCompletions {
-        let deduped = CompletionDeduplicator.deduplicate(candidates)
-        return CompletionRanker.rank(
-            deduped,
-            prefix: prefix,
-            intent: context.intent,
-            isExplicit: context.isExplicit,
-            frequencies: statistics.languageFrequencies,
-            intentFrequencies: statistics.intentFrequencies,
-            lastAccepted: statistics.lastAccepted,
-            documentIdentifiers: context.documentIdentifiers
-        )
     }
 }
