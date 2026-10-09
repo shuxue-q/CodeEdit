@@ -37,6 +37,19 @@ enum CompletionIntent: Equatable, Hashable, Sendable, CaseIterable {
     case string
     /// Typing a number literal.
     case numberLiteral
+    /// The name of a variable inside `${…}`, `$ENV{…}`, or `$CACHE{…}`. Produced for CMake.
+    ///
+    /// CMake is the only language with a variable-reference syntax that is also valid inside
+    /// quoted text, which no existing case could express: ``string`` suppresses the window and
+    /// ``expression`` would offer commands.
+    case variableReference
+    /// An argument of a command call, after `(` or a space: a keyword (`PUBLIC`, `REQUIRED`), a
+    /// target, a path, or a bare variable name. Produced for CMake, where every command takes
+    /// whitespace-separated arguments rather than expressions.
+    ///
+    /// CMake's command position needs no case of its own: ``statement`` (inside a function, macro,
+    /// `if`, or loop body) and ``topLevel`` (at file scope) already mean "a command name goes here".
+    case argument
     /// The intent could not be determined.
     case unknown
 
@@ -56,6 +69,8 @@ enum CompletionIntent: Equatable, Hashable, Sendable, CaseIterable {
         case .comment: return "comment text"
         case .string: return "string contents"
         case .numberLiteral: return "a number"
+        case .variableReference: return "the name of a variable inside `${…}`"
+        case .argument: return "an argument of the command call"
         case .unknown: return "code"
         }
     }

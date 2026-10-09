@@ -26,8 +26,11 @@ enum CompletionIntentPolicy {
         }
     }
 
-    /// The intents in which plain words from the document are offered.
-    static let documentWordIntents: Set<CompletionIntent> = [.expression, .statement, .unknown, .topLevel, .typeName]
+    /// The intents in which plain words from the document are offered. In CMake's arguments and
+    /// references they are the project's own targets and variables.
+    static let documentWordIntents: Set<CompletionIntent> = [
+        .expression, .statement, .unknown, .topLevel, .typeName, .argument, .variableReference
+    ]
 
     /// The weight of a document word where it is offered: low, so any real symbol outranks it.
     static let documentWordWeight = 0.25
@@ -36,11 +39,15 @@ enum CompletionIntentPolicy {
     static let postfixWeight = 0.6
 
     /// The weight of a candidate of `kind` from `source` for `intent`, or `nil` to exclude it.
+    ///
+    /// `languageId` matters for ``CompletionIntent/statement`` and ``CompletionIntent/topLevel``,
+    /// which mean "a declaration or statement" in the C family but "a command name" in CMake.
     static func weight(
         kind: LSPCompletionCategory,
         source: CompletionSource,
         intent: CompletionIntent,
-        isExplicit: Bool
+        isExplicit: Bool,
+        languageId: String = ""
     ) -> Double? {
         if source == .word {
             return documentWordIntents.contains(intent) ? documentWordWeight : nil
@@ -60,10 +67,10 @@ enum CompletionIntentPolicy {
             return typeNameWeight(kind: kind)
         case .expression:
             return kind == .snippet ? nil : expressionWeight(kind: kind)
-        case .statement:
-            return statementWeight(kind: kind)
-        case .topLevel:
-            return typeKinds.union([.snippet]).contains(kind) ? 1.0 : (kind == .keyword ? 0.9 : 0.4)
+        case .statement, .topLevel:
+            return blockWeight(kind: kind, intent: intent, languageId: languageId)
+        case .variableReference, .argument:
+            return cmakeWeight(kind: kind, intent: intent)
         case .unknown:
             return 0.5
         }
@@ -117,20 +124,92 @@ enum CompletionIntentPolicy {
         }
     }
 
+    /// Weights where a statement or declaration starts: a function body or file scope. In CMake it is
+    /// the start of a command.
+    private static func blockWeight(
+        kind: LSPCompletionCategory,
+        intent: CompletionIntent,
+        languageId: String
+    ) -> Double {
+        if CMakeKeywords.languageIds.contains(languageId) {
+            return commandNameWeight(kind: kind)
+        }
+        if intent == .statement {
+            return statementWeight(kind: kind)
+        }
+        return typeKinds.union([.snippet]).contains(kind) ? 1.0 : (kind == .keyword ? 0.9 : 0.4)
+    }
+
     private static func statementWeight(kind: LSPCompletionCategory) -> Double {
         if kind == .snippet || kind == .keyword { return 1.0 }
         if valueKinds.contains(kind) { return 0.8 }
         return typeKinds.contains(kind) || kind == .namespace ? 0.6 : 0.4
     }
 
+    // MARK: - CMake
+
+    /// Weights at the start of a CMake command. The server sends commands as functions; the local
+    /// tables send the same names (merged with the server's by the deduplicator) and snippets.
+    /// Variables, targets, and modules do not start a command.
+    private static func commandNameWeight(kind: LSPCompletionCategory) -> Double {
+        switch kind {
+        case .function: return 1.0
+        case .snippet: return 0.95
+        case .keyword: return 0.9
+        default: return 0.2
+        }
+    }
+
+    /// Weights for the two intents only CMake produces.
+    private static func cmakeWeight(kind: LSPCompletionCategory, intent: CompletionIntent) -> Double? {
+        if intent == .variableReference {
+            return variableReferenceWeight(kind: kind)
+        }
+        return kind == .snippet ? nil : argumentWeight(kind: kind)
+    }
+
+    /// Weights inside `${…}`: a variable, nothing the user would write as a command or keyword.
+    /// Constants such as `ON` and the server's built-in values (`macro`) follow variables.
+    private static func variableReferenceWeight(kind: LSPCompletionCategory) -> Double? {
+        switch kind {
+        case .snippet, .keyword: return nil
+        case .variable: return 1.0
+        case .macro, .enumMember: return 0.9
+        case .namespace, .file, .folder: return 0.3
+        default: return 0.2
+        }
+    }
+
+    /// Weights in a command's arguments, where nearly anything goes. Keyword arguments are common
+    /// but rank below a symbol the user is clearly spelling, until an `ALL_CAPS` prefix says
+    /// otherwise (see ``prefixShapeBonus(kind:prefix:intent:)``). Modules and files cover
+    /// `find_package(` and `include(`.
+    private static func argumentWeight(kind: LSPCompletionCategory) -> Double {
+        switch kind {
+        case .variable: return 0.9
+        case .namespace, .file: return 0.8
+        case .keyword, .macro, .enumMember: return 0.8
+        case .folder: return 0.7
+        case .function: return 0.5
+        default: return 0.3
+        }
+    }
+
     // MARK: - Prefix shape
 
     /// A bonus for candidates whose kind matches the shape of what the user typed: an `ALL_CAPS`
-    /// prefix is looking for a macro or constant, a `Capitalized` prefix for a type.
-    static func prefixShapeBonus(kind: LSPCompletionCategory, prefix: String) -> Double {
+    /// prefix is looking for a macro or constant, a `Capitalized` prefix for a type. In a CMake
+    /// command's arguments (`intent` is ``CompletionIntent/argument``), an `ALL_CAPS` prefix is a
+    /// keyword argument (`PUB` for `PUBLIC`), so keywords get the bonus too.
+    static func prefixShapeBonus(
+        kind: LSPCompletionCategory,
+        prefix: String,
+        intent: CompletionIntent? = nil
+    ) -> Double {
         let letters = prefix.filter(\.isLetter)
         guard letters.count >= 2, let first = letters.first else { return 0 }
         if letters.allSatisfy(\.isUppercase) {
+            if intent == .argument && kind == .keyword { return 0.3 }
             return kind == .macro || kind == .enumMember ? 0.3 : 0
         }
         if first.isUppercase {

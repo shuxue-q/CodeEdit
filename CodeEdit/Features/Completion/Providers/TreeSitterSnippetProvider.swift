@@ -13,8 +13,8 @@ import LanguageServerProtocol
 ///
 /// Each snippet and keyword lists the ``CompletionIntent``s it makes sense for: `for` and `return`
 /// at the start of a statement, `nullptr` and `sizeof` where a value is expected, `const` and `int`
-/// where a type is, nothing after `.` or `::`. The tables cover C and C++; more languages can be
-/// added the same way.
+/// where a type is, nothing after `.` or `::`. The tables cover C and C++, plus CMake
+/// (see ``CMakeCompletionTables``); more languages can be added the same way.
 final class TreeSitterSnippetProvider: CompletionProvider {
     /// One snippet table entry.
     struct Snippet {
@@ -29,6 +29,10 @@ final class TreeSitterSnippetProvider: CompletionProvider {
     struct Keyword {
         let text: String
         let intents: Set<CompletionIntent>
+        /// The kind the entry is offered as. CMake's tables list command names as `.function` and
+        /// variable names as `.variable`, so they merge with the same names from the language server
+        /// instead of showing up twice.
+        var kind: LSPCompletionCategory = .keyword
     }
 
     let source: CompletionSource = .snippet
@@ -65,7 +69,7 @@ final class TreeSitterSnippetProvider: CompletionProvider {
                     label: keyword.text,
                     filterText: keyword.text,
                     sortText: keyword.text,
-                    kind: .keyword,
+                    kind: keyword.kind,
                     source: .keyword,
                     detail: nil,
                     documentation: nil,
@@ -231,11 +235,13 @@ final class TreeSitterSnippetProvider: CompletionProvider {
 
     private static let keywords: [String: [Keyword]] = [
         "c": cKeywords,
-        "cpp": cppKeywords
+        "cpp": cppKeywords,
+        "cmake": CMakeCompletionTables.keywords
     ]
 
     private static let snippets: [String: [Snippet]] = [
         "c": cSnippets,
-        "cpp": cppSnippets
+        "cpp": cppSnippets,
+        "cmake": CMakeCompletionTables.snippets
     ]
 }

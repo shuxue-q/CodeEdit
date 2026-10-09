@@ -19,6 +19,7 @@ enum CompletionRanker {
     /// The inputs to ``score(_:options:)`` that stay constant across all candidates in a request.
     private struct ScoringOptions {
         let intent: CompletionIntent
+        let languageId: String
         let prefix: String
         let isExplicit: Bool
         let frequencies: [String: Int]
@@ -41,6 +42,7 @@ enum CompletionRanker {
         _ candidates: [CompletionCandidate],
         prefix: String,
         intent: CompletionIntent,
+        languageId: String = "",
         isExplicit: Bool = false,
         frequencies: [String: Int] = [:],
         intentFrequencies: [String: Int] = [:],
@@ -56,6 +58,7 @@ enum CompletionRanker {
         let ordered = orderedByServer(candidates)
         let options = ScoringOptions(
             intent: intent,
+            languageId: languageId,
             prefix: normalizedPrefix,
             isExplicit: isExplicit,
             frequencies: frequencies,
@@ -97,12 +100,17 @@ enum CompletionRanker {
                 kind: candidate.kind,
                 source: candidate.source,
                 intent: options.intent,
-                isExplicit: options.isExplicit
+                isExplicit: options.isExplicit,
+                languageId: options.languageId
             ) else {
                 continue
             }
             let contextWeight = intentWeight
-                + CompletionIntentPolicy.prefixShapeBonus(kind: candidate.kind, prefix: options.prefix)
+                + CompletionIntentPolicy.prefixShapeBonus(
+                    kind: candidate.kind,
+                    prefix: options.prefix,
+                    intent: options.intent
+                )
             let matchText = candidate.filterText.isEmpty ? candidate.label : candidate.filterText
             guard let fuzzy = FuzzyMatcher.match(pattern: options.prefix, candidate: matchText) else {
                 continue

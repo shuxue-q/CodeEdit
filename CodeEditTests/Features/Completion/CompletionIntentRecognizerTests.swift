@@ -108,9 +108,10 @@ final class CompletionIntentRecognizerTests: XCTestCase {
     }
 
     func testCFamilyScopesDoNotApplyToOtherGrammars() {
-        // CMake's grammar also has an `argument_list`: `set(CMAKE_` must not be treated as a C call.
+        // CMake's grammar also has an `argument_list`: `set(CMAKE_` is a CMake argument, not a C call.
         let types = ["argument_list", "normal_command", "source_file"]
-        XCTAssertEqual(intent("set(CMAKE_", nodeTypes: types, languageId: "cmake"), .unknown)
+        XCTAssertEqual(intent("set(CMAKE_", nodeTypes: types, languageId: "cmake"), .argument)
+        XCTAssertEqual(intent("set(CMAKE_", nodeTypes: types, languageId: "python"), .unknown)
     }
 
     func testAccessOperatorsApplyToOtherLanguages() {

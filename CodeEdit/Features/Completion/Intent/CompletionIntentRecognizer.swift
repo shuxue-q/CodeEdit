@@ -20,8 +20,10 @@ import SwiftTreeSitter
 /// 4. The innermost enclosing construct in the syntax tree: an argument list, a function body, or
 ///    file scope.
 ///
-/// Token rules apply to the C family. Other languages get the language-neutral rules (comments,
-/// strings, numbers, `.`, `->`, `::`) and the tree scope.
+/// Token rules apply to the C family. CMake has rules of its own (``CMakeTokenRules``): `#` comments,
+/// `${…}` references, command position, and command arguments, none of which the C scanner models.
+/// Other languages get the language-neutral rules (comments, strings, numbers, `.`, `->`, `::`) and
+/// the tree scope.
 ///
 /// `nodeTypesAt` is injected so this can be tested without a live `TreeSitterClient`: the
 /// production closure walks `TreeSitterClient.nodesAt(location:)`'s node and its ancestors,
@@ -72,6 +74,13 @@ struct CompletionIntentRecognizer {
         languageId: String
     ) -> CompletionIntent {
         let types = nodeTypesAt(location)
+        if CMakeKeywords.languageIds.contains(languageId) {
+            return CMakeTokenRules.intent(
+                types: types,
+                prefix: prefix,
+                beforePrefix: Self.text(lineTextBeforeCursor, droppingSuffix: prefix)
+            )
+        }
         let isCFamily = CFamilyKeywords.languageIds.contains(languageId)
         let beforePrefix = Self.text(lineTextBeforeCursor, droppingSuffix: prefix)
         let scan = CompletionLineScanner.scan(beforePrefix)

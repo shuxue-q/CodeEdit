@@ -66,6 +66,7 @@ extension CompletionAggregator {
             deduped,
             prefix: prefix,
             intent: context.intent,
+            languageId: context.languageId,
             isExplicit: context.isExplicit,
             frequencies: statistics.languageFrequencies,
             intentFrequencies: statistics.intentFrequencies,
