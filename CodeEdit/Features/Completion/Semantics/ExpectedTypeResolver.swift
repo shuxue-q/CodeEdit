@@ -36,6 +36,7 @@ struct ExpectedTypeEnvironment {
 /// | `case` | the type of the enclosing `switch`'s condition, from hover |
 /// | `T{`, `T(` (when no signature is known) | `T`, when tree-sitter says `T` is a type name |
 ///
+/// When the tree has no function around the cursor, `return` reads the declaration's text instead.
 /// Only the C family is resolved. Nothing here penalizes a candidate: no slot, no type.
 struct ExpectedTypeResolver {
     /// The intents in which a value of some type is being written.
@@ -105,7 +106,8 @@ struct ExpectedTypeResolver {
         }
         guard let typeRange = environment.fieldRange(location, "function_definition", "type"),
               NSMaxRange(typeRange) <= string.length else {
-            return nil
+            // While the user types, the tree often has no function around the cursor: read the text.
+            return returnTypeFromText(at: location, in: string)
         }
         var typeText = string.substring(with: typeRange)
         if let declaratorRange = environment.fieldRange(location, "function_definition", "declarator"),
@@ -117,6 +119,19 @@ struct ExpectedTypeResolver {
             return nil
         }
         return type
+    }
+
+    /// The return type of the function whose body contains `location`, read from the declaration's text.
+    ///
+    /// The return type is what stands before the function's name, without storage and function specifiers.
+    /// Lambdas, constructors, deduced (`auto`) and trailing return types give `nil`, never a wrong type.
+    private func returnTypeFromText(at location: Int, in string: NSString) -> TypeText? {
+        guard case let .function(returnText)? = FunctionSignatureText.enclosure(
+            in: string as String, before: location
+        ) else {
+            return nil
+        }
+        return FunctionReturnTypeText.parse(returnText)
     }
 
     /// `T` for `T(` or `T{` when tree-sitter says the callee names a type.

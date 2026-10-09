@@ -173,11 +173,6 @@ final class ExpectedTypeResolverTests: XCTestCase {
         XCTAssertNil(slot)
     }
 
-    func testReturnWithoutASyntaxTreeExpectsNothing() async {
-        let slot = await resolve("int f() {\n    return |\n}")
-        XCTAssertNil(slot)
-    }
-
     // MARK: - Calls
 
     func testCallArgumentUsesTheActiveParameterOfSignatureHelp() async {

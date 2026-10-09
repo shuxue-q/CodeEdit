@@ -284,6 +284,37 @@ extension ClangdCompletionIntegrationTests {
         XCTAssertLessThan(flippedCounter, flippedLabel, "The expected-type bonus must be able to reorder clangd's list")
     }
 
+    /// `return` while the syntax tree knows nothing about the document (an aggregator whose tree-sitter client
+    /// never saw the text, like a tree that is stale while the user types): the return type is read from the
+    /// text, so an `int` variable ranks above a `std::string` one in an `int` function, and the other way round
+    /// in a `std::string` function.
+    func testReturnSlotWorksWithoutAFunctionInTheSyntaxTree() async throws {
+        let source = "#include <string>\nstd::string a_label;\nint z_count;\n"
+            + "int f() {\n    return \n}\nstd::string g() {\n    return \n}\n"
+        let fixture = try await makeFixture(source: source)
+        let noTree = CompletionAggregator(
+            document: fixture.document,
+            treeSitterClient: TreeSitterClient(),
+            frequencyStore: InMemoryCompletionFrequencyStore(),
+            metrics: CompletionMetricsStore(fileURL: fixture.directory.appending(path: "notree-metrics.json"))
+        )
+        let inInt = try await completeUntilTyped(
+            fixture, after: "int f() {\n    return ", symbol: "z_count", aggregator: noTree
+        )
+        let intCount = try XCTUnwrap(rank(of: "z_count", in: inInt.items), "z_count missing from the list")
+        let intLabel = try XCTUnwrap(rank(of: "a_label", in: inInt.items), "a_label missing from the list")
+        print("RETURN-SLOT no tree, int function: z_count rank=\(intCount) a_label rank=\(intLabel)")
+        XCTAssertLessThan(intCount, intLabel, "An int must rank above a std::string in an int function")
+
+        let inString = try await completeUntilTyped(
+            fixture, after: "std::string g() {\n    return ", symbol: "a_label", aggregator: noTree
+        )
+        let stringCount = try XCTUnwrap(rank(of: "z_count", in: inString.items))
+        let stringLabel = try XCTUnwrap(rank(of: "a_label", in: inString.items))
+        print("RETURN-SLOT no tree, string function: z_count rank=\(stringCount) a_label rank=\(stringLabel)")
+        XCTAssertLessThan(stringLabel, stringCount, "A std::string must rank above an int in a std::string function")
+    }
+
     /// Hover on a real clangd gives the type of the assigned variable.
     func testAssignmentUsesTheTypeOfTheTargetFromHover() async throws {
         let source = "#include <string>\nint a_counter;\nstd::string z_label;\nstd::string target;\n"
