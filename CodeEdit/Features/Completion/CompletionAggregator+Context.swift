@@ -70,8 +70,23 @@ extension CompletionAggregator {
             frequencies: statistics.languageFrequencies,
             intentFrequencies: statistics.intentFrequencies,
             lastAccepted: statistics.lastAccepted,
+            receiverFrequencies: statistics.receiverFrequencies,
+            receiverLastAccepted: statistics.receiverLastAccepted,
             documentIdentifiers: context.documentIdentifiers,
             expectedType: context.expectedType
         )
+    }
+
+    /// Adds document words once the typed prefix is long enough, when the request was made too early
+    /// to ask for them.
+    func mergeWordCandidatesIfNeeded(context: CompletionContext) {
+        guard !wordCandidatesGathered,
+              context.prefix.count >= DocumentWordProvider.minimumPrefixLength,
+              let words = wordProvider.cachedCandidates(for: context) else {
+            return
+        }
+        wordCandidatesGathered = true
+        for word in words { candidateOwners[word.id] = wordProvider }
+        rawCandidates.append(contentsOf: words)
     }
 }

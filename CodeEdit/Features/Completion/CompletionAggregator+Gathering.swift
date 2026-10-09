@@ -103,12 +103,45 @@ extension CompletionAggregator {
         return words.map { Set($0.keys) } ?? []
     }
 
+    /// The production sources of the expected type and the receiver type, which ask the language server
+    /// through hover and signature help.
+    static func semanticSources(
+        document: CodeFileDocument,
+        treeSitterClient: TreeSitterClient,
+        lspProvider: LSPCompletionProvider
+    ) -> (
+        expectedType: (CompletionContext, TextViewController) async -> TypeText?,
+        receiverType: (CompletionContext, TextViewController) async -> String?
+    ) {
+        let service = ExpectedTypeService(
+            document: document,
+            treeSitterClient: treeSitterClient,
+            clientProvider: { [weak lspProvider] in lspProvider?.languageClient() }
+        )
+        return (
+            { context, textView in await service.expectedType(for: context, textView: textView) },
+            { context, textView in await service.receiverType(for: context, textView: textView) }
+        )
+    }
+
     /// How long after the request started the expected type may still be waited for. The type is
     /// resolved while the providers run, so this only matters when they were faster.
     static let expectedTypeBudget: Duration = .milliseconds(200)
 
     /// The expected type, or none if resolving it takes until `expectedTypeBudget` after `start`.
     func expectedType(from task: Task<TypeText?, Never>, since start: ContinuousClock.Instant) async -> TypeText? {
+        await semanticResult(of: task, since: start)
+    }
+
+    /// The receiver's type, or none if resolving it takes until `expectedTypeBudget` after `start`.
+    func receiverType(from task: Task<String?, Never>, since start: ContinuousClock.Instant) async -> String? {
+        await semanticResult(of: task, since: start)
+    }
+
+    private func semanticResult<Value: Sendable>(
+        of task: Task<Value?, Never>,
+        since start: ContinuousClock.Instant
+    ) async -> Value? {
         let remaining = Self.expectedTypeBudget - (ContinuousClock.now - start)
         return await awaitValue(of: task, upTo: max(.zero, remaining)) ?? nil
     }

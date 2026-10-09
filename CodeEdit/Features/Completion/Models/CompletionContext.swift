@@ -32,4 +32,8 @@ struct CompletionContext {
     /// after `return`, the active parameter's type in a call), when it could be worked out in time.
     /// The ranker favors candidates of this type. `nil` means unknown, never a penalty.
     var expectedType: TypeText?
+    /// The normalized type of the object whose members are being completed (`std::vector<int>` for
+    /// `v.` when `v` is such a vector), when it could be worked out in time. Member statistics are kept
+    /// per receiver type. `nil` means unknown.
+    var receiverType: String?
 }

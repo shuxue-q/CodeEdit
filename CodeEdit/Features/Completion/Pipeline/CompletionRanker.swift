@@ -24,6 +24,8 @@ enum CompletionRanker {
         let frequencies: [String: Int]
         let intentFrequencies: [String: Int]
         let lastAccepted: [String: Date]
+        let receiverFrequencies: [String: Int]
+        let receiverLastAccepted: [String: Date]
         let documentIdentifiers: Set<String>
         let expectedType: TypeText?
         /// The highest server `score` among the candidates, which scales the others into `0...1`.
@@ -43,6 +45,8 @@ enum CompletionRanker {
         frequencies: [String: Int] = [:],
         intentFrequencies: [String: Int] = [:],
         lastAccepted: [String: Date] = [:],
+        receiverFrequencies: [String: Int] = [:],
+        receiverLastAccepted: [String: Date] = [:],
         documentIdentifiers: Set<String> = [],
         expectedType: TypeText? = nil,
         now: Date = Date(),
@@ -57,6 +61,8 @@ enum CompletionRanker {
             frequencies: frequencies,
             intentFrequencies: intentFrequencies,
             lastAccepted: lastAccepted,
+            receiverFrequencies: receiverFrequencies,
+            receiverLastAccepted: receiverLastAccepted,
             documentIdentifiers: documentIdentifiers,
             expectedType: expectedType,
             maxServerScore: ordered.compactMap(\.score).max() ?? 0,
@@ -157,20 +163,23 @@ enum CompletionRanker {
         }
     }
 
-    /// Acceptances of `key` in this intent, plus those in the language's other intents at half weight.
+    /// Acceptances of `key` in this intent, plus those in the language's other intents at half weight,
+    /// plus those on a receiver of the same type (member access), which count for that type only.
     ///
     /// The per-language table counts every intent, so the part not already counted for this intent
     /// is the fallback that keeps data recorded before intents were tracked useful.
     private static func frequency(of key: String, options: ScoringOptions) -> Double {
         let inIntent = Double(options.intentFrequencies[key] ?? 0)
         let inLanguage = Double(options.frequencies[key] ?? 0)
-        return inIntent + 0.5 * max(0, inLanguage - inIntent)
+        let onReceiver = Double(options.receiverFrequencies[key] ?? 0)
+        return onReceiver + inIntent + 0.5 * max(0, inLanguage - inIntent)
     }
 
-    /// `1` right after accepting `key` in this intent, falling off exponentially with the age of that
-    /// acceptance; `0` when it was never accepted.
+    /// `1` right after accepting `key` in this intent (or on this receiver type), falling off
+    /// exponentially with the age of that acceptance; `0` when it was never accepted.
     private static func recencyBonus(of key: String, options: ScoringOptions) -> Double {
-        guard let last = options.lastAccepted[key] else { return 0 }
+        let accepted = [options.lastAccepted[key], options.receiverLastAccepted[key]].compactMap { $0 }
+        guard let last = accepted.max() else { return 0 }
         let age = max(0, options.now.timeIntervalSince(last))
         return exp(-age / options.weights.recencyTimeConstant)
     }

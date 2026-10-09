@@ -59,15 +59,7 @@ final class ExpectedTypeService {
             fieldRange: { [treeSitterClient] location, type, field in
                 Self.fieldRange(of: field, inAncestor: type, at: location, in: treeSitterClient)
             },
-            typeOfSymbol: { [weak self, weak textView] offset in
-                guard let self, let textView else { return nil }
-                return await self.cachedRequest(.hover, offset: offset, context: context) { client, uri, position in
-                    guard let hover = try await client.requestHover(for: uri, position) else { return nil }
-                    return LSPTypeExtraction.type(fromHover: LSPTypeExtraction.text(of: hover))
-                } position: {
-                    textView.textView.lspPositionFrom(offset: offset)
-                }
-            },
+            typeOfSymbol: symbolTypeLookup(context: context, textView: textView),
             activeParameterType: { [weak self, weak textView] offset in
                 guard let self, let textView else { return nil }
                 return await self.cachedRequest(.signature, offset: offset, context: context) { client, uri, position in
@@ -86,6 +78,35 @@ final class ExpectedTypeService {
             intent: context.intent,
             languageId: context.languageId
         )
+    }
+
+    /// The normalized type of the receiver of the member access at the cursor of `context` (`std::vector<int>`
+    /// for `v.`), or `nil` if there is no receiver or its type is not known in time.
+    func receiverType(for context: CompletionContext, textView: TextViewController) async -> String? {
+        guard context.intent == .memberAccess else { return nil }
+        let resolver = ReceiverTypeResolver(typeOfSymbol: symbolTypeLookup(context: context, textView: textView))
+        return await resolver.resolve(
+            text: context.documentText,
+            prefixStart: context.prefixRange.location,
+            intent: context.intent,
+            languageId: context.languageId
+        )
+    }
+
+    /// Hover-based lookup of the type of the symbol that starts at an offset.
+    private func symbolTypeLookup(
+        context: CompletionContext,
+        textView: TextViewController
+    ) -> (Int) async -> TypeText? {
+        { [weak self, weak textView] offset in
+            guard let self, let textView else { return nil }
+            return await self.cachedRequest(.hover, offset: offset, context: context) { client, uri, position in
+                guard let hover = try await client.requestHover(for: uri, position) else { return nil }
+                return LSPTypeExtraction.type(fromHover: LSPTypeExtraction.text(of: hover))
+            } position: {
+                textView.textView.lspPositionFrom(offset: offset)
+            }
+        }
     }
 
     // MARK: - Language server requests

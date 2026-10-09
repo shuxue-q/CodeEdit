@@ -33,10 +33,12 @@ final class CompletionAggregator: CodeSuggestionDelegate {
 
     private let lspProvider: LSPCompletionProvider
     private let snippetProvider: TreeSitterSnippetProvider
-    private let wordProvider: DocumentWordProvider
+    let wordProvider: DocumentWordProvider
     private let postfixProvider: PostfixCompletionProvider
     /// Works out the type the slot at the cursor expects. Replaceable so tests need no language server.
     private let expectedTypeSource: (CompletionContext, TextViewController) async -> TypeText?
+    /// Works out the type of the object whose members are being completed.
+    private let receiverTypeSource: (CompletionContext, TextViewController) async -> String?
     private var aiProvider: (any AICompletionProvider)?
     /// Extra providers queried alongside the built-in ones. Empty in the app; tests inject fakes here.
     private let additionalProviders: [any CompletionProvider]
@@ -52,7 +54,7 @@ final class CompletionAggregator: CodeSuggestionDelegate {
     var candidateOwners: [String: any CompletionProvider] = [:]
     /// The raw (pre-filter) candidate pool gathered for the current request, used to re-run the
     /// pipeline synchronously as the user keeps typing.
-    private var rawCandidates: [CompletionCandidate] = []
+    var rawCandidates: [CompletionCandidate] = []
     /// The context the last request was made with. Only `prefix`/`prefixRange` change as the user
     /// types; everything else stays pinned to the original request.
     private var requestContext: CompletionContext?
@@ -63,7 +65,7 @@ final class CompletionAggregator: CodeSuggestionDelegate {
     var lateResults: [(provider: any CompletionProvider, candidates: [CompletionCandidate])] = []
     /// Whether the current request already asked ``DocumentWordProvider`` for words. It does not for a
     /// one-character prefix; the words are then merged in once the prefix is long enough.
-    private var wordCandidatesGathered = false
+    var wordCandidatesGathered = false
     /// The provider requests of the current session, cancelled when a newer request or a close supersedes them.
     var inFlightProviderTasks: [Task<Void, Never>] = []
     /// The candidate ids in the order the window last showed them, to find an accepted item's rank.
@@ -81,7 +83,8 @@ final class CompletionAggregator: CodeSuggestionDelegate {
         frequencyStore: CompletionFrequencyStoring = CompletionFrequencyStore.shared,
         metrics: any CompletionMetricsRecording = CompletionMetricsStore.shared,
         additionalProviders: [any CompletionProvider] = [],
-        expectedTypeSource: ((CompletionContext, TextViewController) async -> TypeText?)? = nil
+        expectedTypeSource: ((CompletionContext, TextViewController) async -> TypeText?)? = nil,
+        receiverTypeSource: ((CompletionContext, TextViewController) async -> String?)? = nil
     ) {
         self.document = document
         self.treeSitterClient = treeSitterClient
@@ -94,18 +97,13 @@ final class CompletionAggregator: CodeSuggestionDelegate {
         self.wordProvider = DocumentWordProvider()
         self.postfixProvider = PostfixCompletionProvider(treeSitterClient: treeSitterClient)
         self.aiProvider = ClaudeCompletionProvider()
-        if let expectedTypeSource {
-            self.expectedTypeSource = expectedTypeSource
-        } else {
-            let service = ExpectedTypeService(
-                document: document,
-                treeSitterClient: treeSitterClient,
-                clientProvider: { [weak lspProvider] in lspProvider?.languageClient() }
-            )
-            self.expectedTypeSource = { context, textView in
-                await service.expectedType(for: context, textView: textView)
-            }
-        }
+        let sources = Self.semanticSources(
+            document: document,
+            treeSitterClient: treeSitterClient,
+            lspProvider: lspProvider
+        )
+        self.expectedTypeSource = expectedTypeSource ?? sources.expectedType
+        self.receiverTypeSource = receiverTypeSource ?? sources.receiverType
     }
 
     // MARK: - CodeSuggestionDelegate
@@ -157,22 +155,28 @@ final class CompletionAggregator: CodeSuggestionDelegate {
         candidateOwners = [:]
         requestGeneration += 1
 
-        statistics = frequencyStore.statistics(languageId: context.languageId, intent: context.intent)
-
         // Tokenizing runs alongside the providers; its result only feeds the ranker's proximity signal.
         let documentText = context.documentText
         let words = Task { await wordProvider.words(in: documentText) }
         let requestStart = ContinuousClock.now
         let snapshot = context
         let expectedTypeTask = Task { @MainActor in await expectedTypeSource(snapshot, textView) }
+        let receiverTypeTask = Task { @MainActor in await receiverTypeSource(snapshot, textView) }
         let gathered = await gatherCandidates(context: context, textView: textView, generation: requestGeneration)
         guard !Task.isCancelled else {
             words.cancel()
             expectedTypeTask.cancel()
+            receiverTypeTask.cancel()
             return nil
         }
         context.documentIdentifiers = await identifiers(from: words)
         context.expectedType = await expectedType(from: expectedTypeTask, since: requestStart)
+        context.receiverType = await receiverType(from: receiverTypeTask, since: requestStart)
+        statistics = frequencyStore.statistics(
+            languageId: context.languageId,
+            intent: context.intent,
+            receiverType: context.receiverType
+        )
         requestContext = context
 
         rawCandidates = gathered
@@ -271,6 +275,7 @@ final class CompletionAggregator: CodeSuggestionDelegate {
             label: candidate.label,
             languageId: requestContext?.languageId ?? "",
             intent: requestContext?.intent ?? .unknown,
+            receiverType: requestContext?.receiverType,
             at: Date()
         )
     }
@@ -311,18 +316,5 @@ final class CompletionAggregator: CodeSuggestionDelegate {
         requestOffset = nil
         lateResults = []
         requestGeneration += 1
-    }
-
-    /// Adds document words once the typed prefix is long enough, when the request was made too early
-    /// to ask for them.
-    private func mergeWordCandidatesIfNeeded(context: CompletionContext) {
-        guard !wordCandidatesGathered,
-              context.prefix.count >= DocumentWordProvider.minimumPrefixLength,
-              let words = wordProvider.cachedCandidates(for: context) else {
-            return
-        }
-        wordCandidatesGathered = true
-        for word in words { candidateOwners[word.id] = wordProvider }
-        rawCandidates.append(contentsOf: words)
     }
 }
