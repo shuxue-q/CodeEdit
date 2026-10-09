@@ -174,3 +174,92 @@ final class CompletionRankerTests: XCTestCase {
         XCTAssertEqual(ranked.items[2].label, "fooAI", "AI band stays after two non-AI items")
     }
 }
+
+// MARK: - History and proximity signals
+
+extension CompletionRankerTests {
+    private func plain(_ label: String) -> CompletionCandidate {
+        CompletionCandidate(
+            id: label, label: label, filterText: label, kind: .variable, source: .lsp,
+            payload: .plain(insertText: label)
+        )
+    }
+
+    /// Ranks `alpha` and `bravo` with the server's ordering switched off, so they tie on every signal
+    /// but the ones passed in and sort alphabetically.
+    private func rankPair(
+        frequencies: [String: Int] = [:],
+        intentFrequencies: [String: Int] = [:],
+        lastAccepted: [String: Date] = [:],
+        documentIdentifiers: Set<String> = [],
+        now: Date = Date()
+    ) -> [String] {
+        CompletionRanker.rank(
+            [plain("alpha"), plain("bravo")],
+            prefix: "",
+            intent: .unknown,
+            frequencies: frequencies,
+            intentFrequencies: intentFrequencies,
+            lastAccepted: lastAccepted,
+            documentIdentifiers: documentIdentifiers,
+            now: now,
+            weights: RankingWeights(server: 0)
+        ).items.map(\.label)
+    }
+
+    func testRecentAcceptanceLiftsACandidate() {
+        let now = Date()
+        XCTAssertEqual(rankPair(), ["alpha", "bravo"])
+        XCTAssertEqual(rankPair(lastAccepted: ["bravo": now.addingTimeInterval(-60)], now: now), ["bravo", "alpha"])
+    }
+
+    func testRecencyFadesWithAge() {
+        let now = Date()
+        let weights = RankingWeights()
+        let fresh = weights.recency * exp(-60 / weights.recencyTimeConstant)
+        let old = weights.recency * exp(-6 * 3_600 / weights.recencyTimeConstant)
+        XCTAssertGreaterThan(fresh, 0.3)
+        XCTAssertLessThan(old, 0.001)
+        // A minute-old acceptance beats a six-hour-old one, whichever candidate it was.
+        XCTAssertEqual(
+            rankPair(
+                lastAccepted: ["alpha": now.addingTimeInterval(-60), "bravo": now.addingTimeInterval(-6 * 3_600)],
+                now: now
+            ),
+            ["alpha", "bravo"]
+        )
+        XCTAssertEqual(
+            rankPair(
+                lastAccepted: ["alpha": now.addingTimeInterval(-6 * 3_600), "bravo": now.addingTimeInterval(-60)],
+                now: now
+            ),
+            ["bravo", "alpha"]
+        )
+    }
+
+    func testSymbolsUsedInTheDocumentAreLifted() {
+        XCTAssertEqual(rankPair(documentIdentifiers: ["bravo"]), ["bravo", "alpha"])
+        XCTAssertEqual(rankPair(documentIdentifiers: ["gamma"]), ["alpha", "bravo"])
+    }
+
+    func testIdentifierMatchIgnoresTheSignatureInTheLabel() {
+        let ranked = CompletionRanker.rank(
+            [plain("alpha(int)"), plain("bravo(int)")],
+            prefix: "",
+            intent: .unknown,
+            documentIdentifiers: ["bravo"],
+            weights: RankingWeights(server: 0)
+        ).items.map(\.label)
+        XCTAssertEqual(ranked, ["bravo(int)", "alpha(int)"])
+    }
+
+    func testIntentFrequencyCountsFullAndOtherIntentsCountHalf() {
+        // Same total in the language table; "bravo" was accepted in this intent, "alpha" elsewhere.
+        XCTAssertEqual(
+            rankPair(frequencies: ["alpha": 10, "bravo": 10], intentFrequencies: ["bravo": 10]),
+            ["bravo", "alpha"]
+        )
+        // Counts from other intents still help when nothing was recorded for this one.
+        XCTAssertEqual(rankPair(frequencies: ["bravo": 10]), ["bravo", "alpha"])
+    }
+}

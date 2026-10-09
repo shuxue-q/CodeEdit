@@ -40,6 +40,14 @@ enum CompletionDeduplicator {
         return trimmed.trimmingCharacters(in: .whitespaces)
     }
 
+    /// The bare symbol name in a row label: without padding, the include marker, a signature, or
+    /// template arguments.
+    static func symbolName(of label: String) -> String {
+        let normalized = normalizedLabel(label)
+        let end = normalized.firstIndex { $0 == "(" || $0 == "<" } ?? normalized.endIndex
+        return String(normalized[..<end])
+    }
+
     private static func resolve(group: [CompletionCandidate]) -> [CompletionCandidate] {
         var working = group
         // A document word is the weakest source: any other candidate with the same label replaces it,

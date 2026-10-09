@@ -23,10 +23,10 @@ import CodeEditTextView
 @MainActor
 final class CompletionAggregator: CodeSuggestionDelegate {
     /// Characters that are considered part of a symbol when finding the typed prefix.
-    private static let wordCharacters = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "_$#"))
+    static let wordCharacters = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "_$#"))
 
-    private weak var document: CodeFileDocument?
-    private let treeSitterClient: TreeSitterClient
+    weak var document: CodeFileDocument?
+    let treeSitterClient: TreeSitterClient
     private let frequencyStore: CompletionFrequencyStoring
 
     private let lspProvider: LSPCompletionProvider
@@ -57,6 +57,8 @@ final class CompletionAggregator: CodeSuggestionDelegate {
     /// Whether the current request already asked ``DocumentWordProvider`` for words. It does not for a
     /// one-character prefix; the words are then merged in once the prefix is long enough.
     private var wordCandidatesGathered = false
+    /// What the frequency store knows for the current request's language and intent.
+    private var statistics = CompletionStatistics()
     /// Incremented on every request and on close so results from a superseded request are dropped.
     var requestGeneration = 0
 
@@ -108,7 +110,7 @@ final class CompletionAggregator: CodeSuggestionDelegate {
         guard let resolved = textView.resolveCursorPosition(cursorPosition) else { return nil }
         let location = resolved.range.location
         let string = textView.textView.textStorage.string as NSString
-        let context = buildContext(string: string, location: location, isExplicit: trigger == .explicit)
+        var context = buildContext(string: string, location: location, isExplicit: trigger == .explicit)
         // Typing in a comment, a string, a number, or a new declaration's name: stay out of the way
         // without asking any provider.
         guard context.isExplicit || CompletionIntentPolicy.allowsAutomaticCompletion(for: context.intent) else {
@@ -121,8 +123,18 @@ final class CompletionAggregator: CodeSuggestionDelegate {
         candidateOwners = [:]
         requestGeneration += 1
 
+        statistics = frequencyStore.statistics(languageId: context.languageId, intent: context.intent)
+
+        // Tokenizing runs alongside the providers; its result only feeds the ranker's proximity signal.
+        let documentText = context.documentText
+        let words = Task { await wordProvider.words(in: documentText) }
         let gathered = await gatherCandidates(context: context, textView: textView, generation: requestGeneration)
-        guard !Task.isCancelled else { return nil }
+        guard !Task.isCancelled else {
+            words.cancel()
+            return nil
+        }
+        context.documentIdentifiers = await identifiers(from: words)
+        requestContext = context
 
         rawCandidates = gathered
         wordCandidatesGathered = context.isExplicit || context.prefix.count >= DocumentWordProvider.minimumPrefixLength
@@ -206,7 +218,12 @@ final class CompletionAggregator: CodeSuggestionDelegate {
             cursorPosition: cursorPosition,
             commitCharacter: commitCharacter
         )
-        frequencyStore.recordAcceptance(label: candidate.label, languageId: requestContext?.languageId ?? "")
+        frequencyStore.recordAcceptance(
+            label: candidate.label,
+            languageId: requestContext?.languageId ?? "",
+            intent: requestContext?.intent ?? .unknown,
+            at: Date()
+        )
     }
 
     func completionCommitCharacters(for item: CodeSuggestionEntry) -> Set<Character> {
@@ -257,65 +274,21 @@ final class CompletionAggregator: CodeSuggestionDelegate {
         rawCandidates.append(contentsOf: words)
     }
 
-    // MARK: - Context
-
-    private func buildContext(string: NSString, location: Int, isExplicit: Bool) -> CompletionContext {
-        let prefixRange = wordRange(in: string, at: location)
-        let prefix = string.substring(with: prefixRange)
-        let lineStart = lineStart(in: string, before: location)
-        let lineTextBeforeCursor = string.substring(with: NSRange(location: lineStart, length: location - lineStart))
-        let languageId = document?.getLanguage().id.rawValue ?? ""
-        let recognizer = CompletionIntentRecognizer(treeSitterClient: treeSitterClient)
-        let intent = recognizer.recognize(
-            at: location,
-            prefix: prefix,
-            lineTextBeforeCursor: lineTextBeforeCursor,
-            languageId: languageId
-        )
-
-        return CompletionContext(
-            prefix: prefix,
-            prefixRange: prefixRange,
-            triggerCharacter: location > 0 ? string.substring(with: NSRange(location: location - 1, length: 1)) : nil,
-            intent: intent,
-            languageId: languageId,
-            documentText: string as String,
-            cursorOffset: location,
-            isExplicit: isExplicit
-        )
-    }
-
-    private func wordRange(in string: NSString, at location: Int) -> NSRange {
-        var start = location
-        while start > 0,
-              let scalar = Unicode.Scalar(string.character(at: start - 1)),
-              Self.wordCharacters.contains(scalar) {
-            start -= 1
-        }
-        return NSRange(location: start, length: location - start)
-    }
-
-    private func lineStart(in string: NSString, before location: Int) -> Int {
-        var start = location
-        while start > 0 && string.character(at: start - 1) != 0x0A {
-            start -= 1
-        }
-        return start
-    }
-
     private func rank(
         _ candidates: [CompletionCandidate],
         prefix: String,
         context: CompletionContext
     ) -> RankedCompletions {
         let deduped = CompletionDeduplicator.deduplicate(candidates)
-        let frequencies = frequencyStore.frequencies(for: context.languageId)
         return CompletionRanker.rank(
             deduped,
             prefix: prefix,
             intent: context.intent,
             isExplicit: context.isExplicit,
-            frequencies: frequencies
+            frequencies: statistics.languageFrequencies,
+            intentFrequencies: statistics.intentFrequencies,
+            lastAccepted: statistics.lastAccepted,
+            documentIdentifiers: context.documentIdentifiers
         )
     }
 }

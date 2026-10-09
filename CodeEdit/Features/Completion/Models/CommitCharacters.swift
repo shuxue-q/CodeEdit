@@ -39,9 +39,9 @@ enum CommitCharacters {
         if candidate.kind == .file || candidate.kind == .folder || candidate.kind == .snippet {
             return []
         }
-        let selectedName = name(of: candidate.label)
+        let selectedName = CompletionDeduplicator.symbolName(of: candidate.label)
         let typedNamesAnotherCandidate = pool.contains {
-            let other = name(of: $0.label)
+            let other = CompletionDeduplicator.symbolName(of: $0.label)
             return other == prefix && other != selectedName
         }
         guard !typedNamesAnotherCandidate else { return [] }
@@ -51,13 +51,5 @@ enum CommitCharacters {
             return Set(fromServer.compactMap(\.first))
         }
         return cFamilyLanguages.contains(languageId) ? cFamily : []
-    }
-
-    /// The bare symbol name in a row label: without padding, the include marker, a signature, or
-    /// template arguments.
-    static func name(of label: String) -> String {
-        let normalized = CompletionDeduplicator.normalizedLabel(label)
-        let end = normalized.firstIndex { $0 == "(" || $0 == "<" } ?? normalized.endIndex
-        return String(normalized[..<end])
     }
 }

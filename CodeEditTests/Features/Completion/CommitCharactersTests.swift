@@ -74,8 +74,8 @@ final class CommitCharactersTests: XCTestCase {
     }
 
     func testRowNameStripsSignatureAndTemplateArguments() {
-        XCTAssertEqual(CommitCharacters.name(of: " foo(int a)"), "foo")
-        XCTAssertEqual(CommitCharacters.name(of: "•vector<T>"), "vector")
+        XCTAssertEqual(CompletionDeduplicator.symbolName(of: " foo(int a)"), "foo")
+        XCTAssertEqual(CompletionDeduplicator.symbolName(of: "•vector<T>"), "vector")
     }
 
     func testSettingDefaultsToEnabled() throws {

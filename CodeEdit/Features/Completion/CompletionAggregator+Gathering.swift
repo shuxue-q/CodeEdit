@@ -86,6 +86,21 @@ extension CompletionAggregator {
         return gathered
     }
 
+    /// The identifiers of the document, or none if tokenizing takes longer than 150 ms.
+    func identifiers(from task: Task<[String: Int], Never>) async -> Set<String> {
+        let words = await withTaskGroup(of: [String: Int]?.self) { group in
+            group.addTask { await task.value }
+            group.addTask {
+                try? await Task.sleep(for: .milliseconds(150))
+                return nil
+            }
+            let first = await group.next() ?? nil
+            group.cancelAll()
+            return first
+        }
+        return words.map { Set($0.keys) } ?? []
+    }
+
     /// Waits for `task` to finish or for `duration` to elapse, whichever comes first.
     private static func wait(for task: Task<Void, Never>, upTo duration: Duration) async {
         await withTaskGroup(of: Void.self) { group in
