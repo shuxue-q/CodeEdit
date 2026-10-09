@@ -11,9 +11,10 @@ import os
 
 /// Requests AI-generated completions from a cloud model through an ``AICompletionBackend``.
 ///
-/// Opt-in: only makes requests when `Settings[\.textEditing].aiCompletion.enabled` is `true` and an
-/// API key is present in the Keychain. Uses raw `URLSession` HTTP. The provider owns cancellation,
-/// the deadline, the minimum prefix rule and error-log throttling; the backend owns the wire format.
+/// Opt-in: only makes requests when `Settings[\.textEditing].aiCompletion.enabled` is `true` and the
+/// selected backend is configured (an API key in the Keychain, or a loopback server that needs none).
+/// Uses raw `URLSession` HTTP. The provider owns cancellation, the deadline, the minimum prefix rule and
+/// error-log throttling; the backend owns the wire format.
 /// A new request cancels the previous in-flight one; a short (<2 character) prefix skips the request
 /// unless it was explicit.
 @MainActor
@@ -53,17 +54,15 @@ final class CloudAICompletionProvider: AICompletionProvider {
 
     func candidates(for context: CompletionContext, textView: TextViewController) async -> [CompletionCandidate] {
         let settings = settingsProvider()
-        guard settings.enabled,
-              let apiKey = keychain.get(SettingsData.TextEditingSettings.AICompletionSettings.keychainKey),
-              !apiKey.isEmpty else {
-            return []
-        }
+        guard settings.enabled else { return [] }
         guard context.isExplicit || context.prefix.count >= Self.minimumAutomaticPrefixLength else {
             return []
         }
 
-        let backend = AIBackendKind.anthropic.backend
-        let configuration = AIBackendConfiguration(model: settings.model, apiKey: apiKey)
+        let keychainKey = SettingsData.TextEditingSettings.AICompletionSettings.keychainKey(for: settings.backend)
+        let apiKey = keychain.get(keychainKey)
+        let backend = settings.backend.backend
+        let configuration = settings.configuration(apiKey: apiKey ?? "")
 
         currentTask?.cancel()
         let task = Task { [weak self] () -> [CompletionCandidate] in
@@ -103,7 +102,14 @@ final class CloudAICompletionProvider: AICompletionProvider {
         guard !Task.isCancelled else { return [] }
         do {
             let request = AICompletionPrompt.request(for: context)
-            let urlRequest = try backend.makeRequest(request, configuration: configuration)
+            let urlRequest: URLRequest
+            do {
+                urlRequest = try backend.makeRequest(request, configuration: configuration)
+            } catch {
+                // Not configured (no key, no base URL): the normal state for a user who has not finished
+                // setting AI up, so nothing is logged.
+                return []
+            }
             let (data, response) = try await session.data(for: urlRequest)
             guard !Task.isCancelled else { return [] }
             guard let httpResponse = response as? HTTPURLResponse, (200..<300).contains(httpResponse.statusCode) else {

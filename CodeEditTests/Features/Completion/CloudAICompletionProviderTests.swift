@@ -12,6 +12,8 @@ import XCTest
 @testable import CodeEdit
 
 final class CloudAICompletionProviderTests: XCTestCase {
+    private typealias AISettings = SettingsData.TextEditingSettings.AICompletionSettings
+
     /// Routes every request through a handler set per test, instead of touching the network.
     private final class StubURLProtocol: URLProtocol {
         static var handler: ((URLRequest) -> (HTTPURLResponse, Data))?
@@ -91,7 +93,7 @@ final class CloudAICompletionProviderTests: XCTestCase {
         let provider = CloudAICompletionProvider(
             session: makeSession(),
             keychain: CodeEditKeychain(keyPrefix: "test.\(UUID().uuidString)."),
-            settingsProvider: { SettingsData.TextEditingSettings.AICompletionSettings() }
+            settingsProvider: { AISettings() }
         )
         let result = await provider.candidates(for: context(), textView: makeEditor())
         XCTAssertTrue(result.isEmpty)
@@ -99,10 +101,10 @@ final class CloudAICompletionProviderTests: XCTestCase {
 
     @MainActor
     func testShortAutomaticPrefixIsSkipped() async {
-        var settings = SettingsData.TextEditingSettings.AICompletionSettings()
+        var settings = AISettings()
         settings.enabled = true
         let keychain = CodeEditKeychain(keyPrefix: "test.\(UUID().uuidString).")
-        keychain.set("test-key", forKey: SettingsData.TextEditingSettings.AICompletionSettings.keychainKey)
+        keychain.set("test-key", forKey: AISettings.keychainKey(for: .anthropic))
         StubURLProtocol.handler = { _ in XCTFail("Should not make a network request"); fatalError() }
         defer { StubURLProtocol.handler = nil }
         let provider = CloudAICompletionProvider(
@@ -114,10 +116,10 @@ final class CloudAICompletionProviderTests: XCTestCase {
 
     @MainActor
     func testEnabledSettingsWithAKeyMakeARequestAndDecodeTheResponse() async {
-        var settings = SettingsData.TextEditingSettings.AICompletionSettings()
+        var settings = AISettings()
         settings.enabled = true
         let keychain = CodeEditKeychain(keyPrefix: "test.\(UUID().uuidString).")
-        keychain.set("test-key", forKey: SettingsData.TextEditingSettings.AICompletionSettings.keychainKey)
+        keychain.set("test-key", forKey: AISettings.keychainKey(for: .anthropic))
 
         let structuredOutput = #"{"completions":[{"label":"vec","insertText":"std::vector<$0>"}]}"#
         StubURLProtocol.handler = { [weak self] request in
@@ -134,6 +136,79 @@ final class CloudAICompletionProviderTests: XCTestCase {
         )
         let result = await provider.candidates(for: context(), textView: makeEditor())
         XCTAssertEqual(result.map(\.label), ["vec"])
+    }
+
+    @MainActor
+    func testOpenAISelectionUsesItsOwnKeyAndEndpoint() async {
+        var settings = AISettings()
+        settings.enabled = true
+        settings.backend = .openAI
+        settings.model = "gpt-5"
+        let keychain = CodeEditKeychain(keyPrefix: "test.\(UUID().uuidString).")
+        keychain.set("anthropic-key", forKey: AISettings.keychainKey(for: .anthropic))
+        keychain.set("openai-key", forKey: AISettings.keychainKey(for: .openAI))
+
+        var seen: URLRequest?
+        StubURLProtocol.handler = { request in
+            seen = request
+            let content = #"{"completions": ["std::vector<int> v;"]}"#
+            let json: [String: Any] = ["choices": [["message": ["content": content]]]]
+            let data = try! JSONSerialization.data(withJSONObject: json) // swiftlint:disable:this force_try
+            let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            return (response, data)
+        }
+        defer { StubURLProtocol.handler = nil }
+
+        let provider = CloudAICompletionProvider(
+            session: makeSession(), keychain: keychain, settingsProvider: { settings }
+        )
+        let result = await provider.candidates(for: context(), textView: makeEditor())
+        XCTAssertEqual(result.map(\.label), ["std::vector<int> v;"])
+        XCTAssertEqual(seen?.url?.absoluteString, "https://api.openai.com/v1/chat/completions")
+        XCTAssertEqual(seen?.value(forHTTPHeaderField: "Authorization"), "Bearer openai-key")
+    }
+
+    @MainActor
+    func testLoopbackCompatibleServerIsQueriedWithoutAKey() async {
+        var settings = AISettings()
+        settings.enabled = true
+        settings.backend = .openAICompatible
+        settings.baseURL = "http://localhost:11434/v1"
+        settings.model = "qwen2.5-coder"
+        var seen: URLRequest?
+        StubURLProtocol.handler = { request in
+            seen = request
+            let json: [String: Any] = ["choices": [["message": ["content": "[\"x\"]"]]]]
+            let data = try! JSONSerialization.data(withJSONObject: json) // swiftlint:disable:this force_try
+            return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, data)
+        }
+        defer { StubURLProtocol.handler = nil }
+
+        let provider = CloudAICompletionProvider(
+            session: makeSession(),
+            keychain: CodeEditKeychain(keyPrefix: "test.\(UUID().uuidString)."),
+            settingsProvider: { settings }
+        )
+        let result = await provider.candidates(for: context(), textView: makeEditor())
+        XCTAssertEqual(result.map(\.label), ["x"])
+        XCTAssertEqual(seen?.url?.absoluteString, "http://localhost:11434/v1/chat/completions")
+        XCTAssertNil(seen?.value(forHTTPHeaderField: "Authorization"))
+    }
+
+    @MainActor
+    func testMissingKeyForARemoteBackendSkipsTheRequest() async {
+        var settings = AISettings()
+        settings.enabled = true
+        settings.backend = .openAI
+        StubURLProtocol.handler = { _ in XCTFail("Should not make a network request"); fatalError() }
+        defer { StubURLProtocol.handler = nil }
+        let provider = CloudAICompletionProvider(
+            session: makeSession(),
+            keychain: CodeEditKeychain(keyPrefix: "test.\(UUID().uuidString)."),
+            settingsProvider: { settings }
+        )
+        let result = await provider.candidates(for: context(), textView: makeEditor())
+        XCTAssertTrue(result.isEmpty)
     }
 
     func testHTTPErrorYieldsNoCandidates() {

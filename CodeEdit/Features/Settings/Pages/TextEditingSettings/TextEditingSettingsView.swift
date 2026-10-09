@@ -16,6 +16,9 @@ struct TextEditingSettingsView: View {
     @State private var isShowingWarningCharactersSettings = false
     @State private var anthropicAPIKey: String = ""
     private let keychain = CodeEditKeychain()
+    private let anthropicKeychainKey = SettingsData.TextEditingSettings.AICompletionSettings.keychainKey(
+        for: .anthropic
+    )
 
     var body: some View {
         SettingsForm {
@@ -62,9 +65,7 @@ struct TextEditingSettingsView: View {
             }
         }
         .onAppear {
-            anthropicAPIKey = keychain.get(
-                SettingsData.TextEditingSettings.AICompletionSettings.keychainKey
-            ) ?? ""
+            anthropicAPIKey = keychain.get(anthropicKeychainKey) ?? ""
         }
     }
 }
@@ -349,9 +350,9 @@ private extension TextEditingSettingsView {
             .disabled(!textEditing.aiCompletion.enabled)
             .onChange(of: anthropicAPIKey) { _, newValue in
                 if newValue.isEmpty {
-                    keychain.delete(SettingsData.TextEditingSettings.AICompletionSettings.keychainKey)
+                    keychain.delete(anthropicKeychainKey)
                 } else {
-                    keychain.set(newValue, forKey: SettingsData.TextEditingSettings.AICompletionSettings.keychainKey)
+                    keychain.set(newValue, forKey: anthropicKeychainKey)
                 }
             }
     }
