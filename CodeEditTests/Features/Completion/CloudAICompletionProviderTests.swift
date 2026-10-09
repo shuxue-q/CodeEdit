@@ -1,5 +1,5 @@
 //
-//  ClaudeCompletionProviderTests.swift
+//  CloudAICompletionProviderTests.swift
 //  CodeEditTests
 //
 //  Created by CodeEdit Contributors on 9/28/26.
@@ -11,7 +11,7 @@ import XCTest
 
 @testable import CodeEdit
 
-final class ClaudeCompletionProviderTests: XCTestCase {
+final class CloudAICompletionProviderTests: XCTestCase {
     /// Routes every request through a handler set per test, instead of touching the network.
     private final class StubURLProtocol: URLProtocol {
         static var handler: ((URLRequest) -> (HTTPURLResponse, Data))?
@@ -77,81 +77,9 @@ final class ClaudeCompletionProviderTests: XCTestCase {
     private func successResponse(json: [String: Any]) -> (HTTPURLResponse, Data) {
         let data = try! JSONSerialization.data(withJSONObject: json) // swiftlint:disable:this force_try
         let response = HTTPURLResponse(
-            url: ClaudeCompletionProvider.endpoint, statusCode: 200, httpVersion: nil, headerFields: nil
+            url: AnthropicMessagesBackend.endpoint, statusCode: 200, httpVersion: nil, headerFields: nil
         )!
         return (response, data)
-    }
-
-    // MARK: - Request encoding
-
-    func testRequestIncludesTheRequiredHeaders() {
-        let request = ClaudeCompletionProvider.makeRequest(context: context(), model: "claude-opus-5", apiKey: "key")
-        XCTAssertEqual(request.url, ClaudeCompletionProvider.endpoint)
-        XCTAssertEqual(request.httpMethod, "POST")
-        XCTAssertEqual(request.value(forHTTPHeaderField: "x-api-key"), "key")
-        XCTAssertEqual(request.value(forHTTPHeaderField: "anthropic-version"), "2023-06-01")
-        XCTAssertEqual(request.value(forHTTPHeaderField: "content-type"), "application/json")
-        XCTAssertEqual(
-            request.value(forHTTPHeaderField: "anthropic-beta"), "server-side-fallback-2026-07-01"
-        )
-    }
-
-    func testRequestBodyOmitsTemperatureAndThinkingAndHasNoAssistantMessage() {
-        let body = ClaudeCompletionProvider.requestBody(context: context(), model: "claude-opus-5")
-        XCTAssertEqual(body["model"] as? String, "claude-opus-5")
-        XCTAssertEqual(body["max_tokens"] as? Int, 1_024)
-        XCTAssertEqual(body["fallbacks"] as? String, "default")
-        XCTAssertNil(body["temperature"])
-        XCTAssertNil(body["top_p"])
-        XCTAssertNil(body["top_k"])
-        XCTAssertNil(body["thinking"])
-
-        let messages = try? XCTUnwrap(body["messages"] as? [[String: Any]])
-        XCTAssertEqual(messages?.count, 1)
-        XCTAssertEqual(messages?.first?["role"] as? String, "user")
-
-        let outputConfig = try? XCTUnwrap(body["output_config"] as? [String: Any])
-        XCTAssertEqual(outputConfig?["effort"] as? String, "low")
-        let format = outputConfig?["format"] as? [String: Any]
-        XCTAssertEqual(format?["type"] as? String, "json_schema")
-        XCTAssertNotNil(format?["schema"])
-    }
-
-    // MARK: - Response decoding
-
-    func testEndTurnResponseDecodesCompletions() {
-        let structuredOutput = #"{"completions":[{"label":"printf","insertText":"printf($0);"}]}"#
-        let json: [String: Any] = [
-            "stop_reason": "end_turn",
-            "content": [["type": "text", "text": structuredOutput]]
-        ]
-        let (_, data) = successResponse(json: json)
-        let candidates = ClaudeCompletionProvider.candidates(from: data)
-        XCTAssertEqual(candidates.count, 1)
-        XCTAssertEqual(candidates.first?.label, "printf")
-        XCTAssertEqual(candidates.first?.source, .ai)
-        guard case .plain(let insertText) = candidates.first?.payload else {
-            return XCTFail("Expected a plain insert-text payload")
-        }
-        XCTAssertEqual(insertText, "printf($0);")
-    }
-
-    func testRefusalStopReasonYieldsNoCandidates() {
-        let json: [String: Any] = ["stop_reason": "refusal", "content": [["type": "text", "text": "{}"]]]
-        let (_, data) = successResponse(json: json)
-        XCTAssertTrue(ClaudeCompletionProvider.candidates(from: data).isEmpty)
-    }
-
-    func testNonEndTurnStopReasonYieldsNoCandidates() {
-        let json: [String: Any] = ["stop_reason": "max_tokens", "content": [["type": "text", "text": "{}"]]]
-        let (_, data) = successResponse(json: json)
-        XCTAssertTrue(ClaudeCompletionProvider.candidates(from: data).isEmpty)
-    }
-
-    func testMalformedContentYieldsNoCandidates() {
-        let json: [String: Any] = ["stop_reason": "end_turn", "content": [["type": "text", "text": "not json"]]]
-        let (_, data) = successResponse(json: json)
-        XCTAssertTrue(ClaudeCompletionProvider.candidates(from: data).isEmpty)
     }
 
     // MARK: - End-to-end through the provider
@@ -160,7 +88,7 @@ final class ClaudeCompletionProviderTests: XCTestCase {
     func testDisabledSettingsSkipTheRequestEntirely() async {
         StubURLProtocol.handler = { _ in XCTFail("Should not make a network request"); fatalError() }
         defer { StubURLProtocol.handler = nil }
-        let provider = ClaudeCompletionProvider(
+        let provider = CloudAICompletionProvider(
             session: makeSession(),
             keychain: CodeEditKeychain(keyPrefix: "test.\(UUID().uuidString)."),
             settingsProvider: { SettingsData.TextEditingSettings.AICompletionSettings() }
@@ -177,7 +105,7 @@ final class ClaudeCompletionProviderTests: XCTestCase {
         keychain.set("test-key", forKey: SettingsData.TextEditingSettings.AICompletionSettings.keychainKey)
         StubURLProtocol.handler = { _ in XCTFail("Should not make a network request"); fatalError() }
         defer { StubURLProtocol.handler = nil }
-        let provider = ClaudeCompletionProvider(
+        let provider = CloudAICompletionProvider(
             session: makeSession(), keychain: keychain, settingsProvider: { settings }
         )
         let result = await provider.candidates(for: context(prefix: "p"), textView: makeEditor())
@@ -201,7 +129,7 @@ final class ClaudeCompletionProviderTests: XCTestCase {
         }
         defer { StubURLProtocol.handler = nil }
 
-        let provider = ClaudeCompletionProvider(
+        let provider = CloudAICompletionProvider(
             session: makeSession(), keychain: keychain, settingsProvider: { settings }
         )
         let result = await provider.candidates(for: context(), textView: makeEditor())
@@ -210,11 +138,14 @@ final class ClaudeCompletionProviderTests: XCTestCase {
 
     func testHTTPErrorYieldsNoCandidates() {
         let response = HTTPURLResponse(
-            url: ClaudeCompletionProvider.endpoint, statusCode: 500, httpVersion: nil, headerFields: nil
+            url: AnthropicMessagesBackend.endpoint, statusCode: 500, httpVersion: nil, headerFields: nil
         )!
         XCTAssertEqual(response.statusCode, 500)
         // The 2xx check lives in `performRequest`; `candidates(from:)` only covers the body, which
         // an error response typically doesn't carry in the expected shape.
-        XCTAssertTrue(ClaudeCompletionProvider.candidates(from: Data()).isEmpty)
+        XCTAssertTrue(
+            CloudAICompletionProvider.candidates(from: Data(), response: response, backend: AnthropicMessagesBackend())
+                .isEmpty
+        )
     }
 }

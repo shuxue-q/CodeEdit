@@ -11,7 +11,7 @@ extension SettingsData.TextEditingSettings {
     /// Settings for the opt-in Claude-powered AI completion source.
     ///
     /// The API key is never persisted here; it is stored in the Keychain under
-    /// ``AICompletionSettings/keychainKey`` and read by `ClaudeCompletionProvider`.
+    /// ``AICompletionSettings/keychainKey`` and read by `CloudAICompletionProvider`.
     struct AICompletionSettings: Codable, Hashable {
         /// The Keychain key the Anthropic API key is stored under.
         static let keychainKey = "anthropicAPIKey"
