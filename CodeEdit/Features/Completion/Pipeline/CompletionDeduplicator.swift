@@ -12,7 +12,8 @@ enum CompletionDeduplicator {
     /// Candidates are grouped by their normalized label. When a group contains a `.snippet`-kind
     /// candidate, plain/keyword candidates in that group are dropped. Remaining exact duplicates
     /// (same label and kind) are collapsed to the one with the highest-priority source
-    /// (`lsp > snippet > keyword > ai`); the other sources are recorded in `mergedSources`.
+    /// (`lsp > snippet > keyword > ai > word`); the other sources are recorded in `mergedSources`.
+    /// A document word is dropped outright when any other candidate has its label.
     static func deduplicate(_ candidates: [CompletionCandidate]) -> [CompletionCandidate] {
         var order: [String] = []
         var groups: [String: [CompletionCandidate]] = [:]
@@ -41,6 +42,11 @@ enum CompletionDeduplicator {
 
     private static func resolve(group: [CompletionCandidate]) -> [CompletionCandidate] {
         var working = group
+        // A document word is the weakest source: any other candidate with the same label replaces it,
+        // whatever kind that candidate has.
+        if working.contains(where: { $0.source != .word }) {
+            working.removeAll { $0.source == .word }
+        }
         let hasSnippet = working.contains { $0.kind == .snippet }
         if hasSnippet {
             working = working.filter { $0.kind == .snippet || !isKeywordOrPlain($0) }

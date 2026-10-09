@@ -26,6 +26,12 @@ enum CompletionIntentPolicy {
         }
     }
 
+    /// The intents in which plain words from the document are offered.
+    static let documentWordIntents: Set<CompletionIntent> = [.expression, .statement, .unknown, .topLevel, .typeName]
+
+    /// The weight of a document word where it is offered: low, so any real symbol outranks it.
+    static let documentWordWeight = 0.25
+
     /// The weight of a candidate of `kind` from `source` for `intent`, or `nil` to exclude it.
     static func weight(
         kind: LSPCompletionCategory,
@@ -33,6 +39,9 @@ enum CompletionIntentPolicy {
         intent: CompletionIntent,
         isExplicit: Bool
     ) -> Double? {
+        if source == .word {
+            return documentWordIntents.contains(intent) ? documentWordWeight : nil
+        }
         switch intent {
         case .comment, .string, .numberLiteral, .declarationName:
             // Only reachable on an explicit request; offer everything at a low weight.

@@ -12,15 +12,18 @@ enum CompletionSource: String, Equatable, Hashable, Sendable, CaseIterable {
     case keyword
     // swiftlint:disable:next identifier_name
     case ai
+    /// An identifier taken from the current document, offered when no better source has it.
+    case word
 
     /// Priority used by ``CompletionDeduplicator`` to pick a winner among exact duplicates.
-    /// Higher wins: `lsp > snippet > keyword > ai`.
+    /// Higher wins: `lsp > snippet > keyword > ai > word`.
     var priority: Int {
         switch self {
         case .lsp: return 3
         case .snippet: return 2
         case .keyword: return 1
         case .ai: return 0
+        case .word: return -1
         }
     }
 }

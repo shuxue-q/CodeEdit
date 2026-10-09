@@ -31,11 +31,12 @@ final class CompletionAggregator: CodeSuggestionDelegate {
 
     private let lspProvider: LSPCompletionProvider
     private let snippetProvider: TreeSitterSnippetProvider
+    private let wordProvider: DocumentWordProvider
     private var aiProvider: (any AICompletionProvider)?
 
     /// All providers, in fan-out order.
     var providers: [any CompletionProvider] {
-        var all: [any CompletionProvider] = [lspProvider, snippetProvider]
+        var all: [any CompletionProvider] = [lspProvider, snippetProvider, wordProvider]
         if let aiProvider { all.append(aiProvider) }
         return all
     }
@@ -53,6 +54,9 @@ final class CompletionAggregator: CodeSuggestionDelegate {
     /// Results that arrived after the window opened, kept until the next cursor move so they can be
     /// merged in without blocking the window. Cleared when merged or when a new request starts.
     var lateResults: [(provider: any CompletionProvider, candidates: [CompletionCandidate])] = []
+    /// Whether the current request already asked ``DocumentWordProvider`` for words. It does not for a
+    /// one-character prefix; the words are then merged in once the prefix is long enough.
+    private var wordCandidatesGathered = false
     /// Incremented on every request and on close so results from a superseded request are dropped.
     var requestGeneration = 0
 
@@ -66,6 +70,7 @@ final class CompletionAggregator: CodeSuggestionDelegate {
         self.frequencyStore = frequencyStore
         self.lspProvider = LSPCompletionProvider(document: document)
         self.snippetProvider = TreeSitterSnippetProvider()
+        self.wordProvider = DocumentWordProvider()
         self.aiProvider = ClaudeCompletionProvider()
     }
 
@@ -120,6 +125,7 @@ final class CompletionAggregator: CodeSuggestionDelegate {
         guard !Task.isCancelled else { return nil }
 
         rawCandidates = gathered
+        wordCandidatesGathered = context.isExplicit || context.prefix.count >= DocumentWordProvider.minimumPrefixLength
         let ranked = rank(gathered, prefix: context.prefix, context: context)
         let entries = CompletionPresenter.present(ranked.items)
         guard !entries.isEmpty else { return nil }
@@ -160,6 +166,7 @@ final class CompletionAggregator: CodeSuggestionDelegate {
             context.prefixRange = wordRange
         }
 
+        mergeWordCandidatesIfNeeded(context: context)
         for late in lateResults {
             for candidate in late.candidates { candidateOwners[candidate.id] = late.provider }
             rawCandidates.append(contentsOf: late.candidates)
@@ -235,6 +242,19 @@ final class CompletionAggregator: CodeSuggestionDelegate {
         requestOffset = nil
         lateResults = []
         requestGeneration += 1
+    }
+
+    /// Adds document words once the typed prefix is long enough, when the request was made too early
+    /// to ask for them.
+    private func mergeWordCandidatesIfNeeded(context: CompletionContext) {
+        guard !wordCandidatesGathered,
+              context.prefix.count >= DocumentWordProvider.minimumPrefixLength,
+              let words = wordProvider.cachedCandidates(for: context) else {
+            return
+        }
+        wordCandidatesGathered = true
+        for word in words { candidateOwners[word.id] = wordProvider }
+        rawCandidates.append(contentsOf: words)
     }
 
     // MARK: - Context
