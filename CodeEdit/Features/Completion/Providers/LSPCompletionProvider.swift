@@ -30,10 +30,12 @@ final class LSPCompletionProvider: CompletionProvider {
 
     /// The completion items from the last request, keyed by candidate id, so `resolve` can look
     /// the original item back up.
-    private var itemsByCandidateID: [String: CompletionItem] = [:]
+    var itemsByCandidateID: [String: CompletionItem] = [:]
+    /// Candidate ids already sent through `completionItem/resolve`, so accepting one never waits again.
+    var resolvedCandidateIDs: Set<String> = []
     /// The document offset the cursor was at when the last completion request was made, used to
     /// pad a server text-edit range by anything typed since.
-    private var requestOffset: Int?
+    var requestOffset: Int?
 
     init(document: CodeFileDocument) {
         self.document = document
@@ -64,6 +66,7 @@ final class LSPCompletionProvider: CompletionProvider {
             )
             requestOffset = context.cursorOffset
             itemsByCandidateID = [:]
+            resolvedCandidateIDs = []
             let candidates = items.map { candidate(from: $0) }
             for (item, candidate) in zip(items, candidates) {
                 itemsByCandidateID[candidate.id] = item
@@ -75,20 +78,30 @@ final class LSPCompletionProvider: CompletionProvider {
     }
 
     func apply(_ candidate: CompletionCandidate, textView: TextViewController, cursorPosition: CursorPosition?) {
-        guard case .lsp(let item) = candidate.payload else { return }
-        if let textEdit = item.textEdit {
-            applyTextEdit(textEdit, item: item, textView: textView, cursorPosition: cursorPosition)
+        guard case .lsp(let payloadItem) = candidate.payload else { return }
+        // A resolved copy (documentation, additional edits) supersedes the payload the row was built with.
+        let item = itemsByCandidateID[candidate.id] ?? payloadItem
+        if needsResolveBeforeApply(item, candidateID: candidate.id) {
+            // The server may only attach `additionalTextEdits` on resolve; wait briefly for them.
+            Task { @MainActor [weak self, weak textView] in
+                guard let self, let textView else { return }
+                let resolved = await self.resolveForApply(item, candidateID: candidate.id)
+                // The user may have kept typing while the server answered; apply at the current cursor.
+                self.apply(item: resolved, textView: textView, cursorPosition: textView.cursorPositions.first)
+            }
         } else {
-            applyInsertText(item: item, textView: textView, cursorPosition: cursorPosition)
+            apply(item: item, textView: textView, cursorPosition: cursorPosition)
         }
     }
 
     func resolve(_ candidate: CompletionCandidate) async -> CompletionCandidate? {
         guard case .lsp(let item) = candidate.payload, let client = languageClient() else { return nil }
         let resolved = await resolveIfSupported(item, client: client)
+        resolvedCandidateIDs.insert(candidate.id)
         let withOrigin = await attachDeclaringHeader(to: resolved, client: client)
         guard withOrigin != item else { return nil }
         itemsByCandidateID[candidate.id] = withOrigin
+        resolvedCandidateIDs.insert(candidate.id)
         // Keep the same identity so the aggregator can find the row to replace.
         let updated = self.candidate(from: withOrigin)
         return CompletionCandidate(
@@ -167,72 +180,6 @@ final class LSPCompletionProvider: CompletionProvider {
             deprecated: entry.deprecated,
             payload: .lsp(item)
         )
-    }
-
-    // MARK: - Apply
-
-    private func applyTextEdit(
-        _ textEdit: TwoTypeOption<TextEdit, InsertReplaceEdit>,
-        item: CompletionItem,
-        textView: TextViewController,
-        cursorPosition: CursorPosition?
-    ) {
-        let lspRange: LSPRange
-        let newText: String
-        switch textEdit {
-        case .optionA(let edit):
-            lspRange = edit.range
-            newText = edit.newText
-        case .optionB(let insertReplaceEdit):
-            lspRange = insertReplaceEdit.insert
-            newText = insertReplaceEdit.newText
-        }
-        guard var range = textView.textView.nsRangeFrom(lspRange: lspRange) else { return }
-        // The server's edit predates any prefix typed while filtering the cached suggestions.
-        if let requestOffset, let cursorPosition,
-           let current = textView.resolveCursorPosition(cursorPosition),
-           range.location <= requestOffset, range.max >= requestOffset,
-           current.range.location >= requestOffset {
-            range.length += current.range.location - requestOffset
-        }
-        if item.insertTextFormat == .snippet {
-            textView.insertSnippet(newText, replacing: range)
-        } else {
-            textView.textView.replaceCharacters(in: range, with: newText)
-        }
-    }
-
-    private func applyInsertText(
-        item: CompletionItem,
-        textView: TextViewController,
-        cursorPosition: CursorPosition?
-    ) {
-        guard let cursorPosition,
-              let resolved = textView.resolveCursorPosition(cursorPosition) else {
-            return
-        }
-        let location = resolved.range.location
-        let string = textView.textView.textStorage.string as NSString
-        var wordStart = location
-        while wordStart > 0,
-              let scalar = Unicode.Scalar(string.character(at: wordStart - 1)),
-              Self.wordCharacters.contains(scalar) {
-            wordStart -= 1
-        }
-        let insertText = item.insertText ?? item.label
-        let isSnippet = item.insertTextFormat == .snippet
-        let plainText = isSnippet ? SnippetParser.plainText(insertText) : insertText
-        if wordStart < location,
-           string.character(at: wordStart) == 0x23, // '#'
-           !plainText.hasPrefix("#") {
-            wordStart += 1
-        }
-        let replaceRange = NSRange(location: wordStart, length: location - wordStart)
-        if isSnippet {
-            textView.insertSnippet(insertText, replacing: replaceRange)
-        } else {
-            textView.textView.replaceCharacters(in: replaceRange, with: insertText)
-        }
     }
 
     // MARK: - Helpers
