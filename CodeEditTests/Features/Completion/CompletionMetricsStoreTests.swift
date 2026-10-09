@@ -39,6 +39,18 @@ final class CompletionMetricsStoreTests: XCTestCase {
         XCTAssertEqual(session.averageKeystrokesToAccept, 3)
     }
 
+    func testBackendLatencyIsRecordedUnderItsName() {
+        let store = CompletionMetricsStore(fileURL: temporaryFile())
+        store.recordBackendLatency(name: "ai.openAI", duration: .milliseconds(120))
+        store.recordBackendLatency(name: "ai.openAI", duration: .milliseconds(480))
+        store.recordProviderLatency(source: .ai, duration: .milliseconds(900))
+
+        let latencies = store.currentSession().providerLatencies
+        XCTAssertEqual(latencies["ai.openAI"]?.count, 2)
+        XCTAssertEqual(latencies["ai.openAI"]?.p95Milliseconds ?? 0, 480, accuracy: 0.001)
+        XCTAssertEqual(latencies["ai"]?.count, 1, "The whole-provider latency stays under the source name")
+    }
+
     func testAveragesAreAbsentBeforeTheFirstAcceptance() {
         let session = CompletionMetricsStore(fileURL: temporaryFile()).currentSession()
         XCTAssertNil(session.averageAcceptedRank)

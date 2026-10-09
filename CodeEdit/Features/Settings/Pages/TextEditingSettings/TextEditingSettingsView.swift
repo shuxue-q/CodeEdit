@@ -14,8 +14,6 @@ struct TextEditingSettingsView: View {
 
     @State private var isShowingInvisibleCharacterSettings = false
     @State private var isShowingWarningCharactersSettings = false
-    @State private var anthropicAPIKey: String = ""
-    private let keychain = CodeEditKeychain()
 
     var body: some View {
         SettingsForm {
@@ -55,16 +53,8 @@ struct TextEditingSettingsView: View {
                 warningCharacters
             }
             Section {
-                aiCompletionToggle
-                aiCompletionModel
-                aiCompletionAPIKey
-                aiCompletionNote
+                AICompletionSettingsSection(settings: $textEditing.aiCompletion)
             }
-        }
-        .onAppear {
-            anthropicAPIKey = keychain.get(
-                SettingsData.TextEditingSettings.AICompletionSettings.keychainKey
-            ) ?? ""
         }
     }
 }
@@ -330,35 +320,6 @@ private extension TextEditingSettingsView {
         .sheet(isPresented: $isShowingInvisibleCharacterSettings) {
             InvisiblesSettingsView(invisibleCharacters: $textEditing.invisibleCharacters)
         }
-    }
-
-    @ViewBuilder private var aiCompletionToggle: some View {
-        Toggle(isOn: $textEditing.aiCompletion.enabled) {
-            Text("AI Completions")
-            Text("Suggests completions using the Claude API.")
-        }
-    }
-
-    @ViewBuilder private var aiCompletionModel: some View {
-        TextField("Model", text: $textEditing.aiCompletion.model)
-            .disabled(!textEditing.aiCompletion.enabled)
-    }
-
-    @ViewBuilder private var aiCompletionAPIKey: some View {
-        SecureField("Anthropic API Key", text: $anthropicAPIKey)
-            .disabled(!textEditing.aiCompletion.enabled)
-            .onChange(of: anthropicAPIKey) { _, newValue in
-                if newValue.isEmpty {
-                    keychain.delete(SettingsData.TextEditingSettings.AICompletionSettings.keychainKey)
-                } else {
-                    keychain.set(newValue, forKey: SettingsData.TextEditingSettings.AICompletionSettings.keychainKey)
-                }
-            }
-    }
-
-    @ViewBuilder private var aiCompletionNote: some View {
-        Text("When enabled, the code surrounding your cursor is sent to Anthropic to generate suggestions.")
-            .foregroundColor(.secondary)
     }
 
     @ViewBuilder private var warningCharacters: some View {

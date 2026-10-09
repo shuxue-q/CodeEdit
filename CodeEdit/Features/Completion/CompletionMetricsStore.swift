@@ -15,12 +15,19 @@ protocol CompletionMetricsRecording: AnyObject {
     func recordPopup()
     /// A provider took `duration` to answer a request, including answers that arrived too late to show.
     func recordProviderLatency(source: CompletionSource, duration: Duration)
+    /// A completion backend's network round trip took `duration`, recorded under `name` (`ai.anthropic`) next
+    /// to the provider latencies. The default does nothing.
+    func recordBackendLatency(name: String, duration: Duration)
     /// An item was accepted.
     /// - Parameters:
     ///   - rank: The item's row in the list at that moment, `0` being the first.
     ///   - keystrokes: How many times the list was refreshed between the window opening and the
     ///     acceptance, which is one per typed character.
     func recordAcceptance(rank: Int, keystrokes: Int)
+}
+
+extension CompletionMetricsRecording {
+    func recordBackendLatency(name: String, duration: Duration) { }
 }
 
 /// Collects completion metrics for the current app session and keeps a short history in
@@ -62,7 +69,7 @@ final class CompletionMetricsStore: CompletionMetricsRecording {
         var averageAcceptedRank: Double?
         /// The mean number of list refreshes between a popup and an acceptance, if any were accepted.
         var averageKeystrokesToAccept: Double?
-        /// Response times by provider source (`lsp`, `word`, …).
+        /// Response times by provider source (`lsp`, `word`, …) and by AI backend (`ai.anthropic`, …).
         var providerLatencies: [String: LatencySummary]
     }
 
@@ -104,14 +111,22 @@ final class CompletionMetricsStore: CompletionMetricsRecording {
     }
 
     func recordProviderLatency(source: CompletionSource, duration: Duration) {
+        recordLatency(key: source.rawValue, duration: duration)
+    }
+
+    func recordBackendLatency(name: String, duration: Duration) {
+        recordLatency(key: name, duration: duration)
+    }
+
+    private func recordLatency(key: String, duration: Duration) {
         let components = duration.components
         let milliseconds = Double(components.seconds) * 1_000 + Double(components.attoseconds) / 1e15
-        var samples = latencies[source.rawValue, default: []]
+        var samples = latencies[key, default: []]
         samples.append(milliseconds)
         if samples.count > Self.maximumLatencySamples {
             samples.removeFirst(samples.count - Self.maximumLatencySamples)
         }
-        latencies[source.rawValue] = samples
+        latencies[key] = samples
         scheduleSave()
     }
 

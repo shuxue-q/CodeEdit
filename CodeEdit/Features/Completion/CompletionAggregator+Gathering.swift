@@ -103,24 +103,32 @@ extension CompletionAggregator {
         return words.map { Set($0.keys) } ?? []
     }
 
+    /// The three ways of resolving what is known about the cursor position.
+    struct SemanticSources {
+        /// The type the slot at the cursor expects.
+        let expectedType: (CompletionContext, TextViewController) async -> TypeText?
+        /// The type of the object whose members are being completed.
+        let receiverType: (CompletionContext, TextViewController) async -> String?
+        /// The header of the function around the cursor.
+        let functionSignature: (CompletionContext, TextViewController) async -> String?
+    }
+
     /// The production sources of the expected type and the receiver type, which ask the language server
-    /// through hover and signature help.
+    /// through hover and signature help, and of the enclosing function's header, which reads the syntax tree.
     static func semanticSources(
         document: CodeFileDocument,
         treeSitterClient: TreeSitterClient,
         lspProvider: LSPCompletionProvider
-    ) -> (
-        expectedType: (CompletionContext, TextViewController) async -> TypeText?,
-        receiverType: (CompletionContext, TextViewController) async -> String?
-    ) {
+    ) -> SemanticSources {
         let service = ExpectedTypeService(
             document: document,
             treeSitterClient: treeSitterClient,
             clientProvider: { [weak lspProvider] in lspProvider?.languageClient() }
         )
-        return (
-            { context, textView in await service.expectedType(for: context, textView: textView) },
-            { context, textView in await service.receiverType(for: context, textView: textView) }
+        return SemanticSources(
+            expectedType: { context, textView in await service.expectedType(for: context, textView: textView) },
+            receiverType: { context, textView in await service.receiverType(for: context, textView: textView) },
+            functionSignature: { context, _ in service.functionSignature(for: context) }
         )
     }
 
@@ -161,12 +169,28 @@ extension CompletionAggregator {
         let expectedType: Task<TypeText?, Never>
         /// The type of the object whose members are being completed.
         let receiverType: Task<String?, Never>
+        /// The header of the function around the cursor.
+        let functionSignature: Task<String?, Never>
 
         /// Stops all of it.
         func cancel() {
             words.cancel()
             expectedType.cancel()
             receiverType.cancel()
+            functionSignature.cancel()
+        }
+
+        /// The types and the function header, as far as they are known within `duration`. Waiting does not
+        /// cancel the work, which the ranker may still use.
+        func resolved(upTo duration: Duration) async -> ResolvedSemantics {
+            async let expected = awaitValue(of: expectedType, upTo: duration)
+            async let receiver = awaitValue(of: receiverType, upTo: duration)
+            async let signature = awaitValue(of: functionSignature, upTo: duration)
+            return await ResolvedSemantics(
+                expectedType: expected ?? nil,
+                receiverType: receiver ?? nil,
+                functionSignature: signature ?? nil
+            )
         }
     }
 
@@ -177,7 +201,8 @@ extension CompletionAggregator {
         return SemanticTasks(
             words: Task { await wordProvider.words(in: documentText) },
             expectedType: Task { @MainActor in await expectedTypeSource(context, textView) },
-            receiverType: Task { @MainActor in await receiverTypeSource(context, textView) }
+            receiverType: Task { @MainActor in await receiverTypeSource(context, textView) },
+            functionSignature: Task { @MainActor in await functionSignatureSource(context, textView) }
         )
     }
 

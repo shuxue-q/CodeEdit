@@ -93,6 +93,22 @@ final class ExpectedTypeService {
         )
     }
 
+    /// The header of the function definition around the cursor of `context` (`int add(int a, int b)`), for the
+    /// AI prompt, or `nil` outside a function or in a language other than the C family. Read from the syntax
+    /// tree, or from the text when the tree has no function there.
+    func functionSignature(for context: CompletionContext) -> String? {
+        guard CFamilyKeywords.languageIds.contains(context.languageId) else { return nil }
+        let location = context.prefixRange.location
+        if let header = Self.functionHeader(at: location, in: treeSitterClient),
+           let signature = FunctionSignatureText.signature(
+               in: context.documentText, functionStart: header.start, bodyStart: header.bodyStart
+           ) {
+            return signature
+        }
+        // A half-typed statement usually breaks the function in the syntax tree; read the text instead.
+        return FunctionSignatureText.enclosing(in: context.documentText, before: location)
+    }
+
     /// Hover-based lookup of the type of the symbol that starts at an offset.
     private func symbolTypeLookup(
         context: CompletionContext,
@@ -162,6 +178,24 @@ final class ExpectedTypeService {
     }
 
     // MARK: - Syntax tree
+
+    /// Where the innermost `function_definition` around `location` starts, and where its body does.
+    private static func functionHeader(
+        at location: Int,
+        in client: TreeSitterClient
+    ) -> (start: Int, bodyStart: Int?)? {
+        guard let results = try? client.nodesAt(location: location) else { return nil }
+        for result in results {
+            var node: Node? = result.node
+            while let current = node {
+                if current.nodeType == "function_definition" {
+                    return (current.range.location, current.child(byFieldName: "body")?.range.location)
+                }
+                node = current.parent
+            }
+        }
+        return nil
+    }
 
     /// The range of the `field` child of the innermost `ancestorType` node around `location`.
     private static func fieldRange(

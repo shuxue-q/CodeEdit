@@ -41,6 +41,8 @@ final class CompletionAggregator: CodeSuggestionDelegate {
     let expectedTypeSource: (CompletionContext, TextViewController) async -> TypeText?
     /// Works out the type of the object whose members are being completed.
     let receiverTypeSource: (CompletionContext, TextViewController) async -> String?
+    /// Works out the header of the function around the cursor, for the AI prompt.
+    let functionSignatureSource: (CompletionContext, TextViewController) async -> String?
     private var aiProvider: (any AICompletionProvider)?
     /// Extra providers queried alongside the built-in ones. Empty in the app; tests inject fakes here.
     private let additionalProviders: [any CompletionProvider]
@@ -87,6 +89,7 @@ final class CompletionAggregator: CodeSuggestionDelegate {
         additionalProviders: [any CompletionProvider] = [],
         expectedTypeSource: ((CompletionContext, TextViewController) async -> TypeText?)? = nil,
         receiverTypeSource: ((CompletionContext, TextViewController) async -> String?)? = nil,
+        functionSignatureSource: ((CompletionContext, TextViewController) async -> String?)? = nil,
         chainServerFactory: (() -> ChainScratchServer?)? = nil
     ) {
         self.document = document
@@ -99,7 +102,7 @@ final class CompletionAggregator: CodeSuggestionDelegate {
         self.snippetProvider = TreeSitterSnippetProvider()
         self.wordProvider = DocumentWordProvider()
         self.postfixProvider = PostfixCompletionProvider(treeSitterClient: treeSitterClient)
-        self.aiProvider = ClaudeCompletionProvider()
+        self.aiProvider = CloudAICompletionProvider()
         self.chainProvider = ChainCompletionProvider(
             makeServer: chainServerFactory ?? { [weak lspProvider, weak document] in
                 guard let lspProvider, let document else { return nil }
@@ -113,6 +116,7 @@ final class CompletionAggregator: CodeSuggestionDelegate {
         )
         self.expectedTypeSource = expectedTypeSource ?? sources.expectedType
         self.receiverTypeSource = receiverTypeSource ?? sources.receiverType
+        self.functionSignatureSource = functionSignatureSource ?? sources.functionSignature
     }
 
     // MARK: - CodeSuggestionDelegate
@@ -167,7 +171,11 @@ final class CompletionAggregator: CodeSuggestionDelegate {
 
         let requestStart = ContinuousClock.now
         let semantics = startSemanticTasks(context: context, textView: textView)
-        let gathered = await gatherCandidates(context: context, textView: textView, generation: requestGeneration)
+        var providerContext = context
+        providerContext.awaitSemantics = { budget in await semantics.resolved(upTo: budget) }
+        let gathered = await gatherCandidates(
+            context: providerContext, textView: textView, generation: requestGeneration
+        )
         guard !Task.isCancelled else {
             semantics.cancel()
             return nil

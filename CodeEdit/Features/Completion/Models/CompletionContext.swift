@@ -7,6 +7,20 @@
 
 import Foundation
 
+/// The semantic facts about the cursor position that take a moment to work out: they come from tree-sitter and
+/// the language server, and are resolved while the providers run.
+struct ResolvedSemantics: Sendable, Equatable {
+    /// The type the slot at the cursor expects, if known.
+    var expectedType: TypeText?
+    /// The normalized type of the object whose members are being completed, if known.
+    var receiverType: String?
+    /// The header of the function around the cursor (`int main(int argc, char **argv)`), if any.
+    var functionSignature: String?
+
+    /// Nothing is known.
+    static let none = ResolvedSemantics()
+}
+
 /// Everything a ``CompletionProvider`` needs to produce candidates for the current cursor position.
 struct CompletionContext {
     /// The word being typed, up to the cursor.
@@ -39,4 +53,8 @@ struct CompletionContext {
     /// `true` when the user asked for chain completion (members reachable through a symbol that fit the
     /// expected type) instead of the regular list.
     var isChain = false
+    /// Waits up to the given time for the semantic facts of this request and returns whatever is known by then.
+    /// Set by the aggregator for providers that want them (the AI provider puts them in its prompt); `nil`
+    /// when nothing is being resolved. Waiting never cancels the resolution.
+    var awaitSemantics: (@MainActor (Duration) async -> ResolvedSemantics)?
 }
