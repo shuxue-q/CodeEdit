@@ -42,6 +42,16 @@ enum FunctionSignatureText {
     /// Words that may stand between a function's `)` and its `{`.
     private static let trailingQualifiers: Set<String> = ["const", "noexcept", "override", "final", "volatile"]
 
+    /// What a text scan finds around an offset.
+    enum Enclosure: Equatable {
+        /// The offset is in the body of a function whose declaration begins with this text, up to the
+        /// function's name: its return type with any specifiers, for example `static std::string *`.
+        case function(returnText: String)
+        /// The offset is in a lambda or in a function with a trailing return type, whose return type the
+        /// text scan does not read.
+        case opaque
+    }
+
     /// The header of the function whose body contains `offset`, found by scanning the text, or `nil`.
     ///
     /// A half-typed statement such as `ret` in a function body is often parsed as part of a declaration, so
@@ -54,6 +64,41 @@ enum FunctionSignatureText {
         let units = Array(text.utf16)
         let end = max(0, min(offset, units.count))
         let lower = max(0, end - searchWindow)
+        guard case let .function(start, _, brace)? = scan(units, end: end, lower: lower, stopAtOpaque: false) else {
+            return nil
+        }
+        return normalize(String(decoding: units[start..<brace], as: UTF16.self))
+    }
+
+    /// The innermost function body around `offset`, found by scanning the text, for the `return` slot.
+    ///
+    /// Like ``enclosing(in:before:)``, but a lambda body or a function with a trailing return type that is
+    /// reached first answers ``Enclosure/opaque`` instead of being skipped, because a `return` there does
+    /// not return the type of the function around it. `nil` when no function body is found.
+    static func enclosure(in text: String, before offset: Int) -> Enclosure? {
+        let string = text as NSString
+        let end = max(0, min(offset, string.length))
+        let lower = max(0, end - searchWindow)
+        let units = Array(string.substring(with: NSRange(location: lower, length: end - lower)).utf16)
+        switch scan(units, end: units.count, lower: 0, stopAtOpaque: true) {
+        case let .function(start, nameStart, _)?:
+            let returnText = normalize(String(decoding: units[start..<nameStart], as: UTF16.self))
+            return .function(returnText: returnText ?? "")
+        case .opaque?:
+            return .opaque
+        case nil:
+            return nil
+        }
+    }
+
+    /// Where a text scan stopped.
+    private enum ScanResult {
+        /// A function body that opens at `brace`; its declaration starts at `start` and its name at `nameStart`.
+        case function(start: Int, nameStart: Int, brace: Int)
+        case opaque
+    }
+
+    private static func scan(_ units: [UInt16], end: Int, lower: Int, stopAtOpaque: Bool) -> ScanResult? {
         var depth = 0
         var index = end - 1
         while index >= lower {
@@ -63,9 +108,10 @@ enum FunctionSignatureText {
             case code("{"):
                 if depth > 0 {
                     depth -= 1
-                } else if let start = headerStart(of: units, braceIndex: index, lower: lower) {
-                    let header = String(decoding: units[start..<index], as: UTF16.self)
-                    return normalize(header)
+                } else if let head = headerStart(of: units, braceIndex: index, lower: lower) {
+                    return .function(start: head.start, nameStart: head.nameStart, brace: index)
+                } else if stopAtOpaque, opensOpaqueBody(units, braceIndex: index, lower: lower) {
+                    return .opaque
                 }
             default:
                 break
@@ -75,9 +121,58 @@ enum FunctionSignatureText {
         return nil
     }
 
+    /// Whether the brace at `braceIndex` opens a lambda body (`[..](..) {`, `[..] {`) or the body of a
+    /// function with a trailing return type (`auto f() -> int {`).
+    private static func opensOpaqueBody(_ units: [UInt16], braceIndex: Int, lower: Int) -> Bool {
+        let cursor = skipQualifiers(units, from: braceIndex - 1, lower: lower)
+        guard cursor >= lower else { return false }
+        switch units[cursor] {
+        case code("]"):
+            return true
+        case code(")"):
+            guard let open = matchingOpenParenthesis(for: cursor, in: units, lower: lower) else { return false }
+            var before = open - 1
+            while before >= lower, isWhitespace(units[before]) { before -= 1 }
+            return before >= lower && units[before] == code("]")
+        default:
+            // A trailing return type: its arrow stands within the same statement, after a `)` or `]`.
+            var index = cursor
+            while index > lower,
+                  units[index] != code(";"), units[index] != code("{"), units[index] != code("}") {
+                if units[index] == code(">"), units[index - 1] == code("-") {
+                    let beforeArrow = skipQualifiers(units, from: index - 2, lower: lower)
+                    return beforeArrow >= lower
+                        && (units[beforeArrow] == code(")") || units[beforeArrow] == code("]"))
+                }
+                index -= 1
+            }
+            return false
+        }
+    }
+
+    /// Steps back over whitespace, `&` and the qualifiers that may stand between a `)` and a `{`.
+    private static func skipQualifiers(_ units: [UInt16], from start: Int, lower: Int) -> Int {
+        var cursor = start
+        while cursor >= lower {
+            if isWhitespace(units[cursor]) || units[cursor] == code("&") {
+                cursor -= 1
+            } else if let last = word(endingAt: cursor, in: units, lower: lower),
+                      trailingQualifiers.contains(last.text) || last.text == "mutable" {
+                cursor = last.start - 1
+            } else {
+                break
+            }
+        }
+        return cursor
+    }
+
     /// Where the declaration whose body opens at `braceIndex` starts, or `nil` when that brace does not open
     /// a function body.
-    private static func headerStart(of units: [UInt16], braceIndex: Int, lower: Int) -> Int? {
+    private static func headerStart(
+        of units: [UInt16],
+        braceIndex: Int,
+        lower: Int
+    ) -> (start: Int, nameStart: Int)? {
         var cursor = braceIndex - 1
         // Qualifiers and reference markers between `)` and `{`.
         while cursor >= lower {
@@ -106,7 +201,7 @@ enum FunctionSignatureText {
               first == "~" || first == "_" || CharacterSet.letters.contains(first) else {
             return nil
         }
-        return declarationStart(before: nameStart, in: units, lower: lower)
+        return (declarationStart(before: nameStart, in: units, lower: lower), nameStart)
     }
 
     /// The start of the declaration that has its name at `nameStart`: just after the previous `;`, `{`, `}`,

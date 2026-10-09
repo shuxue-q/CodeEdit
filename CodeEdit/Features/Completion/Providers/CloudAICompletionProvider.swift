@@ -20,9 +20,10 @@ import os
 ///
 /// After a failure that retrying right away cannot fix, the provider stops sending requests for a while
 /// instead of failing on every keystroke: 30 seconds after a rate limit or server error (HTTP 429, 529,
-/// 5xx), 5 minutes after the key was rejected (401, 403), 60 seconds when the network is unreachable.
+/// 5xx), 5 minutes after the key was rejected (401, 403), 2 minutes after the server refused the request
+/// itself (400, 404, 422: a wrong model name or base URL), 60 seconds when the network is unreachable.
 /// The next trigger after the window sends a request again. Changing the provider, model, base URL or key
-/// ends the back-off at once.
+/// ends the back-off at once, and so does a successful Test Connection in the settings.
 @MainActor
 final class CloudAICompletionProvider: AICompletionProvider {
     /// The minimum typed-prefix length before an automatic (non-explicit) request is made.
@@ -33,6 +34,9 @@ final class CloudAICompletionProvider: AICompletionProvider {
     static let transientBackoff: Duration = .seconds(30)
     /// How long to stay quiet after the server rejected the key (HTTP 401, 403).
     static let authenticationBackoff: Duration = .seconds(300)
+    /// How long to stay quiet after the server refused the request itself (HTTP 400, 404, 422), which a wrong
+    /// model name or base URL does on every request.
+    static let configurationBackoff: Duration = .seconds(120)
     /// How long to stay quiet after the network turned out to be unreachable.
     static let networkBackoff: Duration = .seconds(60)
     /// How long a request waits for the semantic facts (expected type, function header) before it is sent
@@ -48,15 +52,16 @@ final class CloudAICompletionProvider: AICompletionProvider {
     private let metrics: any CompletionMetricsRecording
     private let now: () -> ContinuousClock.Instant
     private var currentTask: Task<[CompletionCandidate], Never>?
-    private var backoff: Backoff?
+    private let backoffStore: AICompletionBackoffStore
+    private var rememberedWording: RememberedWording?
     private static var lastErrorLogDate: Date?
     private static let logger = Logger(subsystem: "app.codeedit.CodeEdit", category: "CloudAICompletionProvider")
 
-    /// A pause in sending requests, for the configuration that caused it.
-    private struct Backoff {
-        let until: ContinuousClock.Instant
+    /// The backend wording a server accepted after it refused the first one, for the configuration it worked with.
+    private struct RememberedWording {
         let kind: AIBackendKind
         let configuration: AIBackendConfiguration
+        let backend: any AICompletionBackend
     }
 
     /// Creates a provider.
@@ -66,6 +71,8 @@ final class CloudAICompletionProvider: AICompletionProvider {
     ///   - settingsProvider: Returns the current AI completion settings.
     ///   - metrics: Where the backend's response times are recorded.
     ///   - now: The clock back-off is measured with. Injectable so tests need not wait.
+    ///   - backoffStore: Where back-off is recorded. The default is private to this provider; the app passes
+    ///     ``AICompletionBackoffStore/shared`` so that all documents and the settings page agree.
     init(
         session: URLSession = .shared,
         keychain: CodeEditKeychain = CodeEditKeychain(),
@@ -73,13 +80,15 @@ final class CloudAICompletionProvider: AICompletionProvider {
             Settings[\.textEditing].aiCompletion
         },
         metrics: any CompletionMetricsRecording = CompletionMetricsStore.shared,
-        now: @escaping () -> ContinuousClock.Instant = { .now }
+        now: @escaping () -> ContinuousClock.Instant = { .now },
+        backoffStore: AICompletionBackoffStore = AICompletionBackoffStore()
     ) {
         self.session = session
         self.keychain = keychain
         self.settingsProvider = settingsProvider
         self.metrics = metrics
         self.now = now
+        self.backoffStore = backoffStore
     }
 
     func triggerCharacters() -> Set<String> { [] }
@@ -93,9 +102,11 @@ final class CloudAICompletionProvider: AICompletionProvider {
 
         let keychainKey = SettingsData.TextEditingSettings.AICompletionSettings.keychainKey(for: settings.backend)
         let apiKey = keychain.get(keychainKey)
-        let backend = settings.backend.backend
         let configuration = settings.configuration(apiKey: apiKey ?? "")
-        guard !isBackedOff(kind: settings.backend, configuration: configuration) else { return [] }
+        let backend = acceptedBackend(kind: settings.backend, configuration: configuration)
+        guard !backoffStore.isBackedOff(kind: settings.backend, configuration: configuration, now: now()) else {
+            return []
+        }
 
         currentTask?.cancel()
         let task = Task { [weak self] () -> [CompletionCandidate] in
@@ -136,27 +147,21 @@ final class CloudAICompletionProvider: AICompletionProvider {
         let semantics = await context.awaitSemantics?(Self.semanticsBudget) ?? .none
         guard !Task.isCancelled else { return [] }
         let request = AICompletionPrompt.request(for: context, semantics: semantics)
-        let urlRequest: URLRequest
-        do {
-            urlRequest = try backend.makeRequest(request, configuration: configuration)
-        } catch {
-            // Not configured (no key, no base URL): the normal state for a user who has not finished
-            // setting AI up, so nothing is logged.
-            return []
-        }
-
         let clock = ContinuousClock()
         let start = clock.now
         do {
-            let (data, response) = try await session.data(for: urlRequest)
+            let exchange = try await AICompletionTransport.send(
+                request, backend: backend, configuration: configuration, session: session
+            )
             guard !Task.isCancelled else { return [] }
             metrics.recordBackendLatency(name: "ai.\(backend.kind.rawValue)", duration: clock.now - start)
-            guard let httpResponse = response as? HTTPURLResponse else { return [] }
-            guard (200..<300).contains(httpResponse.statusCode) else {
-                handleFailure(status: httpResponse.statusCode, backend: backend, configuration: configuration)
-                return []
-            }
-            return Self.candidates(from: data, response: httpResponse, backend: backend)
+            return candidates(from: exchange, requested: backend, configuration: configuration)
+        } catch AIBackendError.invalidConfiguration {
+            // Not configured (no key, no base URL): the normal state for a user who has not finished
+            // setting AI up, so nothing is logged.
+            return []
+        } catch AIBackendError.malformedResponse {
+            return []
         } catch is CancellationError {
             return []
         } catch let error as URLError where error.code == .cancelled {
@@ -170,6 +175,25 @@ final class CloudAICompletionProvider: AICompletionProvider {
         }
     }
 
+    /// The candidates in an answer, after noting what it says about the configuration: an error starts a
+    /// back-off, and a wording the server accepted only after refusing the first one is remembered.
+    private func candidates(
+        from exchange: AICompletionExchange,
+        requested backend: any AICompletionBackend,
+        configuration: AIBackendConfiguration
+    ) -> [CompletionCandidate] {
+        guard (200..<300).contains(exchange.response.statusCode) else {
+            handleFailure(exchange, configuration: configuration)
+            return []
+        }
+        if exchange.usedAlternative {
+            rememberedWording = RememberedWording(
+                kind: backend.kind, configuration: configuration, backend: exchange.backend
+            )
+        }
+        return Self.candidates(from: exchange.data, response: exchange.response, backend: exchange.backend)
+    }
+
     // MARK: - Back-off
 
     /// How long to stay quiet after an HTTP error, or `nil` when retrying on the next trigger is fine.
@@ -177,6 +201,7 @@ final class CloudAICompletionProvider: AICompletionProvider {
         switch status {
         case 401, 403: return authenticationBackoff
         case 429, 529, 500...599: return transientBackoff
+        case 400, 404, 422: return configurationBackoff
         default: return nil
         }
     }
@@ -192,13 +217,18 @@ final class CloudAICompletionProvider: AICompletionProvider {
         }
     }
 
-    private func isBackedOff(kind: AIBackendKind, configuration: AIBackendConfiguration) -> Bool {
-        guard let backoff else { return false }
-        guard backoff.kind == kind, backoff.configuration == configuration else {
-            self.backoff = nil
-            return false
+    /// The backend to send with: the wording a server accepted earlier for this configuration, if any.
+    private func acceptedBackend(
+        kind: AIBackendKind,
+        configuration: AIBackendConfiguration
+    ) -> any AICompletionBackend {
+        if let rememberedWording {
+            if rememberedWording.kind == kind, rememberedWording.configuration == configuration {
+                return rememberedWording.backend
+            }
+            self.rememberedWording = nil
         }
-        return now() < backoff.until
+        return kind.backend
     }
 
     private func startBackoff(
@@ -206,14 +236,12 @@ final class CloudAICompletionProvider: AICompletionProvider {
         backend: any AICompletionBackend,
         configuration: AIBackendConfiguration
     ) {
-        backoff = Backoff(until: now().advanced(by: duration), kind: backend.kind, configuration: configuration)
+        backoffStore.start(until: now().advanced(by: duration), kind: backend.kind, configuration: configuration)
     }
 
-    private func handleFailure(
-        status: Int,
-        backend: any AICompletionBackend,
-        configuration: AIBackendConfiguration
-    ) {
+    private func handleFailure(_ exchange: AICompletionExchange, configuration: AIBackendConfiguration) {
+        let status = exchange.response.statusCode
+        let backend = exchange.backend
         guard let duration = Self.backoffDuration(forStatus: status) else {
             logError("\(backend.displayName) completion request failed with HTTP \(status)")
             return
@@ -223,7 +251,28 @@ final class CloudAICompletionProvider: AICompletionProvider {
             Self.logger.error(
                 "\(backend.displayName) rejected the API key (HTTP \(status)); AI completion is paused for 5 minutes"
             )
+        } else if duration == Self.configurationBackoff {
+            // Logged once per back-off: nothing is sent, so nothing fails again until the pause is over.
+            let message = Self.serverMessage(in: exchange) ?? "no message"
+            Self.logger.error(
+                """
+                \(backend.kind.rawValue) (\(backend.displayName)) refused the request with HTTP \(status): \(message). \
+                Check the model name and base URL; AI completion is paused for 2 minutes.
+                """
+            )
         }
+    }
+
+    /// The explanation the server gave with an error status, if it gave one.
+    nonisolated private static func serverMessage(in exchange: AICompletionExchange) -> String? {
+        do {
+            _ = try exchange.backend.suggestions(from: exchange.data, response: exchange.response)
+        } catch let AIBackendError.server(_, message) {
+            return message
+        } catch {
+            return nil
+        }
+        return nil
     }
 
     /// Turns a backend's suggestions into completion candidates; a response the backend cannot read

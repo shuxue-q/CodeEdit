@@ -15,15 +15,34 @@ struct OpenAIChatBackend: AICompletionBackend {
     /// The base URL used when the configuration has none.
     static let defaultBaseURL = URL(string: "https://api.openai.com/v1")!
 
+    /// How a request names its token limit and whether it sets a temperature.
+    ///
+    /// OpenAI's current models reject `max_tokens` and any `temperature` but the default; older models and
+    /// most compatible servers expect them.
+    enum ParameterStyle: Equatable, Sendable {
+        /// `max_completion_tokens`, and no `temperature`.
+        case current
+        /// `max_tokens` and `temperature: 0.2`.
+        case legacy
+
+        /// The other wording.
+        var other: ParameterStyle { self == .current ? .legacy : .current }
+    }
+
     let kind: AIBackendKind
+    /// The wording of the token limit and temperature in the request body.
+    let parameterStyle: ParameterStyle
 
     var displayName: String {
         kind == .openAI ? "OpenAI" : "OpenAI-compatible server"
     }
 
-    /// Creates a backend. `kind` only affects the display name and whether a base URL is mandatory.
-    init(kind: AIBackendKind = .openAI) {
+    /// Creates a backend. `kind` decides the display name, whether a base URL is mandatory and, unless
+    /// `parameterStyle` is given, the wording of the body: ``ParameterStyle/current`` for OpenAI itself,
+    /// ``ParameterStyle/legacy`` for compatible servers.
+    init(kind: AIBackendKind = .openAI, parameterStyle: ParameterStyle? = nil) {
         self.kind = kind
+        self.parameterStyle = parameterStyle ?? (kind == .openAI ? .current : .legacy)
     }
 
     func makeRequest(_ request: AICompletionRequest, configuration: AIBackendConfiguration) throws -> URLRequest {
@@ -49,24 +68,59 @@ struct OpenAIChatBackend: AICompletionBackend {
             urlRequest.setValue(value, forHTTPHeaderField: name)
         }
         urlRequest.httpBody = try? JSONSerialization.data(
-            withJSONObject: Self.requestBody(request: request, model: configuration.model)
+            withJSONObject: Self.requestBody(
+                request: request, model: configuration.model, parameterStyle: parameterStyle
+            )
         )
         return urlRequest
     }
 
+    /// The most tokens the model may generate.
+    static let maxOutputTokens = 256
+
     /// Builds the `POST {baseURL}/chat/completions` request body.
-    static func requestBody(request: AICompletionRequest, model: String) -> [String: Any] {
-        [
+    static func requestBody(
+        request: AICompletionRequest,
+        model: String,
+        parameterStyle: ParameterStyle
+    ) -> [String: Any] {
+        var body: [String: Any] = [
             "model": model,
             "messages": [
                 ["role": "system", "content": systemPrompt],
                 ["role": "user", "content": AICompletionPrompt.userMessage(for: request)]
             ],
-            "temperature": 0.2,
-            "max_tokens": 256,
             "n": 1,
             "response_format": ["type": "json_object"]
         ]
+        switch parameterStyle {
+        case .current:
+            body["max_completion_tokens"] = maxOutputTokens
+        case .legacy:
+            body["max_tokens"] = maxOutputTokens
+            body["temperature"] = 0.2
+        }
+        return body
+    }
+
+    /// The names a server's 400 uses when it refuses a parameter of the body.
+    private static let parameterRejectionMarkers = [
+        "unsupported parameter", "unsupported_parameter", "unsupported_value", "unsupported value",
+        "temperature", "max_tokens", "max_completion_tokens"
+    ]
+
+    func alternative(afterRejection data: Data, response: HTTPURLResponse) -> (any AICompletionBackend)? {
+        guard response.statusCode == 400,
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let error = json["error"] as? [String: Any] else {
+            return nil
+        }
+        let described = ["message", "code", "param", "type"]
+            .compactMap { error[$0] as? String }
+            .joined(separator: " ")
+            .lowercased()
+        guard Self.parameterRejectionMarkers.contains(where: described.contains) else { return nil }
+        return OpenAIChatBackend(kind: kind, parameterStyle: parameterStyle.other)
     }
 
     /// The shared system prompt plus the output format. OpenAI's JSON mode requires the word "JSON" in the

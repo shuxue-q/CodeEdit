@@ -59,6 +59,13 @@ protocol AICompletionBackend: Sendable {
     /// Reads the suggestions out of a response. Returns an empty list when the model declined or had
     /// nothing to suggest; throws when the response is an error or not in the expected shape.
     func suggestions(from data: Data, response: HTTPURLResponse) throws -> [AICompletionSuggestion]
+    /// A copy of this backend that words its requests differently, for a server that refused them, or `nil`
+    /// when there is nothing else to try. Asked once per request, with the server's refusal.
+    func alternative(afterRejection data: Data, response: HTTPURLResponse) -> (any AICompletionBackend)?
+}
+
+extension AICompletionBackend {
+    func alternative(afterRejection data: Data, response: HTTPURLResponse) -> (any AICompletionBackend)? { nil }
 }
 
 extension AIBackendKind {

@@ -264,4 +264,45 @@ final class FunctionSignatureTextTests: XCTestCase {
         let source = "void outer() {\n    struct L {\n        int get() const {\n            |"
         XCTAssertEqual(scanned(source), "int get() const")
     }
+
+    // MARK: - The enclosure for the return slot
+
+    /// What the scan for the `return` slot finds at the `|` of `source`.
+    private func enclosure(_ source: String) -> FunctionSignatureText.Enclosure? {
+        let cursor = (source as NSString).range(of: "|").location
+        return FunctionSignatureText.enclosure(in: source.replacingOccurrences(of: "|", with: ""), before: cursor)
+    }
+
+    func testEnclosureGivesTheDeclarationTextBeforeTheName() {
+        XCTAssertEqual(enclosure("int f() {\n    ret|"), .function(returnText: "int"))
+        XCTAssertEqual(
+            enclosure("static std::string *Foo::g(int a) const {\n    |"),
+            .function(returnText: "static std::string *")
+        )
+        XCTAssertEqual(enclosure("Widget::Widget() {\n    |"), .function(returnText: ""))
+    }
+
+    func testEnclosureSkipsControlBlocksButStopsAtLambdas() {
+        XCTAssertEqual(
+            enclosure("long f(int n) {\n    if (n) {\n        while (true) {\n            |"),
+            .function(returnText: "long")
+        )
+        XCTAssertEqual(enclosure("int f() {\n    auto g = [](int x) {\n        |"), .opaque)
+        XCTAssertEqual(enclosure("int f() {\n    auto g = [&] {\n        |"), .opaque)
+        XCTAssertEqual(enclosure("int f() {\n    auto g = [n]() mutable {\n        |"), .opaque)
+        XCTAssertEqual(enclosure("int f() {\n    auto g = [](int x) -> long {\n        |"), .opaque)
+        XCTAssertEqual(enclosure("auto f() -> int {\n    |"), .opaque)
+    }
+
+    func testEnclosureIgnoresALambdaThatIsAlreadyClosed() {
+        XCTAssertEqual(
+            enclosure("int f() {\n    auto g = [](int x) { return x; };\n    |"),
+            .function(returnText: "int")
+        )
+    }
+
+    func testEnclosureFindsNothingOutsideAFunction() {
+        XCTAssertNil(enclosure("int x = |"))
+        XCTAssertNil(enclosure("namespace n {\n    |"))
+    }
 }

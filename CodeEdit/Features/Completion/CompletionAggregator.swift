@@ -102,7 +102,7 @@ final class CompletionAggregator: CodeSuggestionDelegate {
         self.snippetProvider = TreeSitterSnippetProvider()
         self.wordProvider = DocumentWordProvider()
         self.postfixProvider = PostfixCompletionProvider(treeSitterClient: treeSitterClient)
-        self.aiProvider = CloudAICompletionProvider()
+        self.aiProvider = CloudAICompletionProvider(backoffStore: .shared)
         self.chainProvider = ChainCompletionProvider(
             makeServer: chainServerFactory ?? { [weak lspProvider, weak document] in
                 guard let lspProvider, let document else { return nil }

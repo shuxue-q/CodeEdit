@@ -56,6 +56,21 @@ enum GoldenSemanticCases {
             expectedType: "Color"
         ),
         GoldenCase(
+            name: "return while the syntax tree has no function reads the return type from the text",
+            line: "    return ",
+            nodeTypes: ["translation_unit"],
+            expectedIntent: .expression,
+            items: [
+                .lsp("count", .variable, detail: "int"),
+                .lsp("toColor", .function, detail: "Color"),
+                .lsp("color", .variable, detail: "Color"),
+                .lsp("Palette", .class)
+            ],
+            expectedTop: ["toColor", "color", "count"],
+            precedingText: "Color paint(int n) {\n",
+            slotTypes: GoldenCase.SlotTypes()
+        ),
+        GoldenCase(
             name: "call argument takes the type of the parameter from signature help",
             line: "    draw(p",
             nodeTypes: ["argument_list", "call_expression"] + inBody,
