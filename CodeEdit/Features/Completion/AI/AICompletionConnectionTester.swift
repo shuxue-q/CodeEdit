@@ -37,23 +37,16 @@ struct AICompletionConnectionTester {
             intentDescription: "a statement",
             maxSuggestions: 1
         )
-        var urlRequest: URLRequest
-        do {
-            urlRequest = try backend.makeRequest(request, configuration: configuration)
-        } catch let AIBackendError.invalidConfiguration(reason) {
-            return .failure(message: reason)
-        } catch {
-            return .failure(message: error.localizedDescription)
-        }
-        urlRequest.timeoutInterval = Self.timeout
-
         let start = Date()
         do {
-            let (data, response) = try await session.data(for: urlRequest)
-            guard let http = response as? HTTPURLResponse else { return .failure(message: "No HTTP response") }
-            _ = try backend.suggestions(from: data, response: http)
+            let exchange = try await AICompletionTransport.send(
+                request, backend: backend, configuration: configuration, session: session, timeout: Self.timeout
+            )
+            _ = try exchange.backend.suggestions(from: exchange.data, response: exchange.response)
             let milliseconds = Int(Date().timeIntervalSince(start) * 1_000)
             return .success(model: configuration.model, milliseconds: milliseconds)
+        } catch let AIBackendError.invalidConfiguration(reason) {
+            return .failure(message: reason)
         } catch let AIBackendError.server(status, message) {
             return .failure(message: Self.describe(status: status, message: message))
         } catch AIBackendError.malformedResponse {

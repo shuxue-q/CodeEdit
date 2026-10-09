@@ -49,6 +49,7 @@ final class CloudAICompletionProvider: AICompletionProvider {
     private let now: () -> ContinuousClock.Instant
     private var currentTask: Task<[CompletionCandidate], Never>?
     private var backoff: Backoff?
+    private var rememberedWording: RememberedWording?
     private static var lastErrorLogDate: Date?
     private static let logger = Logger(subsystem: "app.codeedit.CodeEdit", category: "CloudAICompletionProvider")
 
@@ -57,6 +58,13 @@ final class CloudAICompletionProvider: AICompletionProvider {
         let until: ContinuousClock.Instant
         let kind: AIBackendKind
         let configuration: AIBackendConfiguration
+    }
+
+    /// The backend wording a server accepted after it refused the first one, for the configuration it worked with.
+    private struct RememberedWording {
+        let kind: AIBackendKind
+        let configuration: AIBackendConfiguration
+        let backend: any AICompletionBackend
     }
 
     /// Creates a provider.
@@ -93,8 +101,8 @@ final class CloudAICompletionProvider: AICompletionProvider {
 
         let keychainKey = SettingsData.TextEditingSettings.AICompletionSettings.keychainKey(for: settings.backend)
         let apiKey = keychain.get(keychainKey)
-        let backend = settings.backend.backend
         let configuration = settings.configuration(apiKey: apiKey ?? "")
+        let backend = acceptedBackend(kind: settings.backend, configuration: configuration)
         guard !isBackedOff(kind: settings.backend, configuration: configuration) else { return [] }
 
         currentTask?.cancel()
@@ -136,27 +144,21 @@ final class CloudAICompletionProvider: AICompletionProvider {
         let semantics = await context.awaitSemantics?(Self.semanticsBudget) ?? .none
         guard !Task.isCancelled else { return [] }
         let request = AICompletionPrompt.request(for: context, semantics: semantics)
-        let urlRequest: URLRequest
-        do {
-            urlRequest = try backend.makeRequest(request, configuration: configuration)
-        } catch {
-            // Not configured (no key, no base URL): the normal state for a user who has not finished
-            // setting AI up, so nothing is logged.
-            return []
-        }
-
         let clock = ContinuousClock()
         let start = clock.now
         do {
-            let (data, response) = try await session.data(for: urlRequest)
+            let exchange = try await AICompletionTransport.send(
+                request, backend: backend, configuration: configuration, session: session
+            )
             guard !Task.isCancelled else { return [] }
             metrics.recordBackendLatency(name: "ai.\(backend.kind.rawValue)", duration: clock.now - start)
-            guard let httpResponse = response as? HTTPURLResponse else { return [] }
-            guard (200..<300).contains(httpResponse.statusCode) else {
-                handleFailure(status: httpResponse.statusCode, backend: backend, configuration: configuration)
-                return []
-            }
-            return Self.candidates(from: data, response: httpResponse, backend: backend)
+            return candidates(from: exchange, requested: backend, configuration: configuration)
+        } catch AIBackendError.invalidConfiguration {
+            // Not configured (no key, no base URL): the normal state for a user who has not finished
+            // setting AI up, so nothing is logged.
+            return []
+        } catch AIBackendError.malformedResponse {
+            return []
         } catch is CancellationError {
             return []
         } catch let error as URLError where error.code == .cancelled {
@@ -168,6 +170,25 @@ final class CloudAICompletionProvider: AICompletionProvider {
             logError("\(backend.displayName) completion request failed: \(error.localizedDescription)")
             return []
         }
+    }
+
+    /// The candidates in an answer, after noting what it says about the configuration: an error starts a
+    /// back-off, and a wording the server accepted only after refusing the first one is remembered.
+    private func candidates(
+        from exchange: AICompletionExchange,
+        requested backend: any AICompletionBackend,
+        configuration: AIBackendConfiguration
+    ) -> [CompletionCandidate] {
+        guard (200..<300).contains(exchange.response.statusCode) else {
+            handleFailure(status: exchange.response.statusCode, backend: exchange.backend, configuration: configuration)
+            return []
+        }
+        if exchange.usedAlternative {
+            rememberedWording = RememberedWording(
+                kind: backend.kind, configuration: configuration, backend: exchange.backend
+            )
+        }
+        return Self.candidates(from: exchange.data, response: exchange.response, backend: exchange.backend)
     }
 
     // MARK: - Back-off
@@ -190,6 +211,20 @@ final class CloudAICompletionProvider: AICompletionProvider {
         default:
             return false
         }
+    }
+
+    /// The backend to send with: the wording a server accepted earlier for this configuration, if any.
+    private func acceptedBackend(
+        kind: AIBackendKind,
+        configuration: AIBackendConfiguration
+    ) -> any AICompletionBackend {
+        if let rememberedWording {
+            if rememberedWording.kind == kind, rememberedWording.configuration == configuration {
+                return rememberedWording.backend
+            }
+            self.rememberedWording = nil
+        }
+        return kind.backend
     }
 
     private func isBackedOff(kind: AIBackendKind, configuration: AIBackendConfiguration) -> Bool {

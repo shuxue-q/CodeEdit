@@ -56,8 +56,9 @@ final class OpenAIChatBackendTests: XCTestCase {
             JSONSerialization.jsonObject(with: XCTUnwrap(urlRequest.httpBody)) as? [String: Any]
         )
         XCTAssertEqual(json["model"] as? String, "gpt-5")
-        XCTAssertEqual(json["temperature"] as? Double, 0.2)
-        XCTAssertEqual(json["max_tokens"] as? Int, 256)
+        XCTAssertEqual(json["max_completion_tokens"] as? Int, 256)
+        XCTAssertNil(json["max_tokens"], "OpenAI's current models reject max_tokens")
+        XCTAssertNil(json["temperature"], "Some of OpenAI's models reject any temperature but the default")
         XCTAssertEqual(json["n"] as? Int, 1)
         XCTAssertEqual((json["response_format"] as? [String: Any])?["type"] as? String, "json_object")
 
@@ -69,6 +70,65 @@ final class OpenAIChatBackendTests: XCTestCase {
         let user = try XCTUnwrap(messages.last?["content"] as? String)
         XCTAssertTrue(user.contains("pri<cursor/>\n}"))
         XCTAssertTrue(user.contains("Language: c"))
+    }
+
+    func testCompatibleServersKeepMaxTokensAndTemperature() throws {
+        let urlRequest = try compatible.makeRequest(
+            request,
+            configuration: AIBackendConfiguration(
+                model: "qwen2.5-coder", baseURL: URL(string: "http://localhost:11434/v1"), apiKey: ""
+            )
+        )
+        let json = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: XCTUnwrap(urlRequest.httpBody)) as? [String: Any]
+        )
+        XCTAssertEqual(json["max_tokens"] as? Int, 256)
+        XCTAssertEqual(json["temperature"] as? Double, 0.2)
+        XCTAssertNil(json["max_completion_tokens"])
+        XCTAssertEqual(json["n"] as? Int, 1)
+        XCTAssertEqual((json["response_format"] as? [String: Any])?["type"] as? String, "json_object")
+    }
+
+    func testTheParameterStyleFollowsTheKindUnlessGiven() {
+        XCTAssertEqual(OpenAIChatBackend(kind: .openAI).parameterStyle, .current)
+        XCTAssertEqual(OpenAIChatBackend(kind: .openAICompatible).parameterStyle, .legacy)
+        XCTAssertEqual(OpenAIChatBackend(kind: .openAI, parameterStyle: .legacy).parameterStyle, .legacy)
+    }
+
+    // MARK: - Alternative wording after a refusal
+
+    private func rejection(_ error: [String: Any], status: Int = 400) -> (Data, HTTPURLResponse) {
+        // swiftlint:disable:next force_try
+        (try! JSONSerialization.data(withJSONObject: ["error": error]), response(status: status))
+    }
+
+    func testAParameterRefusalOffersTheOtherWording() {
+        let refusals: [[String: Any]] = [
+            ["message": "Unsupported parameter: 'max_tokens' is not supported with this model."],
+            ["message": "Unsupported value: 'temperature' does not support 0.2.", "code": "unsupported_value"],
+            ["message": "Bad request", "code": "unsupported_value"],
+            ["message": "Something is wrong", "param": "temperature"],
+            ["message": "Unsupported parameter: 'max_completion_tokens'"]
+        ]
+        for error in refusals {
+            let (data, response) = rejection(error)
+            let alternative = backend.alternative(afterRejection: data, response: response) as? OpenAIChatBackend
+            XCTAssertEqual(alternative?.parameterStyle, .legacy, "\(error)")
+            XCTAssertEqual(alternative?.kind, .openAI)
+        }
+        let (data, response) = rejection(["message": "Unsupported parameter: 'max_tokens'"])
+        let back = compatible.alternative(afterRejection: data, response: response) as? OpenAIChatBackend
+        XCTAssertEqual(back?.parameterStyle, .current)
+        XCTAssertEqual(back?.kind, .openAICompatible)
+    }
+
+    func testOtherRefusalsOfferNothing() {
+        let (modelData, modelResponse) = rejection(["message": "No such model `nope`", "code": "model_not_found"])
+        XCTAssertNil(backend.alternative(afterRejection: modelData, response: modelResponse))
+        let (data, notBadRequest) = rejection(["message": "Unsupported parameter: 'temperature'"], status: 422)
+        XCTAssertNil(backend.alternative(afterRejection: data, response: notBadRequest))
+        XCTAssertNil(backend.alternative(afterRejection: Data("not json".utf8), response: response(status: 400)))
+        XCTAssertNil(AnthropicMessagesBackend().alternative(afterRejection: data, response: response(status: 400)))
     }
 
     func testCustomBaseURLAndTrailingSlashAreHandled() throws {
