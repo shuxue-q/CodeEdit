@@ -23,25 +23,30 @@ import CodeEditTextView
 @MainActor
 final class CompletionAggregator: CodeSuggestionDelegate {
     /// Characters that are considered part of a symbol when finding the typed prefix.
-    private static let wordCharacters = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "_$#"))
+    static let wordCharacters = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "_$#"))
 
-    private weak var document: CodeFileDocument?
-    private let treeSitterClient: TreeSitterClient
+    weak var document: CodeFileDocument?
+    let treeSitterClient: TreeSitterClient
     private let frequencyStore: CompletionFrequencyStoring
+    /// Where popup, acceptance and latency measurements go.
+    let metrics: any CompletionMetricsRecording
 
     private let lspProvider: LSPCompletionProvider
     private let snippetProvider: TreeSitterSnippetProvider
+    private let wordProvider: DocumentWordProvider
     private var aiProvider: (any AICompletionProvider)?
+    /// Extra providers queried alongside the built-in ones. Empty in the app; tests inject fakes here.
+    private let additionalProviders: [any CompletionProvider]
 
     /// All providers, in fan-out order.
-    private var providers: [any CompletionProvider] {
-        var all: [any CompletionProvider] = [lspProvider, snippetProvider]
+    var providers: [any CompletionProvider] {
+        var all: [any CompletionProvider] = [lspProvider, snippetProvider, wordProvider]
         if let aiProvider { all.append(aiProvider) }
-        return all
+        return all + additionalProviders
     }
 
     /// The provider that produced each candidate in the current session, keyed by candidate id.
-    private var candidateOwners: [String: any CompletionProvider] = [:]
+    var candidateOwners: [String: any CompletionProvider] = [:]
     /// The raw (pre-filter) candidate pool gathered for the current request, used to re-run the
     /// pipeline synchronously as the user keeps typing.
     private var rawCandidates: [CompletionCandidate] = []
@@ -52,20 +57,36 @@ final class CompletionAggregator: CodeSuggestionDelegate {
     private var requestOffset: Int?
     /// Results that arrived after the window opened, kept until the next cursor move so they can be
     /// merged in without blocking the window. Cleared when merged or when a new request starts.
-    private var lateResults: [(provider: any CompletionProvider, candidates: [CompletionCandidate])] = []
+    var lateResults: [(provider: any CompletionProvider, candidates: [CompletionCandidate])] = []
+    /// Whether the current request already asked ``DocumentWordProvider`` for words. It does not for a
+    /// one-character prefix; the words are then merged in once the prefix is long enough.
+    private var wordCandidatesGathered = false
+    /// The provider requests of the current session, cancelled when a newer request or a close supersedes them.
+    var inFlightProviderTasks: [Task<Void, Never>] = []
+    /// The candidate ids in the order the window last showed them, to find an accepted item's rank.
+    private var presentedIDs: [String] = []
+    /// How many times the list was refreshed since the window opened.
+    private var refreshesSincePopup = 0
+    /// What the frequency store knows for the current request's language and intent.
+    private var statistics = CompletionStatistics()
     /// Incremented on every request and on close so results from a superseded request are dropped.
-    private var requestGeneration = 0
+    var requestGeneration = 0
 
     init(
         document: CodeFileDocument,
         treeSitterClient: TreeSitterClient,
-        frequencyStore: CompletionFrequencyStoring = CompletionFrequencyStore.shared
+        frequencyStore: CompletionFrequencyStoring = CompletionFrequencyStore.shared,
+        metrics: any CompletionMetricsRecording = CompletionMetricsStore.shared,
+        additionalProviders: [any CompletionProvider] = []
     ) {
         self.document = document
         self.treeSitterClient = treeSitterClient
         self.frequencyStore = frequencyStore
+        self.metrics = metrics
+        self.additionalProviders = additionalProviders
         self.lspProvider = LSPCompletionProvider(document: document)
         self.snippetProvider = TreeSitterSnippetProvider()
+        self.wordProvider = DocumentWordProvider()
         self.aiProvider = ClaudeCompletionProvider()
     }
 
@@ -87,36 +108,76 @@ final class CompletionAggregator: CodeSuggestionDelegate {
         cursorPosition: CursorPosition,
         trigger: CodeSuggestionTrigger
     ) async -> (windowPosition: CursorPosition, items: [CodeSuggestionEntry])? {
+        let result = await completionSuggestionsResult(
+            textView: textView,
+            cursorPosition: cursorPosition,
+            trigger: trigger
+        )
+        return result.map { ($0.windowPosition, $0.items) }
+    }
+
+    func completionSuggestionsResult(
+        textView: TextViewController,
+        cursorPosition: CursorPosition,
+        trigger: CodeSuggestionTrigger
+    ) async -> CodeSuggestionResult? {
         guard let resolved = textView.resolveCursorPosition(cursorPosition) else { return nil }
         let location = resolved.range.location
         let string = textView.textView.textStorage.string as NSString
-        let context = buildContext(string: string, location: location, isExplicit: trigger == .explicit)
+        var context = buildContext(string: string, location: location, isExplicit: trigger == .explicit)
         // Typing in a comment, a string, a number, or a new declaration's name: stay out of the way
         // without asking any provider.
         guard context.isExplicit || CompletionIntentPolicy.allowsAutomaticCompletion(for: context.intent) else {
             return nil
         }
 
+        inFlightProviderTasks.forEach { $0.cancel() }
+        inFlightProviderTasks = []
         requestContext = context
         requestOffset = location
         lateResults = []
         candidateOwners = [:]
         requestGeneration += 1
 
+        statistics = frequencyStore.statistics(languageId: context.languageId, intent: context.intent)
+
+        // Tokenizing runs alongside the providers; its result only feeds the ranker's proximity signal.
+        let documentText = context.documentText
+        let words = Task { await wordProvider.words(in: documentText) }
         let gathered = await gatherCandidates(context: context, textView: textView, generation: requestGeneration)
-        guard !Task.isCancelled else { return nil }
+        guard !Task.isCancelled else {
+            words.cancel()
+            return nil
+        }
+        context.documentIdentifiers = await identifiers(from: words)
+        requestContext = context
 
         rawCandidates = gathered
+        wordCandidatesGathered = context.isExplicit || context.prefix.count >= DocumentWordProvider.minimumPrefixLength
         let ranked = rank(gathered, prefix: context.prefix, context: context)
-        let entries = CompletionPresenter.present(ranked)
+        let entries = CompletionPresenter.present(ranked.items)
         guard !entries.isEmpty else { return nil }
-        return (cursorPosition, entries)
+        metrics.recordPopup()
+        presentedIDs = ranked.items.map(\.id)
+        refreshesSincePopup = 0
+        return CodeSuggestionResult(
+            windowPosition: cursorPosition,
+            items: entries,
+            preselectedIndex: ranked.preselectedIndex
+        )
     }
 
     func completionOnCursorMove(
         textView: TextViewController,
         cursorPosition: CursorPosition
     ) -> [CodeSuggestionEntry]? {
+        completionSuggestionsUpdated(textView: textView, cursorPosition: cursorPosition)?.items
+    }
+
+    func completionSuggestionsUpdated(
+        textView: TextViewController,
+        cursorPosition: CursorPosition
+    ) -> CodeSuggestionUpdate? {
         guard var context = requestContext,
               let requestOffset,
               let resolved = textView.resolveCursorPosition(cursorPosition) else {
@@ -136,6 +197,7 @@ final class CompletionAggregator: CodeSuggestionDelegate {
             context.prefixRange = wordRange
         }
 
+        mergeWordCandidatesIfNeeded(context: context)
         for late in lateResults {
             for candidate in late.candidates { candidateOwners[candidate.id] = late.provider }
             rawCandidates.append(contentsOf: late.candidates)
@@ -144,8 +206,11 @@ final class CompletionAggregator: CodeSuggestionDelegate {
 
         requestContext = context
         let ranked = rank(rawCandidates, prefix: context.prefix, context: context)
-        let entries = CompletionPresenter.present(ranked)
-        return entries.isEmpty ? nil : entries
+        let entries = CompletionPresenter.present(ranked.items)
+        guard !entries.isEmpty else { return nil }
+        presentedIDs = ranked.items.map(\.id)
+        refreshesSincePopup += 1
+        return CodeSuggestionUpdate(items: entries, preselectedIndex: ranked.preselectedIndex)
     }
 
     func completionWindowApplyCompletion(
@@ -153,10 +218,52 @@ final class CompletionAggregator: CodeSuggestionDelegate {
         textView: TextViewController,
         cursorPosition: CursorPosition?
     ) {
+        completionWindowApplyCompletion(
+            item: item,
+            textView: textView,
+            cursorPosition: cursorPosition,
+            commitCharacter: nil
+        )
+    }
+
+    func completionWindowApplyCompletion(
+        item: CodeSuggestionEntry,
+        textView: TextViewController,
+        cursorPosition: CursorPosition?,
+        commitCharacter: Character?
+    ) {
         guard let entry = item as? AggregatedCompletionEntry else { return }
         let candidate = entry.candidate
-        candidateOwners[candidate.id]?.apply(candidate, textView: textView, cursorPosition: cursorPosition)
-        frequencyStore.recordAcceptance(label: candidate.label, languageId: requestContext?.languageId ?? "")
+        candidateOwners[candidate.id]?.apply(
+            candidate,
+            textView: textView,
+            cursorPosition: cursorPosition,
+            commitCharacter: commitCharacter
+        )
+        metrics.recordAcceptance(
+            rank: presentedIDs.firstIndex(of: candidate.id) ?? 0,
+            keystrokes: refreshesSincePopup
+        )
+        frequencyStore.recordAcceptance(
+            label: candidate.label,
+            languageId: requestContext?.languageId ?? "",
+            intent: requestContext?.intent ?? .unknown,
+            at: Date()
+        )
+    }
+
+    func completionCommitCharacters(for item: CodeSuggestionEntry) -> Set<Character> {
+        guard Settings[\.textEditing].completion.commitCharactersEnabled,
+              let entry = item as? AggregatedCompletionEntry,
+              let context = requestContext else {
+            return []
+        }
+        return CommitCharacters.characters(
+            for: entry.candidate,
+            languageId: context.languageId,
+            prefix: context.prefix,
+            pool: rawCandidates
+        )
     }
 
     func completionWindowResolve(item: CodeSuggestionEntry) async -> CodeSuggestionEntry? {
@@ -172,6 +279,9 @@ final class CompletionAggregator: CodeSuggestionDelegate {
     }
 
     func completionWindowDidClose() {
+        inFlightProviderTasks.forEach { $0.cancel() }
+        inFlightProviderTasks = []
+        presentedIDs = []
         rawCandidates = []
         candidateOwners = [:]
         requestContext = nil
@@ -180,151 +290,34 @@ final class CompletionAggregator: CodeSuggestionDelegate {
         requestGeneration += 1
     }
 
-    // MARK: - Context
-
-    private func buildContext(string: NSString, location: Int, isExplicit: Bool) -> CompletionContext {
-        let prefixRange = wordRange(in: string, at: location)
-        let prefix = string.substring(with: prefixRange)
-        let lineStart = lineStart(in: string, before: location)
-        let lineTextBeforeCursor = string.substring(with: NSRange(location: lineStart, length: location - lineStart))
-        let languageId = document?.getLanguage().id.rawValue ?? ""
-        let recognizer = CompletionIntentRecognizer(treeSitterClient: treeSitterClient)
-        let intent = recognizer.recognize(
-            at: location,
-            prefix: prefix,
-            lineTextBeforeCursor: lineTextBeforeCursor,
-            languageId: languageId
-        )
-
-        return CompletionContext(
-            prefix: prefix,
-            prefixRange: prefixRange,
-            triggerCharacter: location > 0 ? string.substring(with: NSRange(location: location - 1, length: 1)) : nil,
-            intent: intent,
-            languageId: languageId,
-            documentText: string as String,
-            cursorOffset: location,
-            isExplicit: isExplicit
-        )
-    }
-
-    private func wordRange(in string: NSString, at location: Int) -> NSRange {
-        var start = location
-        while start > 0,
-              let scalar = Unicode.Scalar(string.character(at: start - 1)),
-              Self.wordCharacters.contains(scalar) {
-            start -= 1
+    /// Adds document words once the typed prefix is long enough, when the request was made too early
+    /// to ask for them.
+    private func mergeWordCandidatesIfNeeded(context: CompletionContext) {
+        guard !wordCandidatesGathered,
+              context.prefix.count >= DocumentWordProvider.minimumPrefixLength,
+              let words = wordProvider.cachedCandidates(for: context) else {
+            return
         }
-        return NSRange(location: start, length: location - start)
-    }
-
-    private func lineStart(in string: NSString, before location: Int) -> Int {
-        var start = location
-        while start > 0 && string.character(at: start - 1) != 0x0A {
-            start -= 1
-        }
-        return start
+        wordCandidatesGathered = true
+        for word in words { candidateOwners[word.id] = wordProvider }
+        rawCandidates.append(contentsOf: words)
     }
 
     private func rank(
         _ candidates: [CompletionCandidate],
         prefix: String,
         context: CompletionContext
-    ) -> [CompletionCandidate] {
+    ) -> RankedCompletions {
         let deduped = CompletionDeduplicator.deduplicate(candidates)
-        let frequencies = frequencyStore.frequencies(for: context.languageId)
         return CompletionRanker.rank(
             deduped,
             prefix: prefix,
             intent: context.intent,
             isExplicit: context.isExplicit,
-            frequencies: frequencies
+            frequencies: statistics.languageFrequencies,
+            intentFrequencies: statistics.intentFrequencies,
+            lastAccepted: statistics.lastAccepted,
+            documentIdentifiers: context.documentIdentifiers
         )
-    }
-
-    // MARK: - Fan-out with per-provider deadlines
-
-    /// One provider's in-flight request for the current completion session.
-    @MainActor
-    private final class ProviderRun {
-        let provider: any CompletionProvider
-        var result: [CompletionCandidate]?
-        /// Set once the window has opened without this run; receives the result when it arrives.
-        var onLateResult: (([CompletionCandidate]) -> Void)?
-        var task: Task<Void, Never>?
-
-        init(provider: any CompletionProvider) {
-            self.provider = provider
-        }
-    }
-
-    /// Queries every provider concurrently.
-    ///
-    /// Providers with a zero `deadline` (language server, snippets) are awaited in full, as the
-    /// language server was before the aggregator existed. Providers with a deadline (AI) never
-    /// hold the window open once the others have answered: whatever they have returned by then is
-    /// included, and a later answer is kept in `lateResults` for the next cursor move. When the
-    /// blocking providers return nothing, a deadline provider is waited on for up to its deadline so
-    /// the window can still open with its items alone.
-    private func gatherCandidates(
-        context: CompletionContext,
-        textView: TextViewController,
-        generation: Int
-    ) async -> [CompletionCandidate] {
-        let runs = providers.map { ProviderRun(provider: $0) }
-        for run in runs {
-            run.task = Task { @MainActor in
-                let result = await run.provider.candidates(for: context, textView: textView)
-                run.result = result
-                run.onLateResult?(result)
-            }
-        }
-        let tasks = runs.compactMap(\.task)
-
-        return await withTaskCancellationHandler {
-            await self.collect(runs, generation: generation)
-        } onCancel: {
-            tasks.forEach { $0.cancel() }
-        }
-    }
-
-    /// Awaits zero-deadline runs in full, then takes whatever the deadline runs have returned.
-    private func collect(_ runs: [ProviderRun], generation: Int) async -> [CompletionCandidate] {
-        var gathered: [CompletionCandidate] = []
-        func take(_ run: ProviderRun) {
-            guard let result = run.result else { return }
-            for candidate in result { candidateOwners[candidate.id] = run.provider }
-            gathered.append(contentsOf: result)
-        }
-
-        for run in runs where run.provider.deadline == .zero {
-            await run.task?.value
-            take(run)
-        }
-        for run in runs where run.provider.deadline > .zero {
-            if run.result == nil, gathered.isEmpty, let task = run.task {
-                await Self.wait(for: task, upTo: run.provider.deadline)
-            }
-            if run.result != nil {
-                take(run)
-            } else {
-                let provider = run.provider
-                run.onLateResult = { [weak self] result in
-                    guard let self, self.requestGeneration == generation, !result.isEmpty else { return }
-                    self.lateResults.append((provider, result))
-                }
-            }
-        }
-        return gathered
-    }
-
-    /// Waits for `task` to finish or for `duration` to elapse, whichever comes first.
-    private static func wait(for task: Task<Void, Never>, upTo duration: Duration) async {
-        await withTaskGroup(of: Void.self) { group in
-            group.addTask { await task.value }
-            group.addTask { try? await Task.sleep(for: duration) }
-            await group.next()
-            group.cancelAll()
-        }
     }
 }

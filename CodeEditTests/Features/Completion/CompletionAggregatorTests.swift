@@ -112,6 +112,39 @@ final class CompletionAggregatorTests: XCTestCase {
         XCTAssertFalse(labels.contains("using"), "`using` is a statement, not a type: \(labels)")
     }
 
+    /// Without a language server, identifiers from the document are offered with the Word badge.
+    func testDocumentWordsAppearWhenNoServerAnswers() async throws {
+        let (aggregator, editor) = try makeAggregator(source: "int counter = 1;\ncou")
+        let result = await aggregator.completionSuggestionsRequested(
+            textView: editor,
+            cursorPosition: CursorPosition(range: NSRange(location: editor.textView.textStorage.length, length: 0)),
+            trigger: .typing
+        )
+        let entry = try XCTUnwrap(result?.items.first { $0.label == "counter" })
+        XCTAssertEqual(entry.badge?.accessibilityLabel, "Word")
+    }
+
+    /// A request made at one character has no words; they join once the prefix reaches two characters.
+    func testWordsJoinOnceThePrefixIsLongEnough() async throws {
+        let (aggregator, editor) = try makeAggregator(source: "int counter = 1;\nc")
+        _ = await aggregator.completionSuggestionsRequested(
+            textView: editor,
+            cursorPosition: CursorPosition(range: NSRange(location: editor.textView.textStorage.length, length: 0)),
+            trigger: .typing
+        )
+        let end = editor.textView.textStorage.length
+        editor.textView.replaceCharacters(in: NSRange(location: end, length: 0), with: "ou")
+        var labels: [String] = []
+        for _ in 0..<40 where !labels.contains("counter") {
+            try await Task.sleep(for: .milliseconds(50))
+            labels = aggregator.completionOnCursorMove(
+                textView: editor,
+                cursorPosition: CursorPosition(range: NSRange(location: end + 2, length: 0))
+            )?.map(\.label) ?? []
+        }
+        XCTAssertTrue(labels.contains("counter"), "Got \(labels)")
+    }
+
     private func makeAggregator(source: String) throws -> (CompletionAggregator, TextViewController) {
         let file = directory.appending(path: "main.cpp")
         try source.write(to: file, atomically: true, encoding: .utf8)

@@ -25,4 +25,7 @@ struct CompletionContext {
     var cursorOffset: Int
     /// `true` when the user explicitly asked for completions rather than triggering them by typing.
     var isExplicit: Bool = false
+    /// The identifiers that occur in the document. A candidate named like one of them is a symbol the
+    /// file already uses, which the ranker favors. Empty when they have not been collected.
+    var documentIdentifiers: Set<String> = []
 }

@@ -45,6 +45,7 @@ struct TextEditingSettingsView: View {
                 enableTypeOverCompletion
                 showInlineCompletionInfo
                 visibleCompletionCount
+                completionBehaviorSettings
             }
             Section {
                 bracketPairHighlight

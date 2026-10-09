@@ -22,19 +22,28 @@ enum CompletionRanker {
         let prefix: String
         let isExplicit: Bool
         let frequencies: [String: Int]
+        let intentFrequencies: [String: Int]
+        let lastAccepted: [String: Date]
+        let documentIdentifiers: Set<String>
+        let now: Date
         let weights: RankingWeights
     }
 
     /// Filters `candidates` to those that match `prefix` and are allowed for `intent`, then ranks
-    /// and returns them, with AI candidates placed in a fixed band after the top non-AI items.
+    /// them, with AI candidates placed in a fixed band after the top non-AI items, and decides
+    /// whether the top item is a strong enough match to be preselected.
     static func rank(
         _ candidates: [CompletionCandidate],
         prefix: String,
         intent: CompletionIntent,
         isExplicit: Bool = false,
         frequencies: [String: Int] = [:],
+        intentFrequencies: [String: Int] = [:],
+        lastAccepted: [String: Date] = [:],
+        documentIdentifiers: Set<String> = [],
+        now: Date = Date(),
         weights: RankingWeights = .default
-    ) -> [CompletionCandidate] {
+    ) -> RankedCompletions {
         let normalizedPrefix = prefix.hasPrefix("#") ? String(prefix.dropFirst()) : prefix
         let ordered = orderedByServer(candidates)
         let options = ScoringOptions(
@@ -42,10 +51,14 @@ enum CompletionRanker {
             prefix: normalizedPrefix,
             isExplicit: isExplicit,
             frequencies: frequencies,
+            intentFrequencies: intentFrequencies,
+            lastAccepted: lastAccepted,
+            documentIdentifiers: documentIdentifiers,
+            now: now,
             weights: weights
         )
         let scored = score(ordered, options: options)
-        return assemble(scored, weights: weights)
+        return assemble(scored, prefix: normalizedPrefix, weights: weights)
     }
 
     /// Normalizes the server's ordering: sorts by `sortText` (falling back to `label`), keeping
@@ -85,30 +98,59 @@ enum CompletionRanker {
             let serverRank = 1.0 - Double(index) / maxIndex
             let blendedServerRank = candidate.score.map { (serverRank + $0) / 2 } ?? serverRank
             let key = CompletionDeduplicator.normalizedLabel(candidate.label)
-            let frequency = Double(options.frequencies[key] ?? 0)
-
             let weights = options.weights
             let total = weights.fuzzy * fuzzy.score
                 + weights.server * blendedServerRank
                 + weights.context * contextWeight
-                + weights.frequency * log1p(frequency)
+                + weights.frequency * log1p(frequency(of: key, options: options))
+                + weights.recency * recencyBonus(of: key, options: options)
+                + weights.proximity * proximityBonus(of: candidate, options: options)
 
             scored.append(ScoredCandidate(candidate: candidate, score: total, matchLength: matchText.count))
         }
         return scored
     }
 
+    /// Acceptances of `key` in this intent, plus those in the language's other intents at half weight.
+    ///
+    /// The per-language table counts every intent, so the part not already counted for this intent
+    /// is the fallback that keeps data recorded before intents were tracked useful.
+    private static func frequency(of key: String, options: ScoringOptions) -> Double {
+        let inIntent = Double(options.intentFrequencies[key] ?? 0)
+        let inLanguage = Double(options.frequencies[key] ?? 0)
+        return inIntent + 0.5 * max(0, inLanguage - inIntent)
+    }
+
+    /// `1` right after accepting `key` in this intent, falling off exponentially with the age of that
+    /// acceptance; `0` when it was never accepted.
+    private static func recencyBonus(of key: String, options: ScoringOptions) -> Double {
+        guard let last = options.lastAccepted[key] else { return 0 }
+        let age = max(0, options.now.timeIntervalSince(last))
+        return exp(-age / options.weights.recencyTimeConstant)
+    }
+
+    /// `1` when the document already contains a symbol named like `candidate`.
+    private static func proximityBonus(of candidate: CompletionCandidate, options: ScoringOptions) -> Double {
+        let name = CompletionDeduplicator.symbolName(of: candidate.label)
+        return options.documentIdentifiers.contains(name) ? 1 : 0
+    }
+
     /// Sorts non-AI candidates by score (ties broken by match length, then label), then inserts
     /// the top-scoring AI candidates into a fixed band after `weights.aiInsertAfter` items.
-    private static func assemble(_ scored: [ScoredCandidate], weights: RankingWeights) -> [CompletionCandidate] {
-        let nonAICandidates = scored
+    private static func assemble(
+        _ scored: [ScoredCandidate],
+        prefix: String,
+        weights: RankingWeights
+    ) -> RankedCompletions {
+        let sortedNonAI = scored
             .filter { $0.candidate.source != .ai }
             .sorted { lhs, rhs in
                 if lhs.score != rhs.score { return lhs.score > rhs.score }
                 if lhs.matchLength != rhs.matchLength { return lhs.matchLength < rhs.matchLength }
                 return lhs.candidate.label < rhs.candidate.label
             }
-            .map(\.candidate)
+        let nonAICandidates = sortedNonAI.map(\.candidate)
+        let preselected = isStrongBestMatch(sortedNonAI, prefix: prefix, weights: weights) ? 0 : nil
 
         let aiCandidates = scored
             .filter { $0.candidate.source == .ai }
@@ -116,10 +158,38 @@ enum CompletionRanker {
             .prefix(weights.aiMaxItems)
             .map(\.candidate)
 
-        guard !aiCandidates.isEmpty else { return nonAICandidates }
+        guard !aiCandidates.isEmpty else {
+            return RankedCompletions(items: nonAICandidates, preselectedIndex: preselected)
+        }
 
         var result = nonAICandidates
         result.insert(contentsOf: aiCandidates, at: min(weights.aiInsertAfter, result.count))
-        return result
+        // The best non-AI item stays first: the AI band is inserted after `aiInsertAfter` (>= 1) items.
+        return RankedCompletions(items: result, preselectedIndex: preselected)
+    }
+
+    /// Whether the top-ranked item deserves to be preselected: the server marked it, it beats the
+    /// runner-up by `weights.preselectMargin`, or it alone starts with the typed `prefix` (case-sensitive).
+    private static func isStrongBestMatch(
+        _ sortedNonAI: [ScoredCandidate],
+        prefix: String,
+        weights: RankingWeights
+    ) -> Bool {
+        guard let top = sortedNonAI.first else { return false }
+        if case .lsp(let item) = top.candidate.payload, item.preselect == true {
+            return true
+        }
+        guard sortedNonAI.count > 1 else { return true }
+        let second = sortedNonAI[1]
+        if top.score - second.score >= weights.preselectMargin {
+            return true
+        }
+        guard !prefix.isEmpty else { return false }
+        return startsWithCaseSensitively(top.candidate, prefix: prefix)
+            && !startsWithCaseSensitively(second.candidate, prefix: prefix)
+    }
+
+    private static func startsWithCaseSensitively(_ candidate: CompletionCandidate, prefix: String) -> Bool {
+        CompletionDeduplicator.normalizedLabel(candidate.label).hasPrefix(prefix)
     }
 }

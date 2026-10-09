@@ -11,6 +11,9 @@ import AppKit
 final class SuggestionViewModel: ObservableObject {
     /// The items to be displayed in the window
     @Published var items: [CodeSuggestionEntry] = []
+    /// The row of `items` that is a strong best match: selected when the list appears and drawn in
+    /// bold. Set before `items` so observers of the list see it. `nil` highlights the first row.
+    var preselectedIndex: Int?
     var itemsRequestTask: Task<Void, Never>?
     private var requestID: UUID?
     weak var activeTextView: TextViewController?
@@ -42,7 +45,7 @@ final class SuggestionViewModel: ObservableObject {
             }
 
             do {
-                let result = await delegate.completionSuggestionsRequested(
+                let result = await delegate.completionSuggestionsResult(
                     textView: textView,
                     cursorPosition: cursorPosition,
                     trigger: trigger
@@ -58,6 +61,7 @@ final class SuggestionViewModel: ObservableObject {
                         return
                     }
 
+                    self.preselectedIndex = completionItems.preselectedIndex
                     self.items = completionItems.items
                     self.syntaxHighlightedCache = [:]
                     showWindowOnParent(targetParentWindow, cursorRect)
@@ -93,16 +97,17 @@ final class SuggestionViewModel: ObservableObject {
             return
         }
 
-        guard let newItems = delegate.completionOnCursorMove(
+        guard let update = delegate.completionSuggestionsUpdated(
             textView: textView,
             cursorPosition: position
         ),
-              !newItems.isEmpty else {
+              !update.items.isEmpty else {
             close()
             return
         }
 
-        items = newItems
+        preselectedIndex = update.preselectedIndex
+        items = update.items
     }
 
     func didSelect(item: CodeSuggestionEntry) {
@@ -121,7 +126,34 @@ final class SuggestionViewModel: ObservableObject {
         items[index] = item
     }
 
-    func applySelectedItem(item: CodeSuggestionEntry, window: NSWindow?) {
+    /// The commit character `typed` stands for, when typing it should accept `item`.
+    ///
+    /// Requires that the delegate lists `typed` for `item` and that a word precedes the caret, so a
+    /// character typed right after `.`, `->` or `::` (nothing typed yet) never accepts a row.
+    func commitCharacter(typed: Character, for item: CodeSuggestionEntry) -> Character? {
+        guard let delegate, let activeTextView,
+              delegate.completionCommitCharacters(for: item).contains(typed),
+              Self.wordPrecedesCaret(in: activeTextView) else {
+            return nil
+        }
+        return typed
+    }
+
+    /// Whether the character before the first caret belongs to an identifier.
+    private static func wordPrecedesCaret(in controller: TextViewController) -> Bool {
+        guard let location = controller.textView.selectionManager.textSelections.first?.range.location,
+              location > 0 else {
+            return false
+        }
+        let string = controller.textView.textStorage.string as NSString
+        guard location <= string.length,
+              let scalar = Unicode.Scalar(string.character(at: location - 1)) else {
+            return false
+        }
+        return CharacterSet.alphanumerics.contains(scalar) || scalar == "_" || scalar == "$"
+    }
+
+    func applySelectedItem(item: CodeSuggestionEntry, window: NSWindow?, commitCharacter: Character? = nil) {
         guard let activeTextView else {
             return
         }
@@ -130,7 +162,8 @@ final class SuggestionViewModel: ObservableObject {
         self.delegate?.completionWindowApplyCompletion(
             item: item,
             textView: activeTextView,
-            cursorPosition: activeTextView.cursorPositions.first
+            cursorPosition: activeTextView.cursorPositions.first,
+            commitCharacter: commitCharacter
         )
         willClose()
         window?.close()
@@ -142,6 +175,7 @@ final class SuggestionViewModel: ObservableObject {
         itemsRequestTask = nil
         delegate?.completionWindowDidClose()
         delegate = nil
+        preselectedIndex = nil
         items.removeAll()
         activeTextView = nil
     }

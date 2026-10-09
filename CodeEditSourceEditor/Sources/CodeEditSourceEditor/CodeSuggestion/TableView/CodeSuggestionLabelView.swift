@@ -17,6 +17,8 @@ struct CodeSuggestionLabelView: View {
     var showsTrailingDetail: Bool = false
     /// White label text, used on the accent selection of the inline layout.
     var isSelected: Bool = false
+    /// Draws the name in bold: this row is the strong best match the window preselected.
+    var isPreselected: Bool = false
 
     var body: some View {
         HStack(alignment: .center, spacing: 2) {
@@ -27,6 +29,7 @@ struct CodeSuggestionLabelView: View {
 
             if showsTrailingDetail {
                 Text(suggestion.label)
+                    .bold(isPreselected)
                     .foregroundStyle(primaryColor)
                     .lineLimit(1)
                     .truncationMode(.tail)
@@ -42,6 +45,7 @@ struct CodeSuggestionLabelView: View {
                 // Main label. One line so a row cannot grow to the height of the window.
                 HStack(spacing: font.charWidth) {
                     Text(suggestion.label)
+                        .bold(isPreselected)
                         .foregroundStyle(suggestion.deprecated ? Color(secondaryLabelColor) : Color(labelColor))
                         .lineLimit(1)
                         .truncationMode(.tail)

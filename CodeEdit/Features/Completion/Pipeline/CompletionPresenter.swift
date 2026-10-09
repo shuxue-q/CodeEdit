@@ -16,7 +16,7 @@ enum CompletionPresenter {
     }
 
     /// The trailing badge for a completion source: LSP, tree-sitter (AST) for snippets and keywords,
-    /// or AI. The AI icon keeps its original colors; the others are tinted.
+    /// AI, or a plain word from the document. The AI icon keeps its original colors; the others are tinted.
     static func badge(for source: CompletionSource) -> CodeSuggestionBadge? {
         switch source {
         case .lsp:
@@ -42,6 +42,12 @@ enum CompletionPresenter {
                 image: CompletionIconImage.original("AI-provider"),
                 color: .purple,
                 accessibilityLabel: "AI suggestion"
+            )
+        case .word:
+            return CodeSuggestionBadge(
+                image: Image(systemName: "textformat.abc"),
+                color: .gray,
+                accessibilityLabel: "Word"
             )
         }
     }

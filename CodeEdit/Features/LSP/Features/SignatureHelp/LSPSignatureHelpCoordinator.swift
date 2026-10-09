@@ -242,6 +242,15 @@ extension LSPSignatureHelpCoordinator: @MainActor TextViewCoordinator {
             }
         })
         observers.append(NotificationCenter.default.addObserver(
+            forName: LSPCompletionProvider.signatureHelpRequestNotification,
+            object: controller,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.scheduleRequest()
+            }
+        })
+        observers.append(NotificationCenter.default.addObserver(
             forName: NSWindow.didResignKeyNotification,
             object: nil,
             queue: .main
