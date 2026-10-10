@@ -128,7 +128,10 @@ struct CodeFileView: View {
             + [breakpointCoordinator]
         self.isEditable = isEditable
 
+        // `@Published` replays the current value on subscription. This initializer runs inside a view
+        // update, so hop to the next main-queue turn before publishing the cursor positions.
         codeFile.$openOptions
+            .receive(on: DispatchQueue.main)
             .sink { [weak codeFile] options in
                 guard let options else { return }
                 editorInstance.cursorPositions = options.cursorPositions
