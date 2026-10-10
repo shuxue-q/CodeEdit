@@ -102,6 +102,10 @@ extension ThemeModel {
     var chromeLabelColor: NSColor { activeChrome?.primaryText ?? .labelColor }
     /// Secondary label color for navigator, tab and breadcrumb text.
     var chromeSecondaryLabelColor: NSColor { activeChrome?.secondaryText ?? .secondaryLabelColor }
+    /// Background for text being edited in the chrome, such as a file name being renamed: the editor canvas.
+    var chromeFieldBackgroundColor: NSColor { activeChrome?.surface(.canvas) ?? .textBackgroundColor }
+    /// Color for text being edited in the chrome: the theme's editor text color at full strength.
+    var chromeFieldTextColor: NSColor { activeChrome.map { $0.textBase ?? $0.primaryText } ?? .textColor }
 }
 
 extension Theme.EditorColors {

@@ -38,7 +38,10 @@ class FileSystemTableViewCell: StandardTableViewCell {
     /// Keeps the unfiltered label muted, but readable on the emphasized selection highlight.
     override var backgroundStyle: NSView.BackgroundStyle {
         didSet {
-            guard navigatorFilter?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true else { return }
+            guard navigatorFilter?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true,
+                  textField?.currentEditor() == nil else {
+                return
+            }
             textField?.textColor = backgroundStyle == .emphasized
                 ? .alternateSelectedControlTextColor
                 : ThemeModel.shared.chromeLabelColor
@@ -167,7 +170,13 @@ let errorRed = NSColor(red: 1, green: 0, blue: 0, alpha: 0.2)
 extension FileSystemTableViewCell: NSTextFieldDelegate {
     func controlTextDidChange(_ obj: Notification) {
         guard let fileItem else { return }
-        textField?.backgroundColor = fileItem.validateFileName(for: textField?.stringValue ?? "") ? .none : errorRed
+        let fieldBackground = ThemeModel.shared.chromeFieldBackgroundColor
+        let background = fileItem.validateFileName(for: textField?.stringValue ?? "")
+            ? fieldBackground
+            : errorRed.withAlphaComponent(1).blended(withFraction: 1 - errorRed.alphaComponent, of: fieldBackground)
+        textField?.backgroundColor = background
+        // The field editor's clip view copied the background when editing began; keep it in step.
+        (textField?.currentEditor()?.superview as? NSClipView)?.backgroundColor = background ?? fieldBackground
     }
 
     func controlTextDidEndEditing(_ obj: Notification) {

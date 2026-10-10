@@ -202,6 +202,9 @@ class StandardTableViewCell: NSTableCellView {
     }
 
     class SpecialSelectTextField: NSTextField {
+        /// The label color to put back when editing ends. Non-nil only while editing.
+        private var labelTextColor: NSColor?
+
         override func becomeFirstResponder() -> Bool {
             let range = NSRange(
                 location: 0,
@@ -210,22 +213,41 @@ class StandardTableViewCell: NSTableCellView {
                     to: stringValue.lastIndex(of: ".") ?? stringValue.endIndex
                 )
             )
+            applyEditingColors()
             selectText(self)
             let editor = currentEditor()
             editor?.selectedRange = range
             return true
         }
 
-        override func textDidBeginEditing(_ notification: Notification) {
-            super.textDidBeginEditing(notification)
-            wantsLayer = true
-            layer?.backgroundColor = NSColor.textBackgroundColor.cgColor
-        }
-
         override func textDidEndEditing(_ notification: Notification) {
             super.textDidEndEditing(notification)
-            wantsLayer = false
-            layer?.backgroundColor = nil
+            restoreLabelColors()
+        }
+
+        override func abortEditing() -> Bool {
+            let aborted = super.abortEditing()
+            restoreLabelColors()
+            return aborted
+        }
+
+        /// Swaps the label colors for the theme's field colors before the field editor is set up.
+        ///
+        /// The label color is chosen for the row behind it (white on the selection highlight), which is
+        /// unreadable on the opaque background the field editor draws.
+        private func applyEditingColors() {
+            guard labelTextColor == nil else { return }
+            labelTextColor = textColor
+            textColor = ThemeModel.shared.chromeFieldTextColor
+            backgroundColor = ThemeModel.shared.chromeFieldBackgroundColor
+            drawsBackground = true
+        }
+
+        private func restoreLabelColors() {
+            guard let labelTextColor else { return }
+            self.labelTextColor = nil
+            drawsBackground = false
+            textColor = labelTextColor
         }
     }
 }
