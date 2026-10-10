@@ -31,12 +31,12 @@ final class CloudAICompletionProvider: AICompletionProvider {
     /// The minimum time between logged network/HTTP failures.
     static let errorLogInterval: TimeInterval = 60
     /// How long to stay quiet after a rate limit or a server error (HTTP 429, 529, 5xx).
-    static let transientBackoff: Duration = .seconds(30)
+    nonisolated static let transientBackoff: Duration = .seconds(30)
     /// How long to stay quiet after the server rejected the key (HTTP 401, 403).
-    static let authenticationBackoff: Duration = .seconds(300)
+    nonisolated static let authenticationBackoff: Duration = .seconds(300)
     /// How long to stay quiet after the server refused the request itself (HTTP 400, 404, 422), which a wrong
     /// model name or base URL does on every request.
-    static let configurationBackoff: Duration = .seconds(120)
+    nonisolated static let configurationBackoff: Duration = .seconds(120)
     /// How long to stay quiet after the network turned out to be unreachable.
     static let networkBackoff: Duration = .seconds(60)
     /// How long a request waits for the semantic facts (expected type, function header) before it is sent
@@ -69,7 +69,7 @@ final class CloudAICompletionProvider: AICompletionProvider {
     ///   - session: The session used for requests. Injectable so tests can stub network calls.
     ///   - keychain: Where the API key is read from.
     ///   - settingsProvider: Returns the current AI completion settings.
-    ///   - metrics: Where the backend's response times are recorded.
+    ///   - metrics: Where the backend's response times are recorded; `nil` uses ``CompletionMetricsStore/shared``.
     ///   - now: The clock back-off is measured with. Injectable so tests need not wait.
     ///   - backoffStore: Where back-off is recorded. The default is private to this provider; the app passes
     ///     ``AICompletionBackoffStore/shared`` so that all documents and the settings page agree.
@@ -79,14 +79,14 @@ final class CloudAICompletionProvider: AICompletionProvider {
         settingsProvider: @escaping () -> SettingsData.TextEditingSettings.AICompletionSettings = {
             Settings[\.textEditing].aiCompletion
         },
-        metrics: any CompletionMetricsRecording = CompletionMetricsStore.shared,
+        metrics: (any CompletionMetricsRecording)? = nil,
         now: @escaping () -> ContinuousClock.Instant = { .now },
         backoffStore: AICompletionBackoffStore = AICompletionBackoffStore()
     ) {
         self.session = session
         self.keychain = keychain
         self.settingsProvider = settingsProvider
-        self.metrics = metrics
+        self.metrics = metrics ?? CompletionMetricsStore.shared
         self.now = now
         self.backoffStore = backoffStore
     }

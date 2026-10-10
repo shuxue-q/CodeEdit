@@ -85,7 +85,7 @@ final class CompletionAggregator: CodeSuggestionDelegate {
         document: CodeFileDocument,
         treeSitterClient: TreeSitterClient,
         frequencyStore: CompletionFrequencyStoring = CompletionFrequencyStore.shared,
-        metrics: any CompletionMetricsRecording = CompletionMetricsStore.shared,
+        metrics: (any CompletionMetricsRecording)? = nil,
         additionalProviders: [any CompletionProvider] = [],
         expectedTypeSource: ((CompletionContext, TextViewController) async -> TypeText?)? = nil,
         receiverTypeSource: ((CompletionContext, TextViewController) async -> String?)? = nil,
@@ -95,7 +95,7 @@ final class CompletionAggregator: CodeSuggestionDelegate {
         self.document = document
         self.treeSitterClient = treeSitterClient
         self.frequencyStore = frequencyStore
-        self.metrics = metrics
+        self.metrics = metrics ?? CompletionMetricsStore.shared
         self.additionalProviders = additionalProviders
         let lspProvider = LSPCompletionProvider(document: document)
         self.lspProvider = lspProvider
