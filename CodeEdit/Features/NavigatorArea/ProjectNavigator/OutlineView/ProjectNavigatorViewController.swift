@@ -70,6 +70,9 @@ final class ProjectNavigatorViewController: NSViewController {
 
     var shouldReloadAfterDoneEditing: Bool = false
 
+    /// A file created from the navigator that is being named inline; it opens once naming finishes.
+    var pendingNewFile: CEWorkspaceFile?
+
     /// Hides dotfiles and excluded patterns; `nil` shows every file.
     var visibilityFilter: NavigatorVisibilityFilter?
 
@@ -98,7 +101,7 @@ final class ProjectNavigatorViewController: NSViewController {
 
         scrollView.documentView = outlineView
         scrollView.contentView.automaticallyAdjustsContentInsets = false
-        scrollView.contentView.contentInsets = .init(top: 10, left: 0, bottom: 0, right: 0)
+        scrollView.contentView.contentInsets = .init(top: 2, left: 0, bottom: 0, right: 0)
         scrollView.scrollerStyle = .overlay
         scrollView.hasVerticalScroller = true
         scrollView.hasHorizontalScroller = false

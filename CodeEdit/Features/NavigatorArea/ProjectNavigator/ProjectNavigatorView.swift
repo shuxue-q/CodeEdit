@@ -15,7 +15,12 @@ import SwiftUI
 /// When selecting a file it will open in the editor.
 ///
 struct ProjectNavigatorView: View {
+    @StateObject private var actions = ProjectNavigatorActions()
+
     var body: some View {
-        ProjectNavigatorOutlineView()
+        VStack(spacing: 0) {
+            ProjectNavigatorHeader(actions: actions)
+            ProjectNavigatorOutlineView(actions: actions)
+        }
     }
 }

@@ -16,6 +16,9 @@ struct ProjectNavigatorOutlineView: NSViewControllerRepresentable {
 
     @StateObject var prefs: Settings = .shared
 
+    /// Receives the controller so the navigator header can create files and folders in it.
+    let actions: ProjectNavigatorActions
+
     typealias NSViewControllerType = ProjectNavigatorViewController
 
     func makeNSViewController(context: Context) -> ProjectNavigatorViewController {
@@ -27,6 +30,7 @@ struct ProjectNavigatorOutlineView: NSViewControllerRepresentable {
         workspace.workspaceFileManager?.addObserver(context.coordinator)
 
         context.coordinator.controller = controller
+        actions.controller = controller
 
         return controller
     }

@@ -41,6 +41,7 @@ extension ProjectNavigatorViewController: OutlineTableViewCellDelegate {
     }
 
     func cellDidFinishEditing() {
+        openPendingNewFileIfNeeded()
         guard shouldReloadAfterDoneEditing else { return }
         outlineView.reloadData()
     }
