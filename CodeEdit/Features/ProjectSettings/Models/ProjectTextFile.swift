@@ -21,7 +21,7 @@ final class ProjectTextFile: Identifiable {
     /// The path shown to the user, relative to the workspace root.
     let displayPath: String
 
-    var id: URL { url }
+    nonisolated var id: URL { url }
 
     /// The text being edited.
     var text: String = ""
