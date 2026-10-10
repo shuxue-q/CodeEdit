@@ -203,7 +203,14 @@ extension Theme {
                     numbers: .init(color: numbers.nsColor),
                     strings: .init(color: strings.nsColor),
                     characters: .init(color: characters.nsColor),
-                    comments: .init(color: comments.nsColor)
+                    comments: .init(color: comments.nsColor),
+                    functions: .init(color: functions.nsColor, bold: functions.bold, italic: functions.italic),
+                    operators: .init(color: operators.nsColor, bold: operators.bold, italic: operators.italic),
+                    assignedVariables: .init(
+                        color: assignedVariables.nsColor,
+                        bold: assignedVariables.bold,
+                        italic: assignedVariables.italic
+                    )
                 )
             }
             set {
@@ -223,6 +230,9 @@ extension Theme {
                 self.strings.nsColor = newValue.strings.color
                 self.characters.nsColor = newValue.characters.color
                 self.comments.nsColor = newValue.comments.color
+                self.functions.nsColor = newValue.functions.color
+                self.operators.nsColor = newValue.operators.color
+                self.assignedVariables.nsColor = newValue.assignedVariables.color
             }
         }
 
@@ -242,6 +252,46 @@ extension Theme {
         var strings: Attributes
         var characters: Attributes
         var comments: Attributes
+        /// Function and method names. Older themes without this key reuse ``commands``, the slot CodeEdit
+        /// documents as the function color.
+        var functions: Attributes
+        /// Operator symbols (`=`, `+`, `->`, …). Older themes without this key reuse ``text``.
+        var operators: Attributes
+        /// Variables being written to (assignment targets, names declared with a value).
+        /// Older themes without this key reuse ``variables``.
+        var assignedVariables: Attributes
+
+        enum CodingKeys: String, CodingKey {
+            case text, insertionPoint, invisibles, background, lineHighlight, selection
+            case keywords, commands, types, attributes, variables, values, numbers, strings, characters, comments
+            case functions, operators, assignedVariables
+        }
+
+        /// Decodes a theme file, filling the roles added after the original format from the attribute that used
+        /// to style them so every existing theme keeps its look.
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            text = try container.decode(Attributes.self, forKey: .text)
+            insertionPoint = try container.decode(Attributes.self, forKey: .insertionPoint)
+            invisibles = try container.decode(Attributes.self, forKey: .invisibles)
+            background = try container.decode(Attributes.self, forKey: .background)
+            lineHighlight = try container.decode(Attributes.self, forKey: .lineHighlight)
+            selection = try container.decode(Attributes.self, forKey: .selection)
+            keywords = try container.decode(Attributes.self, forKey: .keywords)
+            commands = try container.decode(Attributes.self, forKey: .commands)
+            types = try container.decode(Attributes.self, forKey: .types)
+            attributes = try container.decode(Attributes.self, forKey: .attributes)
+            variables = try container.decode(Attributes.self, forKey: .variables)
+            values = try container.decode(Attributes.self, forKey: .values)
+            numbers = try container.decode(Attributes.self, forKey: .numbers)
+            strings = try container.decode(Attributes.self, forKey: .strings)
+            characters = try container.decode(Attributes.self, forKey: .characters)
+            comments = try container.decode(Attributes.self, forKey: .comments)
+            functions = try container.decodeIfPresent(Attributes.self, forKey: .functions) ?? commands
+            operators = try container.decodeIfPresent(Attributes.self, forKey: .operators) ?? text
+            assignedVariables = try container.decodeIfPresent(Attributes.self, forKey: .assignedVariables)
+                ?? variables
+        }
 
         /// Allows to look up properties by their name
         ///
@@ -270,6 +320,9 @@ extension Theme {
                 case "strings": return self.strings
                 case "characters": return self.characters
                 case "comments": return self.comments
+                case "functions": return self.functions
+                case "operators": return self.operators
+                case "assignedVariables": return self.assignedVariables
                 default: fatalError("Invalid key")
                 }
             }
@@ -291,6 +344,9 @@ extension Theme {
                 case "strings": self.strings = newValue
                 case "characters": self.characters = newValue
                 case "comments": self.comments = newValue
+                case "functions": self.functions = newValue
+                case "operators": self.operators = newValue
+                case "assignedVariables": self.assignedVariables = newValue
                 default: fatalError("Invalid key")
                 }
             }
@@ -312,7 +368,10 @@ extension Theme {
             numbers: Attributes,
             strings: Attributes,
             characters: Attributes,
-            comments: Attributes
+            comments: Attributes,
+            functions: Attributes? = nil,
+            operators: Attributes? = nil,
+            assignedVariables: Attributes? = nil
         ) {
             self.text = text
             self.insertionPoint = insertionPoint
@@ -330,6 +389,9 @@ extension Theme {
             self.strings = strings
             self.characters = characters
             self.comments = comments
+            self.functions = functions ?? commands
+            self.operators = operators ?? text
+            self.assignedVariables = assignedVariables ?? variables
         }
     }
 }

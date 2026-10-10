@@ -85,6 +85,16 @@ They can either be ``Theme/ThemeType/dark`` or ``Theme/ThemeType/light``.
   "variables" : {
     "color" : "#41A1C0"
   },
+  "assignedVariables" : {
+    "color" : "#67B7A4"
+  },
+  "functions" : {
+    "color" : "#5DD8FF"
+  },
+  "operators" : {
+    "color" : "#D9D9D9",
+    "bold" : true
+  },
   "attributes" : {
     "color" : "#D0A8FF"
   },
@@ -93,6 +103,24 @@ They can either be ``Theme/ThemeType/dark`` or ``Theme/ThemeType/light``.
   }
 }
 ```
+
+Each entry takes a `color` and optional `bold` / `italic` flags. The roles map to syntax like this:
+
+| Key | Styles |
+| --- | ------ |
+| `keywords` | Keywords, `#include`, booleans, builtin variables such as `self`, tags and labels |
+| `functions` | Function and method names, declared or called (`commands` is kept for compatibility and used when `functions` is missing) |
+| `variables` | Variables that are read, parameters and properties |
+| `assignedVariables` | Variables being written: the target of `=`, `+=`, … and names declared with a value (`int x = 1`, `let y = 2`, `set(VAR …)`) |
+| `values` | Constants, macros and enum members |
+| `numbers` | Integer and floating point literals |
+| `strings` / `characters` | String and character literals |
+| `types` / `attributes` | Type names, and attributes / annotations |
+| `operators` | Operator symbols (`=`, `+`, `->`, `&&`) |
+| `comments` | Comments |
+
+`functions`, `operators` and `assignedVariables` are optional: a theme that omits them uses the `commands`, `text` and
+`variables` colors for those roles, so themes written before they existed keep a sensible look.
 
 ### Terminal
 

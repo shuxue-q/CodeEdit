@@ -70,7 +70,13 @@ struct SemanticTokenMap: Sendable { // swiftlint:enable line_length
             let modifiers = decodeModifier(token.modifiers)
 
             let type = Int(token.type)
-            let capture = tokenTypeMap.indices.contains(type) ? tokenTypeMap[type] : nil
+            var capture = tokenTypeMap.indices.contains(type) ? tokenTypeMap[type] : nil
+
+            // Servers that flag written variables with the `modification` modifier expose the assignment target
+            // role directly, the same way the tree-sitter `variable.assigned` capture does.
+            if modifiers.contains(.modification), capture?.isVariableFamily == true {
+                capture = .assignedVariable
+            }
 
             return HighlightRange(
                 range: range,

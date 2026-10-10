@@ -49,9 +49,6 @@
 (import_spec_list
   ")" @indent.branch)
 
-(var_spec_list
-  ")" @indent.branch)
-
 [
   "}"
   ")"

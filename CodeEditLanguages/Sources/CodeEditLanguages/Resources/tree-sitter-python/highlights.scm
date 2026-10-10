@@ -1,10 +1,28 @@
 ; Identifier naming conventions
 
+((identifier) @constant
+ (#match? @constant "^[A-Z][A-Z_]*$"))
+
 ((identifier) @constructor
  (#match? @constructor "^[A-Z]"))
 
-((identifier) @constant
- (#match? @constant "^[A-Z][A-Z_]*$"))
+; Assignment targets: the variable being written to, as opposed to the ones being read.
+(assignment
+  left: (identifier) @variable.assigned)
+(assignment
+  left: (attribute attribute: (identifier) @variable.assigned))
+(assignment
+  left: (pattern_list (identifier) @variable.assigned))
+(assignment
+  left: (tuple_pattern (identifier) @variable.assigned))
+(augmented_assignment
+  left: (identifier) @variable.assigned)
+(augmented_assignment
+  left: (attribute attribute: (identifier) @variable.assigned))
+(named_expression
+  name: (identifier) @variable.assigned)
+(for_statement
+  left: (identifier) @variable.assigned)
 
 ; Builtin functions
 

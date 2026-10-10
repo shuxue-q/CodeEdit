@@ -33,6 +33,13 @@
 ((identifier) @keyword
  (#match? @keyword "^(private|protected|public)$"))
 
+; Assignment targets: the variable being written to, as opposed to the ones being read.
+(assignment left: (identifier) @variable.assigned)
+(assignment left: (instance_variable) @variable.assigned)
+(assignment left: (left_assignment_list (identifier) @variable.assigned))
+(operator_assignment left: (identifier) @variable.assigned)
+(operator_assignment left: (instance_variable) @variable.assigned)
+
 ; Function calls
 
 ((identifier) @function.method.builtin

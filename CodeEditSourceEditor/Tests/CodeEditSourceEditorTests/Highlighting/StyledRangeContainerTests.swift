@@ -122,4 +122,57 @@ final class StyledRangeContainerTests: XCTestCase {
         XCTAssertEqual(runs[9], Run(length: 5, value: .init(capture: .string, modifiers: [.modification])))
         XCTAssertEqual(runs[10], Run(length: 90, value: nil))
     }
+
+    /// A language server (higher priority) that only knows the text is a variable must not erase the grammar's
+    /// knowledge that it is an assignment target. Any other capture from the higher priority provider still wins.
+    @MainActor
+    func test_assignedVariableSurvivesHigherPriorityVariable() {
+        let providers = [0, 1]
+        let store = StyledRangeContainer(documentLength: 100, providers: providers)
+
+        // Priority 0: a language server reporting plain variables and a function.
+        store.applyHighlightResult(
+            provider: providers[0],
+            highlights: [
+                HighlightRange(range: NSRange(location: 0, length: 10), capture: .variable),
+                HighlightRange(range: NSRange(location: 20, length: 10), capture: .property),
+                HighlightRange(range: NSRange(location: 40, length: 10), capture: .function)
+            ],
+            rangeToHighlight: NSRange(location: 0, length: 100)
+        )
+
+        // Priority 1: the grammar marking the same spans as assignment targets, plus one the server did not style.
+        store.applyHighlightResult(
+            provider: providers[1],
+            highlights: [
+                HighlightRange(range: NSRange(location: 0, length: 10), capture: .assignedVariable),
+                HighlightRange(range: NSRange(location: 20, length: 10), capture: .assignedVariable),
+                HighlightRange(range: NSRange(location: 40, length: 10), capture: .assignedVariable),
+                HighlightRange(range: NSRange(location: 60, length: 10), capture: .assignedVariable)
+            ],
+            rangeToHighlight: NSRange(location: 0, length: 100)
+        )
+
+        let runs = store.runsIn(range: NSRange(location: 0, length: 100))
+        XCTAssertEqual(runs[0], Run(length: 10, value: .init(capture: .assignedVariable, modifiers: [])))
+        XCTAssertEqual(runs[1], Run(length: 10, value: nil))
+        XCTAssertEqual(runs[2], Run(length: 10, value: .init(capture: .assignedVariable, modifiers: [])))
+        XCTAssertEqual(runs[3], Run(length: 10, value: nil))
+        XCTAssertEqual(runs[4], Run(length: 10, value: .init(capture: .function, modifiers: [])))
+        XCTAssertEqual(runs[5], Run(length: 10, value: nil))
+        XCTAssertEqual(runs[6], Run(length: 10, value: .init(capture: .assignedVariable, modifiers: [])))
+        XCTAssertEqual(runs[7], Run(length: 30, value: nil))
+    }
+
+    func test_resolveCapture() {
+        typealias Element = StyledRangeContainer.StyleElement
+        XCTAssertEqual(Element.resolveCapture(preferred: .variable, fallback: .assignedVariable), .assignedVariable)
+        XCTAssertEqual(Element.resolveCapture(preferred: .parameter, fallback: .assignedVariable), .assignedVariable)
+        XCTAssertEqual(Element.resolveCapture(preferred: nil, fallback: .assignedVariable), .assignedVariable)
+        XCTAssertEqual(Element.resolveCapture(preferred: .assignedVariable, fallback: .variable), .assignedVariable)
+        XCTAssertEqual(Element.resolveCapture(preferred: .function, fallback: .assignedVariable), .function)
+        XCTAssertEqual(Element.resolveCapture(preferred: .keyword, fallback: .variable), .keyword)
+        XCTAssertEqual(Element.resolveCapture(preferred: nil, fallback: .variable), .variable)
+        XCTAssertNil(Element.resolveCapture(preferred: nil, fallback: nil))
+    }
 }
