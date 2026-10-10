@@ -164,7 +164,7 @@ extension ProjectNavigatorViewController: NSOutlineViewDelegate {
 
     /// Method for recursively expanding a file's parent directories.
     /// - Parameter item:
-    private func expandParent(item: CEWorkspaceFile) {
+    func expandParent(item: CEWorkspaceFile) {
         if let parent = item.parent as CEWorkspaceFile? {
             expandParent(item: parent)
         }
