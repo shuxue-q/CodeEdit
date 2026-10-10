@@ -127,15 +127,10 @@ extension Theme.EditorColors {
         set { variables = newValue }
     }
 
-    /// Function and method color. Stored under `commands` in theme files.
-    var functions: Theme.Attributes {
-        get { commands }
-        set { commands = newValue }
-    }
-
-    /// The standardized syntax token group, read from the stored keys.
+    /// The standardized syntax token group, read from the stored keys (`functions` falls back to `commands`
+    /// for theme files written before that key existed; see ``Theme/EditorColors/init(from:)``).
     var coreTokens: CoreTokens {
-        CoreTokens(keywords: keywords, identifiers: variables, functions: commands, comments: comments)
+        CoreTokens(keywords: keywords, identifiers: variables, functions: functions, comments: comments)
     }
 }
 

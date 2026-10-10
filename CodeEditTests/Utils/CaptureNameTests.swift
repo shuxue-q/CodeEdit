@@ -19,7 +19,8 @@ final class CaptureNameTests: XCTestCase {
             ("keyword.function", .keywordFunction),
             ("constant", .constant),
             ("operator", .operator),
-            ("label", .label)
+            ("label", .label),
+            ("variable.assigned", .assignedVariable)
         ]
         for (name, expected) in cases {
             XCTAssertEqual(CaptureName.fromString(name), expected, name)
@@ -37,6 +38,7 @@ final class CaptureNameTests: XCTestCase {
             ("number.float", .number),
             ("type.qualifier", .type),
             ("variable.member", .variable),
+            ("variable.assigned.member", .assignedVariable),
             ("comment.documentation", .comment)
         ]
         for (name, expected) in cases {

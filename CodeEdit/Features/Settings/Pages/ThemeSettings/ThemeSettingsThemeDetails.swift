@@ -77,75 +77,7 @@ struct ThemeSettingsThemeDetails: View {
                     }
                     Section("Tokens") {
                         VStack(spacing: 0) {
-                            ThemeSettingsThemeToken(
-                                "Keywords",
-                                color: $theme.editor.keywords.swiftColor,
-                                bold: $theme.editor.keywords.bold,
-                                italic: $theme.editor.keywords.italic
-                            )
-                            Divider().padding(.horizontal, 10)
-                            ThemeSettingsThemeToken(
-                                "Commands",
-                                color: $theme.editor.commands.swiftColor,
-                                bold: $theme.editor.commands.bold,
-                                italic: $theme.editor.commands.italic
-                            )
-                            Divider().padding(.horizontal, 10)
-                            ThemeSettingsThemeToken(
-                                "Types",
-                                color: $theme.editor.types.swiftColor,
-                                bold: $theme.editor.types.bold,
-                                italic: $theme.editor.types.italic
-                            )
-                            Divider().padding(.horizontal, 10)
-                            ThemeSettingsThemeToken(
-                                "Attributes",
-                                color: $theme.editor.attributes.swiftColor,
-                                bold: $theme.editor.attributes.bold,
-                                italic: $theme.editor.attributes.italic
-                            )
-                            Divider().padding(.horizontal, 10)
-                            ThemeSettingsThemeToken(
-                                "Variables",
-                                color: $theme.editor.variables.swiftColor,
-                                bold: $theme.editor.variables.bold,
-                                italic: $theme.editor.variables.italic
-                            )
-                            Divider().padding(.horizontal, 10)
-                            ThemeSettingsThemeToken(
-                                "Values",
-                                color: $theme.editor.values.swiftColor,
-                                bold: $theme.editor.values.bold,
-                                italic: $theme.editor.values.italic
-                            )
-                            Divider().padding(.horizontal, 10)
-                            ThemeSettingsThemeToken(
-                                "Numbers",
-                                color: $theme.editor.numbers.swiftColor,
-                                bold: $theme.editor.numbers.bold,
-                                italic: $theme.editor.numbers.italic
-                            )
-                            Divider().padding(.horizontal, 10)
-                            ThemeSettingsThemeToken(
-                                "Strings",
-                                color: $theme.editor.strings.swiftColor,
-                                bold: $theme.editor.strings.bold,
-                                italic: $theme.editor.strings.italic
-                            )
-                            Divider().padding(.horizontal, 10)
-                            ThemeSettingsThemeToken(
-                                "Characters",
-                                color: $theme.editor.characters.swiftColor,
-                                bold: $theme.editor.characters.bold,
-                                italic: $theme.editor.characters.italic
-                            )
-                            Divider().padding(.horizontal, 10)
-                            ThemeSettingsThemeToken(
-                                "Comments",
-                                color: $theme.editor.comments.swiftColor,
-                                bold: $theme.editor.comments.bold,
-                                italic: $theme.editor.comments.italic
-                            )
+                            tokenRows
                         }
                         .background(theme.editor.background.swiftColor)
                         .padding(-10)
@@ -262,5 +194,101 @@ struct ThemeSettingsThemeDetails: View {
         } message: {
             Text("This action cannot be undone.")
         }
+    }
+}
+
+extension ThemeSettingsThemeDetails {
+    /// One editable row per syntax role of the theme's editor colors.
+    @ViewBuilder private var tokenRows: some View {
+        ThemeSettingsThemeToken(
+            "Keywords",
+            color: $theme.editor.keywords.swiftColor,
+            bold: $theme.editor.keywords.bold,
+            italic: $theme.editor.keywords.italic
+        )
+        Divider().padding(.horizontal, 10)
+        ThemeSettingsThemeToken(
+            "Commands",
+            color: $theme.editor.commands.swiftColor,
+            bold: $theme.editor.commands.bold,
+            italic: $theme.editor.commands.italic
+        )
+        Divider().padding(.horizontal, 10)
+        ThemeSettingsThemeToken(
+            "Types",
+            color: $theme.editor.types.swiftColor,
+            bold: $theme.editor.types.bold,
+            italic: $theme.editor.types.italic
+        )
+        Divider().padding(.horizontal, 10)
+        ThemeSettingsThemeToken(
+            "Attributes",
+            color: $theme.editor.attributes.swiftColor,
+            bold: $theme.editor.attributes.bold,
+            italic: $theme.editor.attributes.italic
+        )
+        Divider().padding(.horizontal, 10)
+        ThemeSettingsThemeToken(
+            "Variables",
+            color: $theme.editor.variables.swiftColor,
+            bold: $theme.editor.variables.bold,
+            italic: $theme.editor.variables.italic
+        )
+        Divider().padding(.horizontal, 10)
+        ThemeSettingsThemeToken(
+            "Assigned Variables",
+            color: $theme.editor.assignedVariables.swiftColor,
+            bold: $theme.editor.assignedVariables.bold,
+            italic: $theme.editor.assignedVariables.italic
+        )
+        Divider().padding(.horizontal, 10)
+        ThemeSettingsThemeToken(
+            "Functions",
+            color: $theme.editor.functions.swiftColor,
+            bold: $theme.editor.functions.bold,
+            italic: $theme.editor.functions.italic
+        )
+        Divider().padding(.horizontal, 10)
+        ThemeSettingsThemeToken(
+            "Values",
+            color: $theme.editor.values.swiftColor,
+            bold: $theme.editor.values.bold,
+            italic: $theme.editor.values.italic
+        )
+        Divider().padding(.horizontal, 10)
+        ThemeSettingsThemeToken(
+            "Numbers",
+            color: $theme.editor.numbers.swiftColor,
+            bold: $theme.editor.numbers.bold,
+            italic: $theme.editor.numbers.italic
+        )
+        Divider().padding(.horizontal, 10)
+        ThemeSettingsThemeToken(
+            "Strings",
+            color: $theme.editor.strings.swiftColor,
+            bold: $theme.editor.strings.bold,
+            italic: $theme.editor.strings.italic
+        )
+        Divider().padding(.horizontal, 10)
+        ThemeSettingsThemeToken(
+            "Characters",
+            color: $theme.editor.characters.swiftColor,
+            bold: $theme.editor.characters.bold,
+            italic: $theme.editor.characters.italic
+        )
+        Divider().padding(.horizontal, 10)
+        ThemeSettingsThemeToken(
+            "Comments",
+            color: $theme.editor.comments.swiftColor,
+            bold: $theme.editor.comments.bold,
+            italic: $theme.editor.comments.italic
+        )
+        Divider().padding(.horizontal, 10)
+        ThemeSettingsThemeToken(
+            "Operators",
+            color: $theme.editor.operators.swiftColor,
+            bold: $theme.editor.operators.bold,
+            italic: $theme.editor.operators.italic
+        )
     }
 }

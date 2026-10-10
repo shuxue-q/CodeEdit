@@ -1,9 +1,45 @@
+; Assignment targets: the variable a command writes to.
+(normal_command
+  (identifier) @_function
+  (argument_list
+    .
+    (argument) @variable.assigned)
+  (#match? @_function "^([sS][eE][tT]|[uU][nN][sS][eE][tT]|[oO][pP][tT][iI][oO][nN])$"))
+
+(normal_command
+  (identifier) @_function
+  (argument_list
+    .
+    (argument) @_subcommand
+    .
+    (argument) @variable.assigned)
+  (#match? @_function "^[lL][iI][sS][tT]$")
+  (#any-of? @_subcommand
+    "APPEND" "FILTER" "INSERT" "POP_BACK" "POP_FRONT" "PREPEND" "REMOVE_ITEM" "REMOVE_AT"
+    "REMOVE_DUPLICATES" "REVERSE" "SORT"))
+
+(normal_command
+  (identifier) @_function
+  (argument_list
+    .
+    (argument) @_subcommand
+    .
+    (argument) @variable.assigned)
+  (#match? @_function "^[mM][aA][tT][hH]$")
+  (#eq? @_subcommand "EXPR"))
+
+(foreach_command
+  (foreach)
+  (argument_list
+    .
+    (argument) @variable.assigned))
+
 (normal_command
   (identifier)
   (argument_list
     (argument
       (unquoted_argument)) @constant)
-  (#lua-match? @constant "^[%u@][%u%d_]+$"))
+  (#match? @constant "^[A-Z@][A-Z0-9_]+$"))
 
 [
   (quoted_argument)
@@ -125,7 +161,7 @@
   (identifier) @_function
   (argument_list
     .
-    (argument) @variable)
+    (argument) @variable.assigned)
   (#match? @_function "^[sS][eE][tT]$"))
 
 (normal_command
@@ -218,4 +254,4 @@
 ((source_file
   .
   (line_comment) @keyword.directive @nospell)
-  (#lua-match? @keyword.directive "^#!/"))
+  (#match? @keyword.directive "^#!/"))

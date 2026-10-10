@@ -37,6 +37,12 @@ struct ThemeSettingsColorPreview: View {
                 theme.editor.variables.swiftColor
             )
             ThemeSettingsColorPreviewColor(
+                theme.editor.assignedVariables.swiftColor
+            )
+            ThemeSettingsColorPreviewColor(
+                theme.editor.functions.swiftColor
+            )
+            ThemeSettingsColorPreviewColor(
                 theme.editor.values.swiftColor
             )
             ThemeSettingsColorPreviewColor(

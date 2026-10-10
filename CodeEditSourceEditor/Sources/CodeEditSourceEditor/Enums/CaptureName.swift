@@ -36,6 +36,10 @@ public enum CaptureName: Int8, CaseIterable, Sendable {
     case constant
     case `operator`
     case label
+    /// A variable that is being written to: the target of an assignment or a declaration with an initial value
+    /// (`x` in `x = y` or `let x = y`). Produced by grammar queries as `variable.assigned` and by language servers
+    /// through the `modification` semantic token modifier. Distinguishes the written variable from the ones read.
+    case assignedVariable
     /// Rainbow bracket nesting levels. Only produced by the bracket depth pass, never by grammar queries.
     /// See ``bracketLevel(_:)``.
     case bracketLevel0
@@ -68,6 +72,17 @@ public enum CaptureName: Int8, CaseIterable, Sendable {
         case .bracketLevel4: return 4
         case .bracketLevel5: return 5
         default: return nil
+        }
+    }
+
+    /// Captures that describe a variable being read: plain variables, properties and parameters.
+    /// ``assignedVariable`` refines any of these when a provider marks the same text as written to.
+    public var isVariableFamily: Bool {
+        switch self {
+        case .variable, .property, .parameter:
+            return true
+        default:
+            return false
         }
     }
 
@@ -105,6 +120,7 @@ public enum CaptureName: Int8, CaseIterable, Sendable {
         "type_alternate": .typeAlternate,
         "attribute": .typeAlternate,
         "variable.builtin": .variableBuiltin,
+        "variable.assigned": .assignedVariable,
         "keyword.return": .keywordReturn,
         "keyword.function": .keywordFunction,
         "constant": .constant,
@@ -195,6 +211,8 @@ public enum CaptureName: Int8, CaseIterable, Sendable {
             return "operator"
         case .label:
             return "label"
+        case .assignedVariable:
+            return "assignedVariable"
         case .bracketLevel0:
             return "bracketLevel0"
         case .bracketLevel1:

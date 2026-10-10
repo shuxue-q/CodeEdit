@@ -4,6 +4,20 @@
 ;; The only difference in this file is that queries using #lua-match?
 ;; have been removed.
 
+;;; Assignment targets: the variable being written to, as opposed to the ones being read.
+
+(property_declaration
+	(variable_declaration
+		(simple_identifier) @variable.assigned)
+	"=")
+(assignment
+	(directly_assignable_expression
+		(simple_identifier) @variable.assigned))
+(assignment
+	(directly_assignable_expression
+		(navigation_suffix
+			(simple_identifier) @variable.assigned)))
+
 ;;; Identifiers
 
 (simple_identifier) @variable

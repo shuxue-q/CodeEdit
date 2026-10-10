@@ -41,6 +41,13 @@ public struct EditorTheme: Equatable {
     public var strings: Attribute
     public var characters: Attribute
     public var comments: Attribute
+    /// Function and method names, both at their declaration and where they are called.
+    public var functions: Attribute
+    /// Operator symbols such as `=`, `+`, `->` and `&&`.
+    public var operators: Attribute
+    /// Variables that are being written to: assignment targets and names declared with an initial value.
+    /// Variables that are only read keep ``variables``.
+    public var assignedVariables: Attribute
 
     /// Explicit rainbow bracket colors, cycled by nesting depth (like VS Code's
     /// `editorBracketHighlight.foreground1…6`). When `nil` or empty, a palette suited to the theme's
@@ -63,7 +70,10 @@ public struct EditorTheme: Equatable {
         numbers: Attribute,
         strings: Attribute,
         characters: Attribute,
-        comments: Attribute
+        comments: Attribute,
+        functions: Attribute? = nil,
+        operators: Attribute? = nil,
+        assignedVariables: Attribute? = nil
     ) {
         self.text = text
         self.insertionPoint = insertionPoint
@@ -81,6 +91,11 @@ public struct EditorTheme: Equatable {
         self.strings = strings
         self.characters = characters
         self.comments = comments
+        // Themes that predate these roles fall back to the slot CodeEdit reserved for them: `commands` was
+        // documented as the function color, operators and assignment targets were drawn as text and variables.
+        self.functions = functions ?? commands
+        self.operators = operators ?? text
+        self.assignedVariables = assignedVariables ?? variables
     }
 
     /// Fallback rainbow bracket palette for dark backgrounds.
@@ -129,16 +144,17 @@ public struct EditorTheme: Equatable {
         .comment: \.comments,
         .variable: \.variables,
         .property: \.variables,
-        .function: \.variables,
-        .method: \.variables,
+        .function: \.functions,
+        .method: \.functions,
         .parameter: \.variables,
+        .assignedVariable: \.assignedVariables,
         .number: \.numbers,
         .float: \.numbers,
         .string: \.strings,
         .type: \.types,
         .typeAlternate: \.attributes,
         .constant: \.values,
-        .operator: \.text
+        .operator: \.operators
     ]
 
     /// Maps a capture type to the attributes for that capture determined by the theme.

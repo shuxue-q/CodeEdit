@@ -55,6 +55,17 @@
 ((identifier) @constant
  (#match? @constant "^_*[A-Z][A-Z\\d_]+$"))
 
+; Assignment targets: the variable being written to, as opposed to the ones being read.
+(variable_declarator
+  name: (identifier) @variable.assigned
+  value: (_))
+(assignment_expression
+  left: (identifier) @variable.assigned)
+(assignment_expression
+  left: (field_access field: (identifier) @variable.assigned))
+(update_expression (identifier) @variable.assigned)
+(enhanced_for_statement name: (identifier) @variable.assigned)
+
 (identifier) @variable
 
 (this) @variable.builtin

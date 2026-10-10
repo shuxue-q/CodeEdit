@@ -41,10 +41,7 @@
   (tuple_expression)            ; ( foo + bar )
   (array_literal)               ; [ foo, bar ]
   (dictionary_literal)          ; [ foo: bar, x: y ]
-  (lambda_literal) 
-  (willset_didset_block)
-  (willset_clause)
-  (didset_clause)
+  (lambda_literal)
 
   (import_declaration)+
 ] @fold

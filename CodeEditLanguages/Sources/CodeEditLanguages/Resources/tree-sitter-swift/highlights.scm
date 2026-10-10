@@ -1,6 +1,16 @@
 [ "." ";" ":" "," ] @punctuation.delimiter
 [ "\\(" "(" ")" "[" "]" "{" "}"] @punctuation.bracket ; TODO: "\\(" ")" in interpolations should be @punctuation.special
 
+; Assignment targets: the variable being written to, as opposed to the ones being read.
+(assignment
+  target: (directly_assignable_expression (simple_identifier) @variable.assigned))
+(assignment
+  target: (directly_assignable_expression
+    (navigation_expression (navigation_suffix (simple_identifier) @variable.assigned))))
+(property_declaration
+  name: (pattern bound_identifier: (simple_identifier) @variable.assigned)
+  value: (_))
+
 ; Identifiers
 (attribute) @variable
 (type_identifier) @type

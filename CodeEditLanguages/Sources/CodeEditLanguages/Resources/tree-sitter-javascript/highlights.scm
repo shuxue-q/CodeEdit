@@ -57,6 +57,26 @@
   function: (member_expression
     property: (property_identifier) @function.method))
 
+; Assignment targets
+;-------------------
+; The variable being written to, as opposed to the ones being read.
+
+(variable_declarator
+  name: (identifier) @variable.assigned
+  value: (_))
+(assignment_expression
+  left: (identifier) @variable.assigned)
+(assignment_expression
+  left: (member_expression
+    property: (property_identifier) @variable.assigned))
+(augmented_assignment_expression
+  left: (identifier) @variable.assigned)
+(augmented_assignment_expression
+  left: (member_expression
+    property: (property_identifier) @variable.assigned))
+(update_expression
+  argument: (identifier) @variable.assigned)
+
 ; Variables
 ;----------
 

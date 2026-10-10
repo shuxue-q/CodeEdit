@@ -59,12 +59,11 @@ struct ThemeChromeTests {
     @Test
     func testCoreTokenAliasesReadAndWriteStoredKeys() {
         guard var editor = ThemeModel.shared.themes.first?.editor else { return }
-        #expect(editor.functions == editor.commands)
         #expect(editor.identifiers == editor.variables)
         editor.functions = Theme.Attributes(color: "#010203")
         editor.identifiers = Theme.Attributes(color: "#040506")
-        #expect(editor.commands.color == "#010203")
+        #expect(editor.coreTokens.functions.color == "#010203")
         #expect(editor.variables.color == "#040506")
-        #expect(editor.editorTheme.commands.color == NSColor(hex: "#010203"))
+        #expect(editor.editorTheme.functions.color == NSColor(hex: "#010203"))
     }
 }

@@ -28,16 +28,28 @@ class StyledRangeContainer {
 
         func combineLowerPriority(_ other: StyleElement?) -> StyleElement {
             StyleElement(
-                capture: self.capture ?? other?.capture,
+                capture: Self.resolveCapture(preferred: self.capture, fallback: other?.capture),
                 modifiers: modifiers.union(other?.modifiers ?? [])
             )
         }
 
         func combineHigherPriority(_ other: StyleElement?) -> StyleElement {
             StyleElement(
-                capture: other?.capture ?? self.capture,
+                capture: Self.resolveCapture(preferred: other?.capture, fallback: self.capture),
                 modifiers: modifiers.union(other?.modifiers ?? [])
             )
+        }
+
+        /// Picks the capture for text styled by two providers.
+        ///
+        /// The preferred provider wins, with one refinement: ``CaptureName/assignedVariable`` beats a plain
+        /// variable-family capture from either side. Language servers only report *that* text is a variable, while
+        /// the grammar knows it is the target of an assignment, so the more specific role survives the merge.
+        static func resolveCapture(preferred: CaptureName?, fallback: CaptureName?) -> CaptureName? {
+            if fallback == .assignedVariable && (preferred == nil || preferred?.isVariableFamily == true) {
+                return .assignedVariable
+            }
+            return preferred ?? fallback
         }
 
         var debugDescription: String {

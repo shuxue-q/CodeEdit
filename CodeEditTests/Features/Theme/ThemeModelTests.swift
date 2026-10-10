@@ -148,10 +148,77 @@ struct ThemeModelTests {
         #expect(oneDark?.editor.variables.color != oneDark?.editor.commands.color)
         let darker = themes.first { $0.displayName == "One Dark Pro Darker" }
         #expect(darker?.editor.commands.color == "#61AFEF")
-        #expect(darker?.editor.variables.color == "#56B6C2")
+        #expect(darker?.editor.functions.color == "#61AFEF")
+        #expect(darker?.editor.variables.color == "#E06C75")
+        #expect(darker?.editor.assignedVariables.color == "#56B6C2")
         #expect(darker?.editor.keywords.color == "#C678DD")
         #expect(darker?.editor.strings.color == "#98C379")
         #expect(darker?.editor.types.color == "#E5C07B")
+    }
+
+    /// The two reworked bundled themes give every syntax role the user reads code by its own color, and their
+    /// terminal palettes are built from the same editor tokens.
+    @Test
+    func reworkedBundledThemesSeparateRolesAndSyncTerminal() throws {
+        let themes = ThemeModel.shared.themes
+        for name in ["One Dark Pro Darker", "Qt Creator Light"] {
+            let theme = try #require(themes.first { $0.displayName == name }, "Missing bundled theme \(name)")
+            let editor = theme.editor
+            let roles: [(String, Theme.Attributes)] = [
+                ("functions", editor.functions),
+                ("variables", editor.variables),
+                ("assignedVariables", editor.assignedVariables),
+                ("values", editor.values),
+                ("numbers", editor.numbers),
+                ("operators", editor.operators),
+                ("keywords", editor.keywords),
+                ("text", editor.text)
+            ]
+            for (index, lhs) in roles.enumerated() {
+                for rhs in roles[(index + 1)...] {
+                    #expect(lhs.1 != rhs.1, "\(name): \(lhs.0) and \(rhs.0) share the same attributes")
+                }
+            }
+            #expect(editor.comments != editor.text, "\(name): comments look like plain text")
+
+            let terminal = theme.terminal
+            #expect(terminal.background == editor.background, "\(name): terminal background differs")
+            #expect(terminal.text == editor.text, "\(name): terminal text differs")
+            #expect(terminal.selection == editor.selection, "\(name): terminal selection differs")
+            #expect(terminal.cursor == editor.insertionPoint, "\(name): terminal cursor differs")
+            #expect(terminal.green.color == editor.strings.color, "\(name): terminal green is not the string color")
+            #expect(terminal.blue.color == editor.functions.color || terminal.blue.color == editor.numbers.color)
+            #expect(terminal.magenta.color == editor.keywords.color || terminal.magenta.color == editor.types.color)
+        }
+    }
+
+    /// Theme files written before `functions`, `operators` and `assignedVariables` existed decode with the colors
+    /// those roles used to share, so their look does not change.
+    @Test
+    func legacyThemeFilesFallBackForNewRoles() throws {
+        let bundledURL = try #require(ThemeModel.shared.bundledThemesURL)
+        let data = try Data(contentsOf: bundledURL.appending(path: "Default (Dark).cetheme"))
+        let json = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let editorJSON = try #require(json["editor"] as? [String: Any])
+        #expect(editorJSON["functions"] == nil, "fixture must not define the new keys")
+
+        let theme = try JSONDecoder().decode(Theme.self, from: data)
+        #expect(theme.editor.functions == theme.editor.commands)
+        #expect(theme.editor.assignedVariables == theme.editor.variables)
+        #expect(theme.editor.operators == theme.editor.text)
+        #expect(theme.editor["functions"] == theme.editor.functions)
+        #expect(theme.editor["operators"] == theme.editor.operators)
+        #expect(theme.editor["assignedVariables"] == theme.editor.assignedVariables)
+
+        let editorTheme = theme.resolvedEditorTheme
+        #expect(editorTheme.functions.color == theme.editor.commands.nsColor)
+        #expect(editorTheme.operators.color == theme.editor.text.nsColor)
+
+        // Round trip keeps the resolved roles explicit.
+        let reencoded = try JSONDecoder().decode(Theme.self, from: JSONEncoder().encode(theme))
+        #expect(reencoded.editor.functions == theme.editor.functions)
+        #expect(reencoded.editor.operators == theme.editor.operators)
+        #expect(reencoded.editor.assignedVariables == theme.editor.assignedVariables)
     }
 
     @Test

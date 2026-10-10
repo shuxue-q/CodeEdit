@@ -124,6 +124,21 @@
  "}"
 ] @punctuation.bracket
 
+;; Assignment targets: the variable being written to, as opposed to the ones being read.
+
+(assignment_statement
+  (variable_list
+    name: (identifier) @variable.assigned))
+(assignment_statement
+  (variable_list
+    name: (dot_index_expression
+      field: (identifier) @variable.assigned)))
+(for_numeric_clause
+  name: (identifier) @variable.assigned)
+(for_generic_clause
+  (variable_list
+    (identifier) @variable.assigned))
+
 ;; Variables
 
 (identifier) @variable

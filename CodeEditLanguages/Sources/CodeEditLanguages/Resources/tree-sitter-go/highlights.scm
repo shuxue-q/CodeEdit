@@ -19,6 +19,25 @@
 (method_declaration
   name: (field_identifier) @function.method)
 
+; Assignment targets: the variable being written to, as opposed to the ones being read.
+
+(short_var_declaration
+  left: (expression_list (identifier) @variable.assigned))
+(assignment_statement
+  left: (expression_list (identifier) @variable.assigned))
+(assignment_statement
+  left: (expression_list
+    (selector_expression field: (field_identifier) @variable.assigned)))
+(var_spec
+  name: (identifier) @variable.assigned
+  value: (expression_list))
+(range_clause
+  left: (expression_list (identifier) @variable.assigned))
+(inc_statement (identifier) @variable.assigned)
+(dec_statement (identifier) @variable.assigned)
+(const_spec
+  name: (identifier) @constant)
+
 ; Identifiers
 
 (type_identifier) @type

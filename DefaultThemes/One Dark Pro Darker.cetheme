@@ -1,9 +1,9 @@
 {
   "name": "one-dark-pro-darker",
   "displayName": "One Dark Pro Darker",
-  "description": "One Dark Pro with a darker #23272E background; chrome derives from the editor background.",
+  "description": "One Dark Pro with a darker #23272E background; chrome derives from the editor background. The terminal palette mirrors the editor tokens.",
   "author": "CodeEdit",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "license": "MIT",
   "distributionURL": "https://github.com/CodeEditApp/CodeEdit",
   "type": "dark",
@@ -27,7 +27,8 @@
       "color": "#ABB2BF"
     },
     "comments": {
-      "color": "#7F848E"
+      "color": "#7F848E",
+      "italic": true
     },
     "strings": {
       "color": "#98C379"
@@ -39,8 +40,7 @@
       "color": "#D19A66"
     },
     "keywords": {
-      "color": "#C678DD",
-      "bold": false
+      "color": "#C678DD"
     },
     "attributes": {
       "color": "#D19A66"
@@ -49,13 +49,23 @@
       "color": "#E5C07B"
     },
     "variables": {
+      "color": "#E06C75"
+    },
+    "assignedVariables": {
       "color": "#56B6C2"
+    },
+    "functions": {
+      "color": "#61AFEF"
     },
     "commands": {
       "color": "#61AFEF"
     },
     "values": {
-      "color": "#D19A66"
+      "color": "#E5C07B",
+      "bold": true
+    },
+    "operators": {
+      "color": "#D7DAE0"
     }
   },
   "terminal": {
@@ -72,34 +82,34 @@
       "color": "#ABB2BF"
     },
     "boldText": {
-      "color": "#ABB2BF"
+      "color": "#D7DAE0"
     },
     "black": {
       "color": "#3F4451"
     },
     "red": {
-      "color": "#E05561"
+      "color": "#E06C75"
     },
     "green": {
-      "color": "#8CC265"
+      "color": "#98C379"
     },
     "yellow": {
-      "color": "#D18F52"
+      "color": "#E5C07B"
     },
     "blue": {
-      "color": "#4AA5F0"
+      "color": "#61AFEF"
     },
     "magenta": {
-      "color": "#C162DE"
+      "color": "#C678DD"
     },
     "cyan": {
-      "color": "#42B3C2"
+      "color": "#56B6C2"
     },
     "white": {
-      "color": "#D7DAE0"
+      "color": "#ABB2BF"
     },
     "brightBlack": {
-      "color": "#4F5666"
+      "color": "#7F848E"
     },
     "brightRed": {
       "color": "#FF616E"
@@ -108,7 +118,7 @@
       "color": "#A5E075"
     },
     "brightYellow": {
-      "color": "#F0A45D"
+      "color": "#D19A66"
     },
     "brightBlue": {
       "color": "#4DC4FF"

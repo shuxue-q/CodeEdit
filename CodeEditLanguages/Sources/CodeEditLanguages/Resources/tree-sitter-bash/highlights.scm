@@ -7,6 +7,12 @@
 
 (command_name) @function
 
+; Assignment targets: `NAME=value` and loop variables, as opposed to `$NAME` reads.
+(variable_assignment
+  name: (variable_name) @variable.assigned)
+(for_statement
+  variable: (variable_name) @variable.assigned)
+
 (variable_name) @property
 
 [

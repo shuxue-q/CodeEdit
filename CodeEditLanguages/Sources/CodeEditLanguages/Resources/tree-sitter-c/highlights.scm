@@ -67,6 +67,23 @@
 (preproc_function_def
   name: (identifier) @function.special)
 
+; Assignment targets: the variable being written to, as opposed to the ones being read.
+(assignment_expression
+  left: (identifier) @variable.assigned)
+(assignment_expression
+  left: (field_expression
+    field: (field_identifier) @variable.assigned))
+(assignment_expression
+  left: (pointer_expression
+    argument: (identifier) @variable.assigned))
+(init_declarator
+  declarator: (identifier) @variable.assigned)
+(init_declarator
+  declarator: (pointer_declarator
+    declarator: (identifier) @variable.assigned))
+(update_expression
+  argument: (identifier) @variable.assigned)
+
 (field_identifier) @property
 (statement_identifier) @label
 (type_identifier) @type

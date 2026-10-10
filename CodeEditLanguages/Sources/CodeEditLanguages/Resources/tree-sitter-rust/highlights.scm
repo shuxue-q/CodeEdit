@@ -4,6 +4,24 @@
 ((identifier) @constant
  (#match? @constant "^[A-Z][A-Z\\d_]+$'"))
 
+; Assignment targets: the variable being written to, as opposed to the ones being read.
+(let_declaration
+  pattern: (identifier) @variable.assigned
+  value: (_))
+(let_declaration
+  pattern: (mut_pattern (identifier) @variable.assigned)
+  value: (_))
+(assignment_expression
+  left: (identifier) @variable.assigned)
+(assignment_expression
+  left: (field_expression
+    field: (field_identifier) @variable.assigned))
+(compound_assignment_expr
+  left: (identifier) @variable.assigned)
+(compound_assignment_expr
+  left: (field_expression
+    field: (field_identifier) @variable.assigned))
+
 ; Assume that uppercase names in paths are types
 ((scoped_identifier
   path: (identifier) @type)
