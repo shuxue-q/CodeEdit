@@ -80,6 +80,8 @@ final class CodeEditDocumentController: NSDocumentController {
         display displayDocument: Bool,
         completionHandler: @escaping (NSDocument?, Bool, Error?) -> Void
     ) {
+        let url = collapsingRepeatedSlashes(in: url)
+
         guard !openFileInExistingWorkspace(url: url) else {
             return
         }
@@ -97,6 +99,24 @@ final class CodeEditDocumentController: NSDocumentController {
                 completionHandler(document, documentWasAlreadyOpen, error)
             }
         }
+    }
+
+    /// Collapses runs of `/` in a file URL's path.
+    ///
+    /// `codeedit://file//Users/…` arrives as `//Users/…`, which `CEWorkspaceFileManager.getFile` parses as a
+    /// host (so the file never joins its workspace) and which `RecentsStore` would record under a path its
+    /// "Remove from Recents" can never match. Unlike `standardizedFileURL`, this keeps a `/private` prefix,
+    /// so files still match workspaces opened under `/private/tmp` or `/private/var`.
+    /// - Parameter url: The URL to open.
+    /// - Returns: The URL with single slashes, or `url` itself when there is nothing to collapse.
+    private func collapsingRepeatedSlashes(in url: URL) -> URL {
+        guard url.isFileURL else { return url }
+        let path = url.absoluteURL.path(percentEncoded: false)
+        guard path.contains("//") else { return url }
+        return URL(
+            filePath: "/" + path.split(separator: "/").joined(separator: "/"),
+            directoryHint: url.hasDirectoryPath ? .isDirectory : .notDirectory
+        )
     }
 
     /// Attempt to open the file URL in an open workspace, finding the nearest workspace to open it in if possible.
