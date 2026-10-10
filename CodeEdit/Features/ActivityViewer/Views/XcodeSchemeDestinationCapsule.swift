@@ -8,6 +8,8 @@
 import SwiftUI
 
 /// Center Scheme and Destination capsule replicating Xcode's `[ (Target) Scheme > (Mac) Destination ]` control.
+/// In a CMake workspace the destination segment shows the selected configure preset; other
+/// workspaces show the scheme segment only.
 struct XcodeSchemeDestinationCapsule: View {
     @ObservedObject var workspaceSettingsManager: CEWorkspaceSettings
     var workspaceFileManager: CEWorkspaceFileManager?
@@ -15,7 +17,6 @@ struct XcodeSchemeDestinationCapsule: View {
     var workspace: WorkspaceDocument?
 
     @State private var isPopoverPresented: Bool = false
-    @State private var isHovered: Bool = false
 
     private var projectName: String {
         let name = workspaceSettingsManager.settings.project.projectName
@@ -35,8 +36,19 @@ struct XcodeSchemeDestinationCapsule: View {
         return projectName
     }
 
+    /// The workspace's CMake model, present only for folders with a root `CMakeLists.txt`.
+    private var cmake: CMakeWorkspace? {
+        workspace?.cmakeWorkspace
+    }
+
+    /// Text of the destination segment for a CMake configure preset selection.
+    static func destinationTitle(presetTitle: String?) -> String {
+        guard let presetTitle, !presetTitle.isEmpty else { return "No Preset" }
+        return presetTitle
+    }
+
     var body: some View {
-        XcodeCapsuleContainer(horizontalPadding: 10) {
+        XcodeCapsuleContainer(horizontalPadding: ToolbarMetrics.textCapsulePadding) {
             HStack(spacing: 7) {
                 targetIcon
 
@@ -49,20 +61,19 @@ struct XcodeSchemeDestinationCapsule: View {
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(.secondary)
 
-                Rectangle()
-                    .fill(Color.primary.opacity(0.15))
-                    .frame(width: 0.75, height: 16)
+                if let cmake {
+                    ToolbarSeparator()
 
-                destinationIcon
+                    destinationIcon
 
-                Text("My Mac")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
+                    Text(Self.destinationTitle(presetTitle: cmake.configurePreset?.title))
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                }
             }
             .contentShape(Capsule())
         }
-        .onHover { isHovered = $0 }
         .onTapGesture {
             isPopoverPresented.toggle()
         }
@@ -89,19 +100,19 @@ struct XcodeSchemeDestinationCapsule: View {
     }
 
     private var destinationIcon: some View {
-        Image(systemName: "laptopcomputer")
-            .font(.system(size: 17))
-            .symbolRenderingMode(.palette)
-            .foregroundStyle(Color(nsColor: .systemBlue), Color.secondary)
+        Image(systemName: "gearshape")
+            .font(.system(size: 15))
+            .foregroundStyle(.secondary)
     }
 
     @ViewBuilder private var popoverContent: some View {
         VStack(alignment: .leading, spacing: 4) {
-            destinationSection
-            Divider()
-                .padding(.vertical, 3)
+            if let cmake, let project = cmake.project, !project.configurePresets.isEmpty {
+                destinationSection(cmake: cmake, project: project)
+                Divider()
+                    .padding(.vertical, 3)
+            }
             tasksSection
-            cmakeSection
             Divider()
                 .padding(.vertical, 3)
             optionsSection
@@ -110,20 +121,36 @@ struct XcodeSchemeDestinationCapsule: View {
         .frame(minWidth: 200)
     }
 
-    @ViewBuilder private var destinationSection: some View {
-        HStack {
-            Image(systemName: "laptopcomputer")
-                .symbolRenderingMode(.palette)
-                .foregroundStyle(Color(nsColor: .systemBlue), Color.secondary)
-            Text("My Mac")
-                .font(.system(size: 12, weight: .medium))
-            Spacer()
-            Image(systemName: "checkmark")
-                .font(.system(size: 10, weight: .bold))
-                .foregroundColor(.accentColor)
+    /// The configure presets of a CMake workspace; picking one makes it the selected preset.
+    @ViewBuilder
+    private func destinationSection(cmake: CMakeWorkspace, project: CMakeProject) -> some View {
+        Text("Configure Preset")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 6)
+        ForEach(project.configurePresets, id: \.id) { preset in
+            Button {
+                cmake.selectConfigurePreset(preset.name)
+                isPopoverPresented = false
+            } label: {
+                HStack {
+                    Image(systemName: "gearshape")
+                        .foregroundStyle(.secondary)
+                    Text(preset.title)
+                        .font(.system(size: 12, weight: .medium))
+                    Spacer()
+                    if preset.name == cmake.selectedConfigurePreset {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(.accentColor)
+                    }
+                }
+                .contentShape(Rectangle())
+                .padding(.horizontal, 6)
+                .padding(.vertical, 3)
+            }
+            .buttonStyle(.plain)
         }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 3)
     }
 
     @ViewBuilder private var tasksSection: some View {
@@ -138,22 +165,6 @@ struct XcodeSchemeDestinationCapsule: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 6)
-        }
-    }
-
-    @ViewBuilder private var cmakeSection: some View {
-        if let cmake = workspace?.cmakeWorkspace, let project = cmake.project, !project.configurePresets.isEmpty {
-            Text("CMake Presets")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 6)
-                .padding(.top, 2)
-            ForEach(project.configurePresets, id: \.id) { preset in
-                OptionMenuItemView(label: preset.title) {
-                    cmake.selectConfigurePreset(preset.name)
-                    isPopoverPresented = false
-                }
-            }
         }
     }
 

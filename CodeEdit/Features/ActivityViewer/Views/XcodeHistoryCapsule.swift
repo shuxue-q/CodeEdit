@@ -24,76 +24,64 @@ struct XcodeHistoryCapsule: View {
     }
 
     var body: some View {
-        XcodeCapsuleContainer(horizontalPadding: 4) {
+        XcodeCapsuleContainer {
             HStack(spacing: 0) {
                 backButton
-                separator
+                ToolbarSeparator()
                 forwardButton
             }
         }
     }
 
     @ViewBuilder private var backButton: some View {
-        Menu {
-            ForEach(
-                Array(activeEditor.history.dropFirst(activeEditor.historyOffset + 1).enumerated()),
-                id: \.offset
-            ) { index, file in
-                Button {
-                    activeEditor.historyOffset += index + 1
-                } label: {
-                    HStack {
-                        file.icon
-                        Text(file.name)
+        ToolbarIconMenu(
+            symbol: "chevron.left",
+            help: "Navigate back",
+            weight: .semibold,
+            primaryAction: { activeEditor.goBackInHistory() },
+            content: {
+                ForEach(
+                    Array(activeEditor.history.dropFirst(activeEditor.historyOffset + 1).enumerated()),
+                    id: \.offset
+                ) { index, file in
+                    Button {
+                        activeEditor.historyOffset += index + 1
+                    } label: {
+                        HStack {
+                            file.icon
+                            Text(file.name)
+                        }
                     }
                 }
             }
-        } label: {
-            Image(toolbarSymbol: "chevron.left", size: 16, weight: .semibold)
-        } primaryAction: {
-            activeEditor.goBackInHistory()
-        }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .toolbarCircleFeedback(iconSize: 16)
+        )
         .disabled(!canGoBack)
         .opacity(canGoBack ? 1.0 : 0.35)
-        .buttonStyle(.plain)
-        .help("Navigate back")
-    }
-
-    private var separator: some View {
-        Rectangle()
-            .fill(Color.primary.opacity(0.15))
-            .frame(width: 0.75, height: 18)
     }
 
     @ViewBuilder private var forwardButton: some View {
-        Menu {
-            ForEach(
-                Array(activeEditor.history.prefix(activeEditor.historyOffset).reversed().enumerated()),
-                id: \.offset
-            ) { index, file in
-                Button {
-                    activeEditor.historyOffset -= index + 1
-                } label: {
-                    HStack {
-                        file.icon
-                        Text(file.name)
+        ToolbarIconMenu(
+            symbol: "chevron.right",
+            help: "Navigate forward",
+            weight: .semibold,
+            primaryAction: { activeEditor.goForwardInHistory() },
+            content: {
+                ForEach(
+                    Array(activeEditor.history.prefix(activeEditor.historyOffset).reversed().enumerated()),
+                    id: \.offset
+                ) { index, file in
+                    Button {
+                        activeEditor.historyOffset -= index + 1
+                    } label: {
+                        HStack {
+                            file.icon
+                            Text(file.name)
+                        }
                     }
                 }
             }
-        } label: {
-            Image(toolbarSymbol: "chevron.right", size: 16, weight: .semibold)
-        } primaryAction: {
-            activeEditor.goForwardInHistory()
-        }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .toolbarCircleFeedback(iconSize: 16)
+        )
         .disabled(!canGoForward)
         .opacity(canGoForward ? 1.0 : 0.35)
-        .buttonStyle(.plain)
-        .help("Navigate forward")
     }
 }

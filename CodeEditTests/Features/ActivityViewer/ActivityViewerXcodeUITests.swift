@@ -124,7 +124,7 @@ final class ActivityViewerXcodeUITests: XCTestCase {
             "stop.fill",
             "hammer.fill",
             "plus.bubble",
-            "laptopcomputer",
+            "gearshape",
             "exclamationmark.triangle.fill",
             "plus.rectangle.on.rectangle",
             "slider.horizontal.below.rectangle",
@@ -166,6 +166,25 @@ final class ActivityViewerXcodeUITests: XCTestCase {
     func testXcodeInspectorToggleCapsuleStandalone() {
         let capsule = XcodeInspectorToggleCapsule()
         XCTAssertNotNil(capsule)
+    }
+
+    func testXcodeNavigatorToggleCapsuleStandalone() {
+        let capsule = XcodeNavigatorToggleCapsule()
+        XCTAssertNotNil(capsule)
+    }
+
+    func testToolbarMetricsAreShared() {
+        let container = XcodeCapsuleContainer { Text("Test") }
+        XCTAssertEqual(container.horizontalPadding, ToolbarMetrics.iconCapsulePadding)
+        XCTAssertEqual(container.height, ToolbarMetrics.cellHeight)
+        XCTAssertEqual(ToolbarMetrics.separatorHeight, 16)
+        XCTAssertEqual(ToolbarMetrics.groupSpacing, 8)
+    }
+
+    func testDestinationTitleShowsSelectedPreset() {
+        XCTAssertEqual(XcodeSchemeDestinationCapsule.destinationTitle(presetTitle: "Release"), "Release")
+        XCTAssertEqual(XcodeSchemeDestinationCapsule.destinationTitle(presetTitle: nil), "No Preset")
+        XCTAssertEqual(XcodeSchemeDestinationCapsule.destinationTitle(presetTitle: ""), "No Preset")
     }
 
     func testStopIsDisabledWhenIdle() {

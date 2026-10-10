@@ -15,7 +15,7 @@ struct XcodeSplitOptionsCapsule: View {
     @ObservedObject private var settings: Settings = .shared
 
     var body: some View {
-        XcodeCapsuleContainer(horizontalPadding: 4) {
+        XcodeCapsuleContainer {
             HStack(spacing: 0) {
                 splitEditorButton
                 editorOptionsMenu
@@ -30,27 +30,18 @@ struct XcodeSplitOptionsCapsule: View {
     }
 
     @ViewBuilder private var splitEditorButton: some View {
-        Button {
+        ToolbarIconButton(
+            symbol: "plus.rectangle.on.rectangle",
+            help: preferredSplitEdge == .bottom ? "Split Editor Down" : "Split Editor Right"
+        ) {
             splitActiveEditor(edge: preferredSplitEdge)
-        } label: {
-            Image(systemName: "plus.rectangle.on.rectangle")
-                .font(.system(size: 17, weight: .regular))
-                .toolbarCircleFeedback()
         }
-        .buttonStyle(.plain)
-        .help(preferredSplitEdge == .bottom ? "Split Editor Down" : "Split Editor Right")
     }
 
     @ViewBuilder private var editorOptionsMenu: some View {
-        Menu {
+        ToolbarIconMenu(symbol: "slider.horizontal.below.rectangle", help: "Adjust Editor Options") {
             editorOptionsContent
-        } label: {
-            Image(toolbarSymbol: "slider.horizontal.below.rectangle", size: 17)
         }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .toolbarCircleFeedback()
-        .help("Adjust Editor Options")
     }
 
     /// Xcode's editor options menu: layout and comparison modes followed by the
@@ -61,26 +52,14 @@ struct XcodeSplitOptionsCapsule: View {
             canvasLayoutToggle("Canvas on Right", layout: .right)
             canvasLayoutToggle("Canvas on Bottom", layout: .bottom)
         }
-        // TODO: Enable the comparison options once a diff/comparison view exists.
-        Toggle("Inline Comparison", isOn: .constant(false))
-            .disabled(true)
-        Toggle("Side By Side Comparison", isOn: .constant(false))
-            .disabled(true)
-        Divider()
+        // TODO: Add Inline and Side By Side Comparison once a diff/comparison view exists.
+        // TODO: Add Authors once blame/author annotations are available in the editor.
+        // TODO: Add Code Coverage once code coverage is available.
+        // TODO: Add Scope Guides once the source editor supports scope guides.
         Toggle("Minimap", isOn: showMinimap)
             .keyboardShortcut("M", modifiers: [.control, .shift, .command])
-        // TODO: Enable once blame/author annotations are available in the editor.
-        Toggle("Authors", isOn: .constant(false))
-            .keyboardShortcut("A", modifiers: [.control, .shift, .command])
-            .disabled(true)
-        // TODO: Enable once code coverage is available.
-        Toggle("Code Coverage", isOn: .constant(false))
-            .disabled(true)
         Divider()
         Toggle("Invisibles", isOn: showInvisibles)
-        // TODO: Enable once the source editor supports scope guides.
-        Toggle("Scope Guides", isOn: .constant(false))
-            .disabled(true)
         Toggle("Wrap Lines", isOn: wrapLines)
             .keyboardShortcut("L", modifiers: [.control, .shift, .command])
         Divider()

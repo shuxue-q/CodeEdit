@@ -75,7 +75,7 @@ extension CodeEditWindowController {
         }
     }
 
-    // swiftlint:disable:next function_body_length cyclomatic_complexity
+    // swiftlint:disable:next cyclomatic_complexity
     func toolbar(
         _ toolbar: NSToolbar,
         itemForItemIdentifier itemIdentifier: NSToolbarItem.Identifier,
@@ -91,32 +91,12 @@ extension CodeEditWindowController {
                 dividerIndex: 1
             )
         case .toggleFirstSidebarItem:
-            let toolbarItem = NSToolbarItem(itemIdentifier: NSToolbarItem.Identifier.toggleFirstSidebarItem)
-            toolbarItem.paletteLabel = " Navigator Sidebar"
-            toolbarItem.toolTip = "Hide or show the Navigator"
-            // Bordered items receive Liquid Glass on macOS 26; keep the Sequoia chrome instead.
-            if #available(macOS 26, *) {
-                toolbarItem.isBordered = false
-            } else {
-                toolbarItem.isBordered = true
-            }
-            toolbarItem.target = self
-            toolbarItem.action = #selector(self.objcToggleFirstPanel)
-            toolbarItem.image = NSImage(
-                systemSymbolName: "sidebar.leading",
-                accessibilityDescription: nil
-            )?.withSymbolConfiguration(.init(scale: .large))
-
-            return toolbarItem
+            return navigatorToggleItem()
         case .toggleLastSidebarItem:
             let toolbarItem = NSToolbarItem(itemIdentifier: NSToolbarItem.Identifier.toggleLastSidebarItem)
             toolbarItem.paletteLabel = "Inspector Sidebar"
             toolbarItem.toolTip = "Hide or show the Inspectors"
-            if #available(macOS 26, *) {
-                toolbarItem.isBordered = false
-            } else {
-                toolbarItem.isBordered = true
-            }
+            toolbarItem.isBordered = false
             toolbarItem.target = self
             toolbarItem.action = #selector(self.objcToggleLastPanel)
             toolbarItem.image = NSImage(
@@ -152,6 +132,19 @@ extension CodeEditWindowController {
         default:
             return NSToolbarItem(itemIdentifier: itemIdentifier)
         }
+    }
+
+    /// The navigator toggle, drawn by the same SwiftUI capsule as the inspector toggle.
+    private func navigatorToggleItem() -> NSToolbarItem {
+        let toolbarItem = NSToolbarItem(itemIdentifier: .toggleFirstSidebarItem)
+        toolbarItem.paletteLabel = " Navigator Sidebar"
+        toolbarItem.toolTip = "Hide or show the Navigator"
+        toolbarItem.view = NSHostingView(
+            rootView: XcodeNavigatorToggleCapsule()
+                .environment(\.window, WindowBox(value: window))
+        )
+        toolbarItem.isBordered = false
+        return toolbarItem
     }
 
     private func stopTaskSidebarItem() -> NSToolbarItem? {
@@ -191,6 +184,7 @@ extension CodeEditWindowController {
         let view = NSHostingView(
             rootView: XcodeRunControlsCapsule(taskManager: taskManager)
                 .environmentObject(workspace)
+                .environment(\.window, WindowBox(value: window))
         )
         toolbarItem.view = view
         toolbarItem.isBordered = false
@@ -263,21 +257,24 @@ extension CodeEditWindowController {
     /// previous single-item environment setup.
     private func activityViewerHostingView<Content: View>(for content: Content) -> NSHostingView<AnyView> {
         let rootView: AnyView
+        let windowBox = WindowBox(value: window)
         if let workspace = workspace, let editorManager = workspace.editorManager {
             rootView = AnyView(
                 content
                     .environmentObject(workspace)
                     .environmentObject(editorManager)
                     .themedChromeText()
+                    .environment(\.window, windowBox)
             )
         } else if let workspace = workspace {
             rootView = AnyView(
                 content
                     .environmentObject(workspace)
                     .themedChromeText()
+                    .environment(\.window, windowBox)
             )
         } else {
-            rootView = AnyView(content.themedChromeText())
+            rootView = AnyView(content.themedChromeText().environment(\.window, windowBox))
         }
 
         return NSHostingView(rootView: rootView)

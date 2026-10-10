@@ -16,12 +16,12 @@ struct XcodeCapsuleContainer<Content: View>: View {
     private var activeState
 
     let content: Content
-    var height: CGFloat = 40
-    var horizontalPadding: CGFloat = 8
+    var height: CGFloat = ToolbarMetrics.cellHeight
+    var horizontalPadding: CGFloat = ToolbarMetrics.iconCapsulePadding
 
     init(
-        height: CGFloat = 40,
-        horizontalPadding: CGFloat = 8,
+        height: CGFloat = ToolbarMetrics.cellHeight,
+        horizontalPadding: CGFloat = ToolbarMetrics.iconCapsulePadding,
         @ViewBuilder content: () -> Content
     ) {
         self.height = height

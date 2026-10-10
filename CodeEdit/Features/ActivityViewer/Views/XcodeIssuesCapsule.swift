@@ -59,7 +59,7 @@ private struct IssuesCapsuleContent: View {
 
     var body: some View {
         if issueCount > 0 {
-            XcodeCapsuleContainer(horizontalPadding: 8) {
+            XcodeCapsuleContainer(horizontalPadding: ToolbarMetrics.textCapsulePadding) {
                 HStack(spacing: 6) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.system(size: 16, weight: .bold))

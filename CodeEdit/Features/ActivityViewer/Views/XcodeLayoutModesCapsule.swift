@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Combine
 
 /// Capsule containing Standard, Assistant Editor, and Code Review modes.
 /// Replicates Xcode's `[ [editors] [assistant] | [review] ]` control, where the
@@ -14,6 +15,16 @@ struct XcodeLayoutModesCapsule: View {
     var workspace: WorkspaceDocument?
     @EnvironmentObject private var editorManager: EditorManager
     @ObservedObject private var settings: Settings = .shared
+    @Environment(\.window.value)
+    private var window: NSWindow?
+
+    /// Whether the Source Control navigator is showing. Fed by the window controller's publisher
+    /// rather than read from `NSApp.keyWindow` during `body`, which tracked nothing and ran every render.
+    @State private var isCodeReviewActive: Bool = false
+
+    private var windowController: CodeEditWindowController? {
+        window?.windowController as? CodeEditWindowController
+    }
 
     private var isMultiEditor: Bool {
         editorManager.flattenedEditors.count > 1
@@ -23,50 +34,36 @@ struct XcodeLayoutModesCapsule: View {
         isMultiEditor && !editorManager.isFocusingActiveEditor
     }
 
-    private var isCodeReviewActive: Bool {
-        guard let windowController = NSApp.keyWindow?.windowController as? CodeEditWindowController else {
-            return false
-        }
-        return windowController.navigatorSidebarViewModel?.selectedTab == .sourceControl
-            && !windowController.navigatorCollapsed
-    }
-
     private var isStandardActive: Bool {
         !isAssistantActive && !isCodeReviewActive
     }
 
     var body: some View {
-        XcodeCapsuleContainer(horizontalPadding: 4) {
+        XcodeCapsuleContainer {
             HStack(spacing: 3) {
                 standardEditorButton
                 assistantEditorButton
-                separator
+                ToolbarSeparator()
                 codeReviewButton
             }
+        }
+        .onReceive(windowController?.codeReviewActivePublisher ?? Just(false).eraseToAnyPublisher()) {
+            isCodeReviewActive = $0
         }
     }
 
     @ViewBuilder private var standardEditorButton: some View {
-        Button {
+        ToolbarIconButton(symbol: "square.stack", help: "Standard Editor", isSelected: isStandardActive) {
             selectStandardEditor()
-        } label: {
-            Image(systemName: "square.stack")
-                .font(.system(size: 17, weight: .regular))
-                .modifier(LayoutModeIconModifier(isActive: isStandardActive))
         }
-        .buttonStyle(.plain)
-        .help("Standard Editor")
     }
 
     @ViewBuilder private var assistantEditorButton: some View {
-        Button {
+        ToolbarIconButton(help: "Assistant Editor", isSelected: isAssistantActive) {
             selectAssistantEditor()
-        } label: {
+        } icon: {
             assistantIcon
-                .modifier(LayoutModeIconModifier(isActive: isAssistantActive))
         }
-        .buttonStyle(.plain)
-        .help("Assistant Editor")
     }
 
     private var assistantIcon: some View {
@@ -83,22 +80,14 @@ struct XcodeLayoutModesCapsule: View {
         }
     }
 
-    private var separator: some View {
-        Rectangle()
-            .fill(Color.primary.opacity(0.15))
-            .frame(width: 0.75, height: 16)
-    }
-
     @ViewBuilder private var codeReviewButton: some View {
-        Button {
+        ToolbarIconButton(
+            symbol: "arrow.left.arrow.right",
+            help: "Code Review (Source Control)",
+            isSelected: isCodeReviewActive
+        ) {
             selectCodeReview()
-        } label: {
-            Image(systemName: "arrow.left.arrow.right")
-                .font(.system(size: 16, weight: .regular))
-                .modifier(LayoutModeIconModifier(isActive: isCodeReviewActive, iconSize: 16))
         }
-        .buttonStyle(.plain)
-        .help("Code Review (Source Control)")
     }
 
     private func selectStandardEditor() {
@@ -122,7 +111,7 @@ struct XcodeLayoutModesCapsule: View {
     }
 
     private func selectCodeReview() {
-        guard let windowController = NSApp.keyWindow?.windowController as? CodeEditWindowController else {
+        guard let windowController else {
             NSApp.sendAction(#selector(CodeEditWindowController.objcToggleFirstPanel), to: nil, from: nil)
             return
         }
@@ -173,17 +162,5 @@ struct XcodeLayoutModesCapsule: View {
         }
         editorManager.updateCachedFlattenedEditors = true
         editorManager.activeEditor = newEditor
-    }
-}
-
-/// Sizes a layout-mode icon and draws the circular highlight for the active mode.
-private struct LayoutModeIconModifier: ViewModifier {
-    let isActive: Bool
-    var iconSize: CGFloat = 17
-
-    func body(content: Content) -> some View {
-        content
-            .foregroundStyle(.primary)
-            .toolbarCircleFeedback(isSelected: isActive, iconSize: iconSize)
     }
 }
