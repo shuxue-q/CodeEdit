@@ -20,6 +20,7 @@ final class CodeEditSplitViewController: NSSplitViewController {
     private unowned var hapticPerformer: NSHapticFeedbackPerformer
 
     private weak var navigatorItem: NSSplitViewItem?
+    private var mainContainer: FrozenWidthHostingContainer?
 
     // MARK: - Initialization
 
@@ -83,7 +84,9 @@ final class CodeEditSplitViewController: NSSplitViewController {
             }
         }
 
-        let mainContent = NSSplitViewItem(viewController: NSHostingController(rootView: workspaceView))
+        let mainContainer = FrozenWidthHostingContainer(rootView: workspaceView)
+        self.mainContainer = mainContainer
+        let mainContent = NSSplitViewItem(viewController: mainContainer)
         mainContent.titlebarSeparatorStyle = .line
         mainContent.minimumThickness = 200
 
@@ -214,6 +217,24 @@ final class CodeEditSplitViewController: NSSplitViewController {
                 workspace?.addToWorkspaceState(key: .splitViewWidth, value: width)
             }
         }
+    }
+
+    /// Holds the workspace content at a fixed width while `item` collapses or expands.
+    ///
+    /// The content keeps the larger of its two widths, so it does not relayout on every animation frame.
+    /// - Parameter item: The sidebar item about to be toggled.
+    func freezeContent(forToggling item: NSSplitViewItem) {
+        guard let mainContainer,
+              let index = splitViewItems.firstIndex(of: item),
+              index == 0 || index == splitViewItems.count - 1 else { return }
+        let contentWidth = mainContainer.view.frame.width
+        // A collapsed item has no width of its own, so fall back to the saved or minimum sidebar width.
+        let sidebarWidth = item.isCollapsed
+            ? (index == 0 ? workspace?.getFromWorkspaceState(.splitViewWidth) as? CGFloat : nil) ?? Self.minSidebarWidth
+            : item.viewController.view.frame.width
+        // The content is widest when the sidebar is collapsed.
+        let frozenWidth = item.isCollapsed ? contentWidth : contentWidth + sidebarWidth
+        mainContainer.freeze(width: frozenWidth, anchor: index == 0 ? .trailing : .leading)
     }
 
     func saveNavigatorCollapsedState(isCollapsed: Bool) {

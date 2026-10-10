@@ -30,6 +30,7 @@ extension CodeEditWindowController {
     /// Toggles a sidebar item's collapsed state inside one animation group, so both sidebars
     /// share the same implicit animation behavior.
     private func animateCollapse(of item: NSSplitViewItem) {
+        splitViewController?.freezeContent(forToggling: item)
         NSAnimationContext.runAnimationGroup { context in
             context.allowsImplicitAnimation = true
             item.animator().isCollapsed.toggle()
