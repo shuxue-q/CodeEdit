@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.4.2 - 2026-10-10
+
+### Features
+- Completion: smart completion engine for C-family and CMake code: semantic ranking by the expected and receiver types, per-intent frequency and recency, a preselected best match, commit characters, call parentheses with parameter hints, `additionalTextEdits`, postfix templates after a dot, chain completion on Control-Shift-Space, document identifiers as a fallback source, and a latency budget with local metrics.
+- Completion: AI backends (Anthropic and OpenAI-compatible) selectable in settings with per-backend keys, base URL and Test Connection; prompts carry the expected type, receiver type and function header; failures back off automatically.
+- Completion: CMake intent recognition, keyword and snippet tables, and ranking, with integration tests against `neocmakelsp`.
+- Themes: new editor color roles for fields, parameters, globals, namespaces, macros, preprocessor directives and primitive types, driven by tree-sitter captures and clangd semantic tokens; Qt Creator Light follows the Light (2024) scheme and One Dark Pro / One Dark Pro Darker get a distinct per-role palette.
+- Themes: assigned-variable, function and operator roles.
+- Navigator: New File / New Folder buttons above the project tree.
+- Toolbar: the destination segment shows the CMake configure preset; toolbar controls share one set of design tokens.
+
+### Fixes
+- Editor: tree-sitter no longer lets the least specific capture win when several match the same range; semantic tokens are requested when the server attaches after the editor.
+- Completion: main-actor isolation warnings, shared C-family language ids, Objective-C recognition, a one-second cap on the first list, and OpenAI request bodies per backend kind.
+- Search: results are published before `search()` returns.
+- Recents: double-slash file URLs open in their workspace and entries stay removable.
+- Layout: workspace content width stays fixed during sidebar toggles; collapse animation unified.
+- Navigator: rename field uses theme colors.
+
 ## 0.4.1 - 2026-10-01
 
 ### Features
