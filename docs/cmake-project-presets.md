@@ -6,6 +6,10 @@ the **CMake** section. Select a configure preset and, when available, an
 associated build preset to inspect compiler settings, build type/configuration,
 generator, build directory, and toolchain file.
 
+The scheme capsule in the toolbar also shows the selected configure preset to the
+right of the scheme name (workspaces without a root `CMakeLists.txt` show the scheme
+only). Click the capsule to switch the configure preset from the popover.
+
 Selections are stored locally per workspace. Selecting a preset does not edit
 the JSON files or execute configure/build commands (see the compilation
 database section below for the one place CMake is executed). Files are reloaded
