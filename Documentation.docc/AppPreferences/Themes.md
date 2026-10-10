@@ -108,11 +108,18 @@ Each entry takes a `color` and optional `bold` / `italic` flags. The roles map t
 
 | Key | Styles |
 | --- | ------ |
-| `keywords` | Keywords, `#include`, booleans, builtin variables such as `self`, tags and labels |
+| `keywords` | Keywords, booleans, builtin variables such as `self`, tags and labels |
 | `functions` | Function and method names, declared or called (`commands` is kept for compatibility and used when `functions` is missing) |
-| `variables` | Variables that are read, parameters and properties |
-| `assignedVariables` | Variables being written: the target of `=`, `+=`, … and names declared with a value (`int x = 1`, `let y = 2`, `set(VAR …)`) |
-| `values` | Constants, macros and enum members |
+| `variables` | Variables that are read (locals) |
+| `assignedVariables` | Plain variables being written: the target of `=`, `+=`, … and names declared with a value (`int x = 1`, `let y = 2`, `set(VAR …)`). Fields, parameters and globals keep their own role when written |
+| `properties` | Fields and members of classes, structs and objects (`point.x`) |
+| `parameters` | Function parameters |
+| `globals` | Variables declared at file, namespace or global scope (reported by language servers such as clangd) |
+| `namespaces` | Namespace and module names |
+| `macros` | Preprocessor macro names, at their definition and (with a language server) their uses |
+| `preprocessors` | Preprocessor directives such as `#include` and `#define` |
+| `primitiveTypes` | Built-in primitive types such as `int` and `double` |
+| `values` | Constants and enum members |
 | `numbers` | Integer and floating point literals |
 | `strings` / `characters` | String and character literals |
 | `types` / `attributes` | Type names, and attributes / annotations |
@@ -120,7 +127,9 @@ Each entry takes a `color` and optional `bold` / `italic` flags. The roles map t
 | `comments` | Comments |
 
 `functions`, `operators` and `assignedVariables` are optional: a theme that omits them uses the `commands`, `text` and
-`variables` colors for those roles, so themes written before they existed keep a sensible look.
+`variables` colors for those roles, so themes written before they existed keep a sensible look. The symbol roles
+follow the same rule: `properties`, `parameters` and `globals` fall back to `variables`, `namespaces` and
+`primitiveTypes` to `types`, `macros` to `values` and `preprocessors` to `keywords`.
 
 ### Terminal
 

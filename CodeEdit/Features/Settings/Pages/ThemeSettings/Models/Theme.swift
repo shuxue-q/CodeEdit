@@ -169,6 +169,11 @@ extension Theme {
             }
         }
 
+        /// The attribute in the form the editor package uses, color and font traits included.
+        var editorAttribute: EditorTheme.Attribute {
+            EditorTheme.Attribute(color: nsColor, bold: bold, italic: italic)
+        }
+
         /// The `NSColor` of ``color``
         var nsColor: NSColor {
             get {
@@ -210,7 +215,14 @@ extension Theme {
                         color: assignedVariables.nsColor,
                         bold: assignedVariables.bold,
                         italic: assignedVariables.italic
-                    )
+                    ),
+                    properties: properties.editorAttribute,
+                    parameters: parameters.editorAttribute,
+                    globals: globals.editorAttribute,
+                    namespaces: namespaces.editorAttribute,
+                    macros: macros.editorAttribute,
+                    preprocessors: preprocessors.editorAttribute,
+                    primitiveTypes: primitiveTypes.editorAttribute
                 )
             }
             set {
@@ -233,6 +245,13 @@ extension Theme {
                 self.functions.nsColor = newValue.functions.color
                 self.operators.nsColor = newValue.operators.color
                 self.assignedVariables.nsColor = newValue.assignedVariables.color
+                self.properties.nsColor = newValue.properties.color
+                self.parameters.nsColor = newValue.parameters.color
+                self.globals.nsColor = newValue.globals.color
+                self.namespaces.nsColor = newValue.namespaces.color
+                self.macros.nsColor = newValue.macros.color
+                self.preprocessors.nsColor = newValue.preprocessors.color
+                self.primitiveTypes.nsColor = newValue.primitiveTypes.color
             }
         }
 
@@ -260,11 +279,27 @@ extension Theme {
         /// Variables being written to (assignment targets, names declared with a value).
         /// Older themes without this key reuse ``variables``.
         var assignedVariables: Attributes
+        /// Fields and members (`point.x`). Older themes without this key reuse ``variables``.
+        var properties: Attributes
+        /// Function parameters. Older themes without this key reuse ``variables``.
+        var parameters: Attributes
+        /// Variables declared at file, namespace or global scope. Older themes without this key reuse
+        /// ``variables``.
+        var globals: Attributes
+        /// Namespace and module names. Older themes without this key reuse ``types``.
+        var namespaces: Attributes
+        /// Preprocessor macro names. Older themes without this key reuse ``values``, the role macros had before.
+        var macros: Attributes
+        /// Preprocessor directives (`#include`, `#define`). Older themes without this key reuse ``keywords``.
+        var preprocessors: Attributes
+        /// Built-in primitive types (`int`, `double`). Older themes without this key reuse ``types``.
+        var primitiveTypes: Attributes
 
         enum CodingKeys: String, CodingKey {
             case text, insertionPoint, invisibles, background, lineHighlight, selection
             case keywords, commands, types, attributes, variables, values, numbers, strings, characters, comments
             case functions, operators, assignedVariables
+            case properties, parameters, globals, namespaces, macros, preprocessors, primitiveTypes
         }
 
         /// Decodes a theme file, filling the roles added after the original format from the attribute that used
@@ -291,6 +326,13 @@ extension Theme {
             operators = try container.decodeIfPresent(Attributes.self, forKey: .operators) ?? text
             assignedVariables = try container.decodeIfPresent(Attributes.self, forKey: .assignedVariables)
                 ?? variables
+            properties = try container.decodeIfPresent(Attributes.self, forKey: .properties) ?? variables
+            parameters = try container.decodeIfPresent(Attributes.self, forKey: .parameters) ?? variables
+            globals = try container.decodeIfPresent(Attributes.self, forKey: .globals) ?? variables
+            namespaces = try container.decodeIfPresent(Attributes.self, forKey: .namespaces) ?? types
+            macros = try container.decodeIfPresent(Attributes.self, forKey: .macros) ?? values
+            preprocessors = try container.decodeIfPresent(Attributes.self, forKey: .preprocessors) ?? keywords
+            primitiveTypes = try container.decodeIfPresent(Attributes.self, forKey: .primitiveTypes) ?? types
         }
 
         /// Allows to look up properties by their name
@@ -323,6 +365,13 @@ extension Theme {
                 case "functions": return self.functions
                 case "operators": return self.operators
                 case "assignedVariables": return self.assignedVariables
+                case "properties": return self.properties
+                case "parameters": return self.parameters
+                case "globals": return self.globals
+                case "namespaces": return self.namespaces
+                case "macros": return self.macros
+                case "preprocessors": return self.preprocessors
+                case "primitiveTypes": return self.primitiveTypes
                 default: fatalError("Invalid key")
                 }
             }
@@ -347,6 +396,13 @@ extension Theme {
                 case "functions": self.functions = newValue
                 case "operators": self.operators = newValue
                 case "assignedVariables": self.assignedVariables = newValue
+                case "properties": self.properties = newValue
+                case "parameters": self.parameters = newValue
+                case "globals": self.globals = newValue
+                case "namespaces": self.namespaces = newValue
+                case "macros": self.macros = newValue
+                case "preprocessors": self.preprocessors = newValue
+                case "primitiveTypes": self.primitiveTypes = newValue
                 default: fatalError("Invalid key")
                 }
             }
@@ -371,7 +427,14 @@ extension Theme {
             comments: Attributes,
             functions: Attributes? = nil,
             operators: Attributes? = nil,
-            assignedVariables: Attributes? = nil
+            assignedVariables: Attributes? = nil,
+            properties: Attributes? = nil,
+            parameters: Attributes? = nil,
+            globals: Attributes? = nil,
+            namespaces: Attributes? = nil,
+            macros: Attributes? = nil,
+            preprocessors: Attributes? = nil,
+            primitiveTypes: Attributes? = nil
         ) {
             self.text = text
             self.insertionPoint = insertionPoint
@@ -392,6 +455,13 @@ extension Theme {
             self.functions = functions ?? commands
             self.operators = operators ?? text
             self.assignedVariables = assignedVariables ?? variables
+            self.properties = properties ?? variables
+            self.parameters = parameters ?? variables
+            self.globals = globals ?? variables
+            self.namespaces = namespaces ?? types
+            self.macros = macros ?? values
+            self.preprocessors = preprocessors ?? keywords
+            self.primitiveTypes = primitiveTypes ?? types
         }
     }
 }

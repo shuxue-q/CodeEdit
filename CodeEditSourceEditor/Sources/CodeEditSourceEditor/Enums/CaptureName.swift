@@ -40,6 +40,17 @@ public enum CaptureName: Int8, CaseIterable, Sendable {
     /// (`x` in `x = y` or `let x = y`). Produced by grammar queries as `variable.assigned` and by language servers
     /// through the `modification` semantic token modifier. Distinguishes the written variable from the ones read.
     case assignedVariable
+    /// A variable declared at file, namespace or global scope (`variable.global`). Language servers report it as a
+    /// `variable` token carrying the `fileScope` or `globalScope` modifier; see ``refined(by:)``.
+    case globalVariable
+    /// A namespace or module name (`namespace.foo`, LSP `namespace` and `module` tokens).
+    case namespace
+    /// A preprocessor macro name (`macro`, LSP `macro` tokens).
+    case macro
+    /// A preprocessor directive such as `#include` or `#define` (`preprocessor`).
+    case preprocessor
+    /// A built-in primitive type such as `int` or `double` (`type.builtin`).
+    case primitiveType
     /// Rainbow bracket nesting levels. Only produced by the bracket depth pass, never by grammar queries.
     /// See ``bracketLevel(_:)``.
     case bracketLevel0
@@ -75,15 +86,39 @@ public enum CaptureName: Int8, CaseIterable, Sendable {
         }
     }
 
-    /// Captures that describe a variable being read: plain variables, properties and parameters.
-    /// ``assignedVariable`` refines any of these when a provider marks the same text as written to.
+    /// Captures that describe a variable being read: plain variables, globals, properties and parameters.
+    /// Only a plain ``variable`` is refined to ``assignedVariable`` when a provider marks the same text as written
+    /// to: the more specific roles keep their own color.
     public var isVariableFamily: Bool {
         switch self {
-        case .variable, .property, .parameter:
+        case .variable, .property, .parameter, .globalVariable:
             return true
         default:
             return false
         }
+    }
+
+    /// Narrows a variable-like capture using the modifiers a language server attached to the same token.
+    ///
+    /// - A `variable` declared in a class scope is a member, so it becomes ``property`` (static data members).
+    /// - A `variable` declared at file or global scope becomes ``globalVariable``.
+    /// - A plain `variable` carrying the `modification` modifier becomes ``assignedVariable``.
+    ///
+    /// Other captures, and variables with none of these modifiers, are returned unchanged.
+    /// - Parameter modifiers: The modifiers of the token.
+    /// - Returns: The capture to style the token with.
+    public func refined(by modifiers: CaptureModifierSet) -> CaptureName {
+        guard self == .variable else { return self }
+        if modifiers.contains(.classScope) {
+            return .property
+        }
+        if modifiers.contains(.globalScope) || modifiers.contains(.fileScope) {
+            return .globalVariable
+        }
+        if modifiers.contains(.modification) {
+            return .assignedVariable
+        }
+        return self
     }
 
     var alternate: CaptureName {
@@ -121,16 +156,22 @@ public enum CaptureName: Int8, CaseIterable, Sendable {
         "attribute": .typeAlternate,
         "variable.builtin": .variableBuiltin,
         "variable.assigned": .assignedVariable,
+        "variable.global": .globalVariable,
+        "variable.parameter": .parameter,
+        "variable.member": .property,
+        "field": .property,
+        "type.builtin": .primitiveType,
+        "preprocessor": .preprocessor,
         "keyword.return": .keywordReturn,
         "keyword.function": .keywordFunction,
         "constant": .constant,
-        "macro": .constant,
+        "macro": .macro,
         "enumMember": .constant,
         "operator": .operator,
         "label": .label,
         // LSP semantic token type names without a tree-sitter equivalent
-        "module": .type,
-        "namespace": .type,
+        "module": .namespace,
+        "namespace": .namespace,
         "class": .type,
         "struct": .type,
         "enum": .type,
@@ -213,6 +254,16 @@ public enum CaptureName: Int8, CaseIterable, Sendable {
             return "label"
         case .assignedVariable:
             return "assignedVariable"
+        case .globalVariable:
+            return "globalVariable"
+        case .namespace:
+            return "namespace"
+        case .macro:
+            return "macro"
+        case .preprocessor:
+            return "preprocessor"
+        case .primitiveType:
+            return "primitiveType"
         case .bracketLevel0:
             return "bracketLevel0"
         case .bracketLevel1:

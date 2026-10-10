@@ -1,9 +1,9 @@
 {
   "name": "one-dark-pro",
   "displayName": "One Dark Pro",
-  "description": "CodeEdit bundled theme.",
+  "description": "One Dark Pro with the same symbol role hierarchy as One Dark Pro Darker (locals, parameters, fields, globals, namespaces, macros, primitives).",
   "author": "CodeEdit",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "license": "MIT",
   "distributionURL": "https://github.com/CodeEditApp/CodeEdit",
   "type": "dark",
@@ -49,13 +49,41 @@
       "color": "#E5C07B"
     },
     "variables": {
-      "color": "#56B6C2"
+      "color": "#8EA6D1"
     },
     "commands": {
       "color": "#61AFEF"
     },
     "values": {
-      "color": "#D19A66"
+      "color": "#5FD3A8",
+      "bold": true
+    },
+    "assignedVariables": {
+      "color": "#A3BAE3"
+    },
+    "functions": {
+      "color": "#61AFEF"
+    },
+    "properties": {
+      "color": "#E5737D"
+    },
+    "parameters": {
+      "color": "#B0A4E3"
+    },
+    "globals": {
+      "color": "#5FD3A8"
+    },
+    "namespaces": {
+      "color": "#E8B08C"
+    },
+    "macros": {
+      "color": "#E58BB5"
+    },
+    "preprocessors": {
+      "color": "#9B8EC4"
+    },
+    "primitiveTypes": {
+      "color": "#56B6C2"
     }
   },
   "terminal": {

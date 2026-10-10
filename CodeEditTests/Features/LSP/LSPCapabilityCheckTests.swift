@@ -150,4 +150,29 @@ final class LSPCapabilityCheckTests: XCTestCase {
         try await provider.documentDidChange()
         XCTAssertFalse(sentMethods.contains { $0.hasPrefix("textDocument/semanticTokens") })
     }
+
+    /// The editor attaches the provider before the server has opened the document, so the provider's first request
+    /// finds no server. Opening the document must then request the initial tokens, or the editor keeps waiting.
+    @MainActor
+    func testHighlightProviderRequestsTokensWhenServerAttachesAfterEditor() async throws {
+        let server = try await makeServer {
+            $0.semanticTokensProvider = .optionA(.init(legend: Self.legend, full: .optionB(.init(delta: true))))
+        }
+        let document = MockDocumentType()
+        let provider = document.languageServerObjects.highlightProvider
+        let textView = TextView(string: "project(demo)\n")
+
+        provider.setUp(textView: textView, codeLanguage: .default)
+        await Task.yield()
+        XCTAssertFalse(sentMethods.contains { $0.hasPrefix("textDocument/semanticTokens") })
+
+        try await server.openDocument(document)
+
+        let fullRequest = ClientRequest.Method.textDocumentSemanticTokensFull.rawValue
+        await waitForExpectation {
+            sentMethods.contains(fullRequest)
+        } onTimeout: {
+            XCTFail("Opening the document after the editor attached did not request semantic tokens")
+        }
+    }
 }

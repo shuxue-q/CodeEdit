@@ -5,7 +5,14 @@ final class EditorThemeTests: XCTestCase {
     private func makeTheme(
         functions: EditorTheme.Attribute? = nil,
         operators: EditorTheme.Attribute? = nil,
-        assignedVariables: EditorTheme.Attribute? = nil
+        assignedVariables: EditorTheme.Attribute? = nil,
+        properties: EditorTheme.Attribute? = nil,
+        parameters: EditorTheme.Attribute? = nil,
+        globals: EditorTheme.Attribute? = nil,
+        namespaces: EditorTheme.Attribute? = nil,
+        macros: EditorTheme.Attribute? = nil,
+        preprocessors: EditorTheme.Attribute? = nil,
+        primitiveTypes: EditorTheme.Attribute? = nil
     ) -> EditorTheme {
         EditorTheme(
             text: .init(color: .white),
@@ -26,7 +33,14 @@ final class EditorThemeTests: XCTestCase {
             comments: .init(color: .lightGray),
             functions: functions,
             operators: operators,
-            assignedVariables: assignedVariables
+            assignedVariables: assignedVariables,
+            properties: properties,
+            parameters: parameters,
+            globals: globals,
+            namespaces: namespaces,
+            macros: macros,
+            preprocessors: preprocessors,
+            primitiveTypes: primitiveTypes
         )
     }
 
@@ -74,5 +88,64 @@ final class EditorThemeTests: XCTestCase {
         XCTAssertTrue(CaptureName.parameter.isVariableFamily)
         XCTAssertFalse(CaptureName.assignedVariable.isVariableFamily)
         XCTAssertFalse(CaptureName.function.isVariableFamily)
+    }
+
+    /// Themes that predate the symbol roles style the same text exactly as before.
+    func test_symbolRolesFallBackToLegacyAttributes() {
+        let theme = makeTheme()
+        XCTAssertEqual(theme.colorFor(.property), .red)
+        XCTAssertEqual(theme.colorFor(.parameter), .red)
+        XCTAssertEqual(theme.colorFor(.globalVariable), .red)
+        XCTAssertEqual(theme.colorFor(.namespace), .yellow)
+        XCTAssertEqual(theme.colorFor(.macro), .brown)
+        XCTAssertEqual(theme.colorFor(.preprocessor), .purple)
+        XCTAssertEqual(theme.colorFor(.primitiveType), .yellow)
+    }
+
+    func test_symbolRolesMapToTheirOwnAttributes() {
+        let theme = makeTheme(
+            properties: .init(color: .cyan),
+            parameters: .init(color: .systemTeal),
+            globals: .init(color: .systemOrange),
+            namespaces: .init(color: .systemIndigo),
+            macros: .init(color: .systemMint),
+            preprocessors: .init(color: .systemPink, bold: true),
+            primitiveTypes: .init(color: .systemGreen, italic: true)
+        )
+        XCTAssertEqual(theme.colorFor(.property), .cyan)
+        XCTAssertEqual(theme.colorFor(.parameter), .systemTeal)
+        XCTAssertEqual(theme.colorFor(.globalVariable), .systemOrange)
+        XCTAssertEqual(theme.colorFor(.namespace), .systemIndigo)
+        XCTAssertEqual(theme.colorFor(.macro), .systemMint)
+        XCTAssertEqual(theme.colorFor(.preprocessor), .systemPink)
+        XCTAssertEqual(theme.colorFor(.primitiveType), .systemGreen)
+        // Plain variables and types are unaffected.
+        XCTAssertEqual(theme.colorFor(.variable), .red)
+        XCTAssertEqual(theme.colorFor(.type), .yellow)
+
+        let font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+        XCTAssertTrue(theme.fontFor(for: .preprocessor, from: font).fontDescriptor.symbolicTraits.contains(.bold))
+        XCTAssertTrue(theme.fontFor(for: .primitiveType, from: font).fontDescriptor.symbolicTraits.contains(.italic))
+    }
+
+    func test_symbolCaptureNameParsing() {
+        XCTAssertEqual(CaptureName.fromString("variable.global"), .globalVariable)
+        XCTAssertEqual(CaptureName.fromString("namespace"), .namespace)
+        XCTAssertEqual(CaptureName.fromString("macro"), .macro)
+        XCTAssertEqual(CaptureName.fromString("preprocessor"), .preprocessor)
+        XCTAssertEqual(CaptureName.fromString("type.builtin"), .primitiveType)
+        XCTAssertEqual(CaptureName.fromString("type"), .type)
+        XCTAssertEqual(CaptureName.fromString("variable.parameter"), .parameter)
+        XCTAssertEqual(CaptureName.fromString("variable.member"), .property)
+    }
+
+    func test_captureRefinementByScopeModifiers() {
+        XCTAssertEqual(CaptureName.variable.refined(by: [.fileScope]), .globalVariable)
+        XCTAssertEqual(CaptureName.variable.refined(by: [.globalScope]), .globalVariable)
+        XCTAssertEqual(CaptureName.variable.refined(by: [.classScope]), .property)
+        XCTAssertEqual(CaptureName.variable.refined(by: [.functionScope, .declaration]), .variable)
+        XCTAssertEqual(CaptureName.variable.refined(by: [.modification]), .assignedVariable)
+        XCTAssertEqual(CaptureName.property.refined(by: [.modification]), .property)
+        XCTAssertEqual(CaptureName.parameter.refined(by: [.globalScope]), .parameter)
     }
 }

@@ -1,9 +1,9 @@
 {
   "name": "one-dark-pro-darker",
   "displayName": "One Dark Pro Darker",
-  "description": "One Dark Pro with a darker #23272E background; chrome derives from the editor background. The terminal palette mirrors the editor tokens.",
+  "description": "One Dark Pro with a darker #23272E background; chrome derives from the editor background. Symbols follow a role hierarchy (locals, parameters, fields, globals, namespaces, macros, primitives). The terminal palette mirrors the editor tokens.",
   "author": "CodeEdit",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "license": "MIT",
   "distributionURL": "https://github.com/CodeEditApp/CodeEdit",
   "type": "dark",
@@ -27,7 +27,7 @@
       "color": "#ABB2BF"
     },
     "comments": {
-      "color": "#7F848E",
+      "color": "#878E9A",
       "italic": true
     },
     "strings": {
@@ -49,10 +49,10 @@
       "color": "#E5C07B"
     },
     "variables": {
-      "color": "#E06C75"
+      "color": "#8EA6D1"
     },
     "assignedVariables": {
-      "color": "#56B6C2"
+      "color": "#A3BAE3"
     },
     "functions": {
       "color": "#61AFEF"
@@ -61,11 +61,32 @@
       "color": "#61AFEF"
     },
     "values": {
-      "color": "#E5C07B",
+      "color": "#5FD3A8",
       "bold": true
     },
     "operators": {
       "color": "#D7DAE0"
+    },
+    "properties": {
+      "color": "#E5737D"
+    },
+    "parameters": {
+      "color": "#B0A4E3"
+    },
+    "globals": {
+      "color": "#5FD3A8"
+    },
+    "namespaces": {
+      "color": "#E8B08C"
+    },
+    "macros": {
+      "color": "#E58BB5"
+    },
+    "preprocessors": {
+      "color": "#9B8EC4"
+    },
+    "primitiveTypes": {
+      "color": "#56B6C2"
     }
   },
   "terminal": {

@@ -124,7 +124,8 @@ final class StyledRangeContainerTests: XCTestCase {
     }
 
     /// A language server (higher priority) that only knows the text is a variable must not erase the grammar's
-    /// knowledge that it is an assignment target. Any other capture from the higher priority provider still wins.
+    /// knowledge that it is an assignment target. Any other capture from the higher priority provider still wins,
+    /// including the more specific variable roles such as properties.
     @MainActor
     func test_assignedVariableSurvivesHigherPriorityVariable() {
         let providers = [0, 1]
@@ -156,7 +157,7 @@ final class StyledRangeContainerTests: XCTestCase {
         let runs = store.runsIn(range: NSRange(location: 0, length: 100))
         XCTAssertEqual(runs[0], Run(length: 10, value: .init(capture: .assignedVariable, modifiers: [])))
         XCTAssertEqual(runs[1], Run(length: 10, value: nil))
-        XCTAssertEqual(runs[2], Run(length: 10, value: .init(capture: .assignedVariable, modifiers: [])))
+        XCTAssertEqual(runs[2], Run(length: 10, value: .init(capture: .property, modifiers: [])))
         XCTAssertEqual(runs[3], Run(length: 10, value: nil))
         XCTAssertEqual(runs[4], Run(length: 10, value: .init(capture: .function, modifiers: [])))
         XCTAssertEqual(runs[5], Run(length: 10, value: nil))
@@ -167,7 +168,10 @@ final class StyledRangeContainerTests: XCTestCase {
     func test_resolveCapture() {
         typealias Element = StyledRangeContainer.StyleElement
         XCTAssertEqual(Element.resolveCapture(preferred: .variable, fallback: .assignedVariable), .assignedVariable)
-        XCTAssertEqual(Element.resolveCapture(preferred: .parameter, fallback: .assignedVariable), .assignedVariable)
+        // More specific roles keep their own color when the grammar reports a write to them.
+        XCTAssertEqual(Element.resolveCapture(preferred: .parameter, fallback: .assignedVariable), .parameter)
+        XCTAssertEqual(Element.resolveCapture(preferred: .property, fallback: .assignedVariable), .property)
+        XCTAssertEqual(Element.resolveCapture(preferred: .globalVariable, fallback: .assignedVariable), .globalVariable)
         XCTAssertEqual(Element.resolveCapture(preferred: nil, fallback: .assignedVariable), .assignedVariable)
         XCTAssertEqual(Element.resolveCapture(preferred: .assignedVariable, fallback: .variable), .assignedVariable)
         XCTAssertEqual(Element.resolveCapture(preferred: .function, fallback: .assignedVariable), .function)

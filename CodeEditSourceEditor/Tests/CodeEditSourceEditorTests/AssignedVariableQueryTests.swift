@@ -99,11 +99,11 @@ final class AssignedVariableQueryTests: XCTestCase {
             .init("total", 0, is: .assignedVariable),
             .init("total", 1, is: .assignedVariable),
             .init("total", 2, is: .assignedVariable),
-            .init("n", 0, is: .variable),
+            .init("n", 0, is: .parameter),
             .init("n", 1, is: .variable),
             .init("count", is: .assignedVariable),
             .init("p", is: .variable),
-            .init("len", is: .assignedVariable),
+            .init("len", is: .property),
             .init("f", is: .function)
         ])
     }

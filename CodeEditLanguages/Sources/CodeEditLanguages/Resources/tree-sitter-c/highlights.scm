@@ -1,3 +1,10 @@
+; Macro definitions. Uses of a macro are only known to a language server (semantic token `macro`).
+(preproc_def
+  name: (identifier) @macro)
+(preproc_function_def
+  name: (identifier) @macro)
+; Capture names are ranked by first appearance in the query, so `@macro` has to precede `@constant`.
+
 "break" @keyword
 "case" @keyword
 "const" @keyword
@@ -20,15 +27,15 @@
 "volatile" @keyword
 "while" @keyword
 
-"#define" @keyword
-"#elif" @keyword
-"#else" @keyword
-"#endif" @keyword
-"#if" @keyword
-"#ifdef" @keyword
-"#ifndef" @keyword
-"#include" @keyword
-(preproc_directive) @keyword
+"#define" @preprocessor
+"#elif" @preprocessor
+"#else" @preprocessor
+"#endif" @preprocessor
+"#if" @preprocessor
+"#ifdef" @preprocessor
+"#ifndef" @preprocessor
+"#include" @preprocessor
+(preproc_directive) @preprocessor
 
 "--" @operator
 "-" @operator
@@ -64,15 +71,24 @@
     field: (field_identifier) @function))
 (function_declarator
   declarator: (identifier) @function)
-(preproc_function_def
-  name: (identifier) @function.special)
+; Parameters: the declared name only, because uses inside the body look like any other identifier.
+(parameter_declaration
+  declarator: (identifier) @parameter)
+(parameter_declaration
+  declarator: (pointer_declarator
+    declarator: (identifier) @parameter))
+(parameter_declaration
+  declarator: (pointer_declarator
+    declarator: (pointer_declarator
+      declarator: (identifier) @parameter)))
+(parameter_declaration
+  declarator: (array_declarator
+    declarator: (identifier) @parameter))
 
 ; Assignment targets: the variable being written to, as opposed to the ones being read.
 (assignment_expression
   left: (identifier) @variable.assigned)
-(assignment_expression
-  left: (field_expression
-    field: (field_identifier) @variable.assigned))
+; Fields written through `.` or `->` stay `@property` (below) so they keep the member color.
 (assignment_expression
   left: (pointer_expression
     argument: (identifier) @variable.assigned))
@@ -87,8 +103,8 @@
 (field_identifier) @property
 (statement_identifier) @label
 (type_identifier) @type
-(primitive_type) @type
-(sized_type_specifier) @type
+(primitive_type) @type.builtin
+(sized_type_specifier) @type.builtin
 
 ((identifier) @constant
  (#match? @constant "^[A-Z][A-Z\\d_]*$"))

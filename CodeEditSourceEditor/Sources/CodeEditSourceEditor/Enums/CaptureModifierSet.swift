@@ -24,6 +24,11 @@ public struct CaptureModifierSet: OptionSet, Equatable, Hashable, Sendable {
     public static let documentation = CaptureModifierSet(rawValue: 1 << CaptureModifier.documentation.rawValue)
     public static let defaultLibrary = CaptureModifierSet(rawValue: 1 << CaptureModifier.defaultLibrary.rawValue)
 
+    public static let functionScope = CaptureModifierSet(rawValue: 1 << CaptureModifier.functionScope.rawValue)
+    public static let classScope = CaptureModifierSet(rawValue: 1 << CaptureModifier.classScope.rawValue)
+    public static let fileScope = CaptureModifierSet(rawValue: 1 << CaptureModifier.fileScope.rawValue)
+    public static let globalScope = CaptureModifierSet(rawValue: 1 << CaptureModifier.globalScope.rawValue)
+
     /// All values in the set.
     ///
     /// Results will be returned in order of ``CaptureModifier``'s raw value.

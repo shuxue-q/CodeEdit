@@ -67,6 +67,13 @@ final class SemanticTokenHighlightProvider<
         isUnsupported = !server.supportsSemanticTokens || server.highlightMap == nil
         if isUnsupported {
             respondToPendingHighlights(with: .success([]))
+        } else if textView != nil, !storage.hasReceivedData {
+            // The editor usually attaches (``setUp(textView:codeLanguage:)``) before the server has opened the
+            // document, so that first request found no server and the highlighter's queries are waiting in
+            // `pendingHighlightCallbacks`. Fetch the initial tokens now; the queued queries re-run when they arrive.
+            _ = Task { @MainActor in
+                try await self.documentDidChange()
+            }
         }
     }
 

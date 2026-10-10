@@ -48,6 +48,20 @@ public struct EditorTheme: Equatable {
     /// Variables that are being written to: assignment targets and names declared with an initial value.
     /// Variables that are only read keep ``variables``.
     public var assignedVariables: Attribute
+    /// Fields and members of a class, struct or object (`point.x`, `self.name`, the field declaration itself).
+    public var properties: Attribute
+    /// Function and method parameters, at their declaration and where the language server marks their uses.
+    public var parameters: Attribute
+    /// Variables declared at file, namespace or global scope.
+    public var globals: Attribute
+    /// Namespace and module names.
+    public var namespaces: Attribute
+    /// Preprocessor macro names, at their definition and where the language server marks their uses.
+    public var macros: Attribute
+    /// Preprocessor directives such as `#include` and `#define`.
+    public var preprocessors: Attribute
+    /// Built-in primitive types such as `int` and `double`.
+    public var primitiveTypes: Attribute
 
     /// Explicit rainbow bracket colors, cycled by nesting depth (like VS Code's
     /// `editorBracketHighlight.foreground1…6`). When `nil` or empty, a palette suited to the theme's
@@ -73,7 +87,14 @@ public struct EditorTheme: Equatable {
         comments: Attribute,
         functions: Attribute? = nil,
         operators: Attribute? = nil,
-        assignedVariables: Attribute? = nil
+        assignedVariables: Attribute? = nil,
+        properties: Attribute? = nil,
+        parameters: Attribute? = nil,
+        globals: Attribute? = nil,
+        namespaces: Attribute? = nil,
+        macros: Attribute? = nil,
+        preprocessors: Attribute? = nil,
+        primitiveTypes: Attribute? = nil
     ) {
         self.text = text
         self.insertionPoint = insertionPoint
@@ -96,6 +117,16 @@ public struct EditorTheme: Equatable {
         self.functions = functions ?? commands
         self.operators = operators ?? text
         self.assignedVariables = assignedVariables ?? variables
+        // The symbol roles added for finer-grained language server highlighting reuse the attribute that styled
+        // the same text before they existed: members, parameters and globals were variables, namespaces were
+        // types, macros were constants, directives were keywords, primitive types were types.
+        self.properties = properties ?? variables
+        self.parameters = parameters ?? variables
+        self.globals = globals ?? variables
+        self.namespaces = namespaces ?? types
+        self.macros = macros ?? values
+        self.preprocessors = preprocessors ?? keywords
+        self.primitiveTypes = primitiveTypes ?? types
     }
 
     /// Fallback rainbow bracket palette for dark backgrounds.
@@ -143,11 +174,16 @@ public struct EditorTheme: Equatable {
         .label: \.keywords,
         .comment: \.comments,
         .variable: \.variables,
-        .property: \.variables,
+        .property: \.properties,
         .function: \.functions,
         .method: \.functions,
-        .parameter: \.variables,
+        .parameter: \.parameters,
         .assignedVariable: \.assignedVariables,
+        .globalVariable: \.globals,
+        .namespace: \.namespaces,
+        .macro: \.macros,
+        .preprocessor: \.preprocessors,
+        .primitiveType: \.primitiveTypes,
         .number: \.numbers,
         .float: \.numbers,
         .string: \.strings,
