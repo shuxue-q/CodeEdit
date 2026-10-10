@@ -139,7 +139,7 @@ final class FindAndReplaceTests: XCTestCase { // swiftlint:disable:this type_bod
         await fulfillment(of: [searchExpectation], timeout: 2)
         let searchResults = searchState.searchResult
 
-        // Expecting a result count of 0 due to the intentional use of a lowercase 'i'
+        // Both files containing 'Ipsum' were rewritten, so the replacement is found in two documents.
         XCTAssertEqual(searchResults.count, 2)
     }
 

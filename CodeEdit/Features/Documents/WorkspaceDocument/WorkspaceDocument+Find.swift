@@ -104,39 +104,35 @@ extension WorkspaceDocument.SearchState {
         }
 
         let asyncController = SearchIndexer.AsyncManager(index: indexer)
-        let evaluateResultGroup = DispatchGroup()
-        let evaluateSearchQueue = DispatchQueue(label: "app.codeedit.CodeEdit.EvaluateSearch")
 
+        // Evaluate every file SearchKit matched concurrently, and only return once the results have been
+        // published. Callers (and tests) read `searchResult` as soon as this method returns, so publishing
+        // from a detached continuation would let them observe an empty result list.
         let searchStream = await asyncController.search(query: searchQuery, 20)
-        for try await result in searchStream {
-            for file in result.results {
-                let fileURL = file.url
-                let fileScore = file.score
-                let capturedRegexPattern = regexPattern
+        await withTaskGroup(of: SearchResultModel?.self) { taskGroup in
+            for await result in searchStream {
+                for file in result.results {
+                    let fileURL = file.url
+                    let fileScore = file.score
 
-                evaluateSearchQueue.async(group: evaluateResultGroup) {
-                    evaluateResultGroup.enter()
-                    Task {
-                        let result = await self.evaluateSearchResult(
+                    taskGroup.addTask {
+                        await self.evaluateSearchResult(
                             fileURL: fileURL,
                             fileScore: fileScore,
-                            regexPattern: capturedRegexPattern
+                            regexPattern: regexPattern
                         )
-
-                        if let result = result {
-                            await self.appendNewResultsToTempResults(newResult: result)
-                        }
-                        evaluateResultGroup.leave()
                     }
+                }
+            }
+
+            for await result in taskGroup {
+                if let result {
+                    await self.appendNewResultsToTempResults(newResult: result)
                 }
             }
         }
 
-        evaluateResultGroup.notify(queue: evaluateSearchQueue) {
-            Task { @MainActor in
-                self.setSearchResults()
-            }
-        }
+        await setSearchResults()
     }
 
     /// Appends a new search result to the temporary search results array on the main thread.

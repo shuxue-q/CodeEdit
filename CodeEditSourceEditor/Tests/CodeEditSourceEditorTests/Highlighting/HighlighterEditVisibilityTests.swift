@@ -25,6 +25,9 @@ final class HighlighterEditVisibilityTests: XCTestCase {
             backing: .buffered,
             defer: false
         )
+        // `NSWindow` releases itself on `close()` by default; under ARC that double-frees the window and
+        // crashes the test runner when the autorelease pool drains after the test returns.
+        window.isReleasedWhenClosed = false
         window.contentViewController = controller
         controller.view.frame = NSRect(x: 0, y: 0, width: 800, height: 400)
         controller.view.layoutSubtreeIfNeeded()
