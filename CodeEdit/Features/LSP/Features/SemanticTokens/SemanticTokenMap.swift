@@ -70,13 +70,13 @@ struct SemanticTokenMap: Sendable { // swiftlint:enable line_length
             let modifiers = decodeModifier(token.modifiers)
 
             let type = Int(token.type)
-            var capture = tokenTypeMap.indices.contains(type) ? tokenTypeMap[type] : nil
+            let rawCapture = tokenTypeMap.indices.contains(type) ? tokenTypeMap[type] : nil
 
-            // Servers that flag written variables with the `modification` modifier expose the assignment target
-            // role directly, the same way the tree-sitter `variable.assigned` capture does.
-            if modifiers.contains(.modification), capture?.isVariableFamily == true {
-                capture = .assignedVariable
-            }
+            // Variables are narrowed by the scope and write modifiers the server attached: class-scope variables
+            // are members, file/global-scope ones are globals, and servers that flag written variables with the
+            // `modification` modifier expose the assignment target role the same way the tree-sitter
+            // `variable.assigned` capture does.
+            let capture = rawCapture?.refined(by: modifiers)
 
             return HighlightRange(
                 range: range,

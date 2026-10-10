@@ -32,6 +32,15 @@ public enum CaptureModifier: Int8, CaseIterable, Sendable {
     case modification
     case documentation
     case defaultLibrary
+    /// The symbol is declared inside a function body (clangd's `functionScope`).
+    case functionScope
+    /// The symbol is a member of a class, struct or union (clangd's `classScope`).
+    case classScope
+    /// The symbol is declared at file or namespace scope, visible only in its translation unit
+    /// (clangd's `fileScope`).
+    case fileScope
+    /// The symbol is declared at global scope (clangd's `globalScope`).
+    case globalScope
 
     public var stringValue: String {
         switch self {
@@ -55,6 +64,14 @@ public enum CaptureModifier: Int8, CaseIterable, Sendable {
             return "documentation"
         case .defaultLibrary:
             return "defaultLibrary"
+        case .functionScope:
+            return "functionScope"
+        case .classScope:
+            return "classScope"
+        case .fileScope:
+            return "fileScope"
+        case .globalScope:
+            return "globalScope"
         }
     }
 
@@ -67,7 +84,7 @@ public enum CaptureModifier: Int8, CaseIterable, Sendable {
             return .definition
         case "readonly":
             return .readonly
-        case "static`":
+        case "static":
             return .static
         case "deprecated":
             return .deprecated
@@ -81,6 +98,14 @@ public enum CaptureModifier: Int8, CaseIterable, Sendable {
             return .documentation
         case "defaultLibrary":
             return .defaultLibrary
+        case "functionScope":
+            return .functionScope
+        case "classScope":
+            return .classScope
+        case "fileScope":
+            return .fileScope
+        case "globalScope":
+            return .globalScope
         default:
             return nil
         }

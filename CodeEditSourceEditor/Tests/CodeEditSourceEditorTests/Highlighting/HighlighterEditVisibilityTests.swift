@@ -53,7 +53,9 @@ final class HighlighterEditVisibilityTests: XCTestCase {
         waitForHighlights()
 
         let prefixRange = (source as NSString).range(of: "CMAKE_")
-        let constantColor = controller.attributesFor(.constant)[.foregroundColor] as? NSColor
+        // The first argument of `set()` is a variable being written; the grammar's more specific assignment capture
+        // wins over the generic ALL_CAPS constant one.
+        let constantColor = controller.attributesFor(.assignedVariable)[.foregroundColor] as? NSColor
         XCTAssertEqual(Set(colors(in: controller, range: prefixRange)), [constantColor])
 
         // Same edit the completion delegate makes: replace the typed prefix with the full item.

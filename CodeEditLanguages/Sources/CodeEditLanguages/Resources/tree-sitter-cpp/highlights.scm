@@ -1,3 +1,10 @@
+; Macro definitions. Uses of a macro are only known to a language server (semantic token `macro`).
+(preproc_def
+  name: (identifier) @macro)
+(preproc_function_def
+  name: (identifier) @macro)
+; Capture names are ranked by first appearance in the combined C++ and C query, so `@macro` comes first.
+
 ; Functions
 
 (call_expression
@@ -26,10 +33,26 @@
 
 ; Types
 
-((namespace_identifier) @type
- (#match? @type "^[A-Z]"))
+(namespace_identifier) @namespace
 
-(auto) @type
+(auto) @type.builtin
+
+; Parameters passed by reference or with a default value (plain ones are matched by the C query)
+(parameter_declaration
+  declarator: (reference_declarator
+    (identifier) @parameter))
+(parameter_declaration
+  declarator: (pointer_declarator
+    declarator: (reference_declarator
+      (identifier) @parameter)))
+(optional_parameter_declaration
+  declarator: (identifier) @parameter)
+(optional_parameter_declaration
+  declarator: (reference_declarator
+    (identifier) @parameter))
+(optional_parameter_declaration
+  declarator: (pointer_declarator
+    declarator: (identifier) @parameter))
 
 ; Constants
 

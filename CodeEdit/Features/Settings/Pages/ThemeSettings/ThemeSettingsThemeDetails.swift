@@ -222,6 +222,20 @@ extension ThemeSettingsThemeDetails {
         )
         Divider().padding(.horizontal, 10)
         ThemeSettingsThemeToken(
+            "Primitive Types",
+            color: $theme.editor.primitiveTypes.swiftColor,
+            bold: $theme.editor.primitiveTypes.bold,
+            italic: $theme.editor.primitiveTypes.italic
+        )
+        Divider().padding(.horizontal, 10)
+        ThemeSettingsThemeToken(
+            "Namespaces",
+            color: $theme.editor.namespaces.swiftColor,
+            bold: $theme.editor.namespaces.bold,
+            italic: $theme.editor.namespaces.italic
+        )
+        Divider().padding(.horizontal, 10)
+        ThemeSettingsThemeToken(
             "Attributes",
             color: $theme.editor.attributes.swiftColor,
             bold: $theme.editor.attributes.bold,
@@ -243,6 +257,27 @@ extension ThemeSettingsThemeDetails {
         )
         Divider().padding(.horizontal, 10)
         ThemeSettingsThemeToken(
+            "Properties",
+            color: $theme.editor.properties.swiftColor,
+            bold: $theme.editor.properties.bold,
+            italic: $theme.editor.properties.italic
+        )
+        Divider().padding(.horizontal, 10)
+        ThemeSettingsThemeToken(
+            "Parameters",
+            color: $theme.editor.parameters.swiftColor,
+            bold: $theme.editor.parameters.bold,
+            italic: $theme.editor.parameters.italic
+        )
+        Divider().padding(.horizontal, 10)
+        ThemeSettingsThemeToken(
+            "Globals",
+            color: $theme.editor.globals.swiftColor,
+            bold: $theme.editor.globals.bold,
+            italic: $theme.editor.globals.italic
+        )
+        Divider().padding(.horizontal, 10)
+        ThemeSettingsThemeToken(
             "Functions",
             color: $theme.editor.functions.swiftColor,
             bold: $theme.editor.functions.bold,
@@ -254,6 +289,20 @@ extension ThemeSettingsThemeDetails {
             color: $theme.editor.values.swiftColor,
             bold: $theme.editor.values.bold,
             italic: $theme.editor.values.italic
+        )
+        Divider().padding(.horizontal, 10)
+        ThemeSettingsThemeToken(
+            "Macros",
+            color: $theme.editor.macros.swiftColor,
+            bold: $theme.editor.macros.bold,
+            italic: $theme.editor.macros.italic
+        )
+        Divider().padding(.horizontal, 10)
+        ThemeSettingsThemeToken(
+            "Preprocessor",
+            color: $theme.editor.preprocessors.swiftColor,
+            bold: $theme.editor.preprocessors.bold,
+            italic: $theme.editor.preprocessors.italic
         )
         Divider().padding(.horizontal, 10)
         ThemeSettingsThemeToken(

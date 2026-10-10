@@ -1,9 +1,9 @@
 {
   "name": "qtcreator.light",
   "displayName": "Qt Creator Light",
-  "description": "Qt Creator Light (2024) style scheme. The terminal palette mirrors the editor tokens.",
+  "description": "Qt Creator Light (2024) style scheme, including its local, parameter, field, global, namespace and macro hierarchy. The terminal palette mirrors the editor tokens.",
   "author": "CodeEdit",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "license": "MIT",
   "distributionURL": "https://github.com/CodeEditApp/CodeEdit",
   "type": "light",
@@ -27,8 +27,7 @@
       "color": "#0A0A0A"
     },
     "comments": {
-      "color": "#008000",
-      "italic": true
+      "color": "#008000"
     },
     "strings": {
       "color": "#008000"
@@ -52,7 +51,7 @@
       "color": "#092E64"
     },
     "assignedVariables": {
-      "color": "#800000"
+      "color": "#092E64"
     },
     "functions": {
       "color": "#00677C"
@@ -64,7 +63,28 @@
       "color": "#CE5C00"
     },
     "operators": {
-      "color": "#1A5FB4"
+      "color": "#0A0A0A"
+    },
+    "properties": {
+      "color": "#800000"
+    },
+    "parameters": {
+      "color": "#092E64"
+    },
+    "globals": {
+      "color": "#CE5C00"
+    },
+    "namespaces": {
+      "color": "#800080"
+    },
+    "macros": {
+      "color": "#00677C"
+    },
+    "preprocessors": {
+      "color": "#000080"
+    },
+    "primitiveTypes": {
+      "color": "#808000"
     }
   },
   "terminal": {

@@ -149,8 +149,8 @@ struct ThemeModelTests {
         let darker = themes.first { $0.displayName == "One Dark Pro Darker" }
         #expect(darker?.editor.commands.color == "#61AFEF")
         #expect(darker?.editor.functions.color == "#61AFEF")
-        #expect(darker?.editor.variables.color == "#E06C75")
-        #expect(darker?.editor.assignedVariables.color == "#56B6C2")
+        #expect(darker?.editor.variables.color == "#8EA6D1")
+        #expect(darker?.editor.assignedVariables.color == "#A3BAE3")
         #expect(darker?.editor.keywords.color == "#C678DD")
         #expect(darker?.editor.strings.color == "#98C379")
         #expect(darker?.editor.types.color == "#E5C07B")
@@ -164,16 +164,20 @@ struct ThemeModelTests {
         for name in ["One Dark Pro Darker", "Qt Creator Light"] {
             let theme = try #require(themes.first { $0.displayName == name }, "Missing bundled theme \(name)")
             let editor = theme.editor
-            let roles: [(String, Theme.Attributes)] = [
+            var roles: [(String, Theme.Attributes)] = [
                 ("functions", editor.functions),
                 ("variables", editor.variables),
-                ("assignedVariables", editor.assignedVariables),
                 ("values", editor.values),
                 ("numbers", editor.numbers),
-                ("operators", editor.operators),
                 ("keywords", editor.keywords),
                 ("text", editor.text)
             ]
+            // Qt Creator Light mirrors the Light (2024) scheme, where a written local looks like any local and
+            // operators use the plain text color.
+            if name != "Qt Creator Light" {
+                roles.append(("assignedVariables", editor.assignedVariables))
+                roles.append(("operators", editor.operators))
+            }
             for (index, lhs) in roles.enumerated() {
                 for rhs in roles[(index + 1)...] {
                     #expect(lhs.1 != rhs.1, "\(name): \(lhs.0) and \(rhs.0) share the same attributes")

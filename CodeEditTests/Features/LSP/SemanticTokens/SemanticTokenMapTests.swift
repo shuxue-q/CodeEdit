@@ -119,4 +119,66 @@ final class SemanticTokenMapTests: XCTestCase {
         XCTAssertEqual(decoded[3].modifiers, [.definition, .async], "Decoded Modifiers")
         XCTAssertEqual(decoded[4].modifiers, [], "Decoded Modifiers")
     }
+
+    /// clangd's token types and scope modifiers separate globals, members, parameters, namespaces and macros from
+    /// plain local variables.
+    @MainActor
+    func testClangdSymbolHierarchy() {
+        let legend = SemanticTokensLegend(
+            tokenTypes: ["variable", "parameter", "property", "namespace", "macro", "class", "function"],
+            tokenModifiers: [
+                "declaration", "definition", "readonly", "static", "functionScope", "classScope", "fileScope",
+                "globalScope"
+            ]
+        )
+        let map = SemanticTokenMap(semanticCapability: .optionA(SemanticTokensOptions(legend: legend)))
+        let functionScope: UInt32 = 1 << 4
+        let classScope: UInt32 = 1 << 5
+        let fileScope: UInt32 = 1 << 6
+        let globalScope: UInt32 = 1 << 7
+        let readonly: UInt32 = 1 << 2
+        let staticModifier: UInt32 = 1 << 3
+
+        let tokens = [
+            SemanticToken(line: 0, char: 0, length: 5, type: 0, modifiers: functionScope),            // local
+            SemanticToken(line: 0, char: 6, length: 5, type: 0, modifiers: fileScope | readonly),    // constant
+            SemanticToken(line: 0, char: 12, length: 5, type: 0, modifiers: globalScope),            // global
+            SemanticToken(line: 0, char: 18, length: 5, type: 0, modifiers: classScope | staticModifier), // static
+            SemanticToken(line: 0, char: 24, length: 1, type: 1, modifiers: functionScope),          // parameter
+            SemanticToken(line: 0, char: 26, length: 4, type: 2, modifiers: classScope),             // field
+            SemanticToken(line: 0, char: 31, length: 3, type: 3, modifiers: globalScope),            // namespace
+            SemanticToken(line: 0, char: 35, length: 5, type: 4, modifiers: globalScope),            // macro
+            SemanticToken(line: 0, char: 41, length: 5, type: 5, modifiers: globalScope),            // class
+            SemanticToken(line: 0, char: 47, length: 5, type: 6, modifiers: globalScope),            // function
+            SemanticToken(line: 0, char: 53, length: 5, type: 0, modifiers: functionScope | 1 << 8)  // unknown bit
+        ]
+        let decoded = map.decode(tokens: SemanticTokens(tokens: tokens), using: mockProvider)
+        XCTAssertEqual(
+            decoded.map(\.capture),
+            [
+                .variable, .globalVariable, .globalVariable, .property,
+                .parameter, .property, .namespace, .macro, .type, .function, .variable
+            ]
+        )
+        XCTAssertEqual(decoded[1].modifiers, [.readonly, .fileScope])
+    }
+
+    /// Servers that flag written variables with `modification` still produce the assigned role for plain
+    /// variables, but fields, parameters and globals keep their own role.
+    @MainActor
+    func testModificationOnlyRefinesPlainVariables() {
+        let legend = SemanticTokensLegend(
+            tokenTypes: ["variable", "property", "parameter"],
+            tokenModifiers: ["modification", "globalScope"]
+        )
+        let map = SemanticTokenMap(semanticCapability: .optionA(SemanticTokensOptions(legend: legend)))
+        let tokens = [
+            SemanticToken(line: 0, char: 0, length: 1, type: 0, modifiers: 0b01),
+            SemanticToken(line: 0, char: 2, length: 1, type: 1, modifiers: 0b01),
+            SemanticToken(line: 0, char: 4, length: 1, type: 2, modifiers: 0b01),
+            SemanticToken(line: 0, char: 6, length: 1, type: 0, modifiers: 0b11)
+        ]
+        let decoded = map.decode(tokens: SemanticTokens(tokens: tokens), using: mockProvider)
+        XCTAssertEqual(decoded.map(\.capture), [.assignedVariable, .property, .parameter, .globalVariable])
+    }
 }
