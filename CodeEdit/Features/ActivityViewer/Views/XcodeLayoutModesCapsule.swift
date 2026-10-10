@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Combine
 
 /// Capsule containing Standard, Assistant Editor, and Code Review modes.
 /// Replicates Xcode's `[ [editors] [assistant] | [review] ]` control, where the
@@ -14,6 +15,16 @@ struct XcodeLayoutModesCapsule: View {
     var workspace: WorkspaceDocument?
     @EnvironmentObject private var editorManager: EditorManager
     @ObservedObject private var settings: Settings = .shared
+    @Environment(\.window.value)
+    private var window: NSWindow?
+
+    /// Whether the Source Control navigator is showing. Fed by the window controller's publisher
+    /// rather than read from `NSApp.keyWindow` during `body`, which tracked nothing and ran every render.
+    @State private var isCodeReviewActive: Bool = false
+
+    private var windowController: CodeEditWindowController? {
+        window?.windowController as? CodeEditWindowController
+    }
 
     private var isMultiEditor: Bool {
         editorManager.flattenedEditors.count > 1
@@ -21,14 +32,6 @@ struct XcodeLayoutModesCapsule: View {
 
     private var isAssistantActive: Bool {
         isMultiEditor && !editorManager.isFocusingActiveEditor
-    }
-
-    private var isCodeReviewActive: Bool {
-        guard let windowController = NSApp.keyWindow?.windowController as? CodeEditWindowController else {
-            return false
-        }
-        return windowController.navigatorSidebarViewModel?.selectedTab == .sourceControl
-            && !windowController.navigatorCollapsed
     }
 
     private var isStandardActive: Bool {
@@ -43,6 +46,9 @@ struct XcodeLayoutModesCapsule: View {
                 separator
                 codeReviewButton
             }
+        }
+        .onReceive(windowController?.codeReviewActivePublisher ?? Just(false).eraseToAnyPublisher()) {
+            isCodeReviewActive = $0
         }
     }
 
@@ -122,7 +128,7 @@ struct XcodeLayoutModesCapsule: View {
     }
 
     private func selectCodeReview() {
-        guard let windowController = NSApp.keyWindow?.windowController as? CodeEditWindowController else {
+        guard let windowController else {
             NSApp.sendAction(#selector(CodeEditWindowController.objcToggleFirstPanel), to: nil, from: nil)
             return
         }

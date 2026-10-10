@@ -18,14 +18,22 @@ extension CodeEditWindowController {
         guard let firstSplitView = splitViewController?.splitViewItems.first else { return }
 
         if shouldAnimate {
-            // Standard animated toggle
-            firstSplitView.animator().isCollapsed.toggle()
+            animateCollapse(of: firstSplitView)
         } else {
             // Instant toggle (no animation)
             firstSplitView.isCollapsed.toggle()
         }
 
         splitViewController?.saveNavigatorCollapsedState(isCollapsed: firstSplitView.isCollapsed)
+    }
+
+    /// Toggles a sidebar item's collapsed state inside one animation group, so both sidebars
+    /// share the same implicit animation behavior.
+    private func animateCollapse(of item: NSSplitViewItem) {
+        NSAnimationContext.runAnimationGroup { context in
+            context.allowsImplicitAnimation = true
+            item.animator().isCollapsed.toggle()
+        }
     }
 
     @objc
@@ -39,10 +47,7 @@ extension CodeEditWindowController {
         }
 
         if shouldAnimate {
-            // Standard animated toggle
-            NSAnimationContext.runAnimationGroup { _ in
-                lastSplitView.animator().isCollapsed.toggle()
-            }
+            animateCollapse(of: lastSplitView)
         } else {
             // Instant toggle (no animation)
             lastSplitView.isCollapsed.toggle()

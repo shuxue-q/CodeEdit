@@ -22,12 +22,21 @@ struct XcodeInspectorToggleCapsule: View {
 }
 
 private struct InspectorToggleButton: View {
-    @ObservedObject var windowController: CodeEditWindowController
+    let windowController: CodeEditWindowController
+    /// Mirrors `inspectorCollapsed` only, so other published changes on the controller
+    /// do not re-render the capsule while the inspector animates.
+    @State private var isCollapsed: Bool
+
+    init(windowController: CodeEditWindowController) {
+        self.windowController = windowController
+        _isCollapsed = State(initialValue: windowController.inspectorCollapsed)
+    }
 
     var body: some View {
-        inspectorCapsule(isOpen: !windowController.inspectorCollapsed) {
+        inspectorCapsule(isOpen: !isCollapsed) {
             windowController.toggleLastPanel()
         }
+        .onReceive(windowController.$inspectorCollapsed.removeDuplicates()) { isCollapsed = $0 }
     }
 }
 

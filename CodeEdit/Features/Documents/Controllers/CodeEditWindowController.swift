@@ -32,6 +32,20 @@ final class CodeEditWindowController: NSWindowController, NSToolbarDelegate, Obs
 
     internal var cancellables = [AnyCancellable]()
 
+    /// Emits whether the Code Review mode is active: the Source Control navigator is selected and visible.
+    ///
+    /// Toolbar views subscribe to this instead of observing the whole controller, so unrelated
+    /// published changes do not re-render them while a sidebar animates.
+    var codeReviewActivePublisher: AnyPublisher<Bool, Never> {
+        guard let navigatorModel = navigatorSidebarViewModel else {
+            return Just(false).eraseToAnyPublisher()
+        }
+        return Publishers.CombineLatest(navigatorModel.$selectedTab, $navigatorCollapsed)
+            .map { tab, collapsed in tab == .sourceControl && !collapsed }
+            .removeDuplicates()
+            .eraseToAnyPublisher()
+    }
+
     var splitViewController: CodeEditSplitViewController? {
         contentViewController as? CodeEditSplitViewController
     }
