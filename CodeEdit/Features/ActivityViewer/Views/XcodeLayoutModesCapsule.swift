@@ -39,11 +39,11 @@ struct XcodeLayoutModesCapsule: View {
     }
 
     var body: some View {
-        XcodeCapsuleContainer(horizontalPadding: 4) {
+        XcodeCapsuleContainer {
             HStack(spacing: 3) {
                 standardEditorButton
                 assistantEditorButton
-                separator
+                ToolbarSeparator()
                 codeReviewButton
             }
         }
@@ -53,26 +53,17 @@ struct XcodeLayoutModesCapsule: View {
     }
 
     @ViewBuilder private var standardEditorButton: some View {
-        Button {
+        ToolbarIconButton(symbol: "square.stack", help: "Standard Editor", isSelected: isStandardActive) {
             selectStandardEditor()
-        } label: {
-            Image(systemName: "square.stack")
-                .font(.system(size: 17, weight: .regular))
-                .modifier(LayoutModeIconModifier(isActive: isStandardActive))
         }
-        .buttonStyle(.plain)
-        .help("Standard Editor")
     }
 
     @ViewBuilder private var assistantEditorButton: some View {
-        Button {
+        ToolbarIconButton(help: "Assistant Editor", isSelected: isAssistantActive) {
             selectAssistantEditor()
-        } label: {
+        } icon: {
             assistantIcon
-                .modifier(LayoutModeIconModifier(isActive: isAssistantActive))
         }
-        .buttonStyle(.plain)
-        .help("Assistant Editor")
     }
 
     private var assistantIcon: some View {
@@ -89,22 +80,14 @@ struct XcodeLayoutModesCapsule: View {
         }
     }
 
-    private var separator: some View {
-        Rectangle()
-            .fill(Color.primary.opacity(0.15))
-            .frame(width: 0.75, height: 16)
-    }
-
     @ViewBuilder private var codeReviewButton: some View {
-        Button {
+        ToolbarIconButton(
+            symbol: "arrow.left.arrow.right",
+            help: "Code Review (Source Control)",
+            isSelected: isCodeReviewActive
+        ) {
             selectCodeReview()
-        } label: {
-            Image(systemName: "arrow.left.arrow.right")
-                .font(.system(size: 16, weight: .regular))
-                .modifier(LayoutModeIconModifier(isActive: isCodeReviewActive, iconSize: 16))
         }
-        .buttonStyle(.plain)
-        .help("Code Review (Source Control)")
     }
 
     private func selectStandardEditor() {
@@ -179,17 +162,5 @@ struct XcodeLayoutModesCapsule: View {
         }
         editorManager.updateCachedFlattenedEditors = true
         editorManager.activeEditor = newEditor
-    }
-}
-
-/// Sizes a layout-mode icon and draws the circular highlight for the active mode.
-private struct LayoutModeIconModifier: ViewModifier {
-    let isActive: Bool
-    var iconSize: CGFloat = 17
-
-    func body(content: Content) -> some View {
-        content
-            .foregroundStyle(.primary)
-            .toolbarCircleFeedback(isSelected: isActive, iconSize: iconSize)
     }
 }

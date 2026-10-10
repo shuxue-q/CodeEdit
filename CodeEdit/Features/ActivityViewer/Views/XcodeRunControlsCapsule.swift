@@ -18,20 +18,14 @@ struct XcodeRunControlsCapsule: View {
     static let trailingControlLabel = "Stop"
 
     var body: some View {
-        XcodeCapsuleContainer(horizontalPadding: 3) {
+        XcodeCapsuleContainer {
             HStack(spacing: 0) {
                 StartTaskToolbarButton(taskManager: taskManager)
-                separator
+                ToolbarSeparator()
                 StopTaskToolbarButton(taskManager: taskManager)
             }
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Run/Stop")
-    }
-
-    private var separator: some View {
-        Rectangle()
-            .fill(Color.primary.opacity(0.15))
-            .frame(width: 0.75, height: 18)
     }
 }

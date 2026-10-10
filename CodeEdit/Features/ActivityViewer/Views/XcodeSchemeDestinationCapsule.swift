@@ -15,7 +15,6 @@ struct XcodeSchemeDestinationCapsule: View {
     var workspace: WorkspaceDocument?
 
     @State private var isPopoverPresented: Bool = false
-    @State private var isHovered: Bool = false
 
     private var projectName: String {
         let name = workspaceSettingsManager.settings.project.projectName
@@ -36,7 +35,7 @@ struct XcodeSchemeDestinationCapsule: View {
     }
 
     var body: some View {
-        XcodeCapsuleContainer(horizontalPadding: 10) {
+        XcodeCapsuleContainer(horizontalPadding: ToolbarMetrics.textCapsulePadding) {
             HStack(spacing: 7) {
                 targetIcon
 
@@ -49,9 +48,7 @@ struct XcodeSchemeDestinationCapsule: View {
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(.secondary)
 
-                Rectangle()
-                    .fill(Color.primary.opacity(0.15))
-                    .frame(width: 0.75, height: 16)
+                ToolbarSeparator()
 
                 destinationIcon
 
@@ -62,7 +59,6 @@ struct XcodeSchemeDestinationCapsule: View {
             }
             .contentShape(Capsule())
         }
-        .onHover { isHovered = $0 }
         .onTapGesture {
             isPopoverPresented.toggle()
         }

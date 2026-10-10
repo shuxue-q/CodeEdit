@@ -15,7 +15,7 @@ private struct ToolbarCircleFeedbackModifier: ViewModifier {
     /// Whether the button is in a selected (active) state.
     var isSelected: Bool
     /// Point size of the toolbar icon. The feedback circle's diameter is twice this value.
-    var iconSize: CGFloat = 17
+    var iconSize: CGFloat = ToolbarMetrics.iconSize
 
     @Environment(\.isEnabled)
     private var isEnabled
@@ -24,7 +24,7 @@ private struct ToolbarCircleFeedbackModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .frame(width: 37, height: 40)
+            .frame(width: ToolbarMetrics.cellWidth, height: ToolbarMetrics.cellHeight)
             .background {
                 Circle()
                     .fill(fillColor)
@@ -51,7 +51,7 @@ extension View {
     /// - Parameters:
     ///   - isSelected: Whether the button shows its selected state.
     ///   - iconSize: Point size of the icon; the indicator circle's diameter is twice this value.
-    func toolbarCircleFeedback(isSelected: Bool = false, iconSize: CGFloat = 17) -> some View {
+    func toolbarCircleFeedback(isSelected: Bool = false, iconSize: CGFloat = ToolbarMetrics.iconSize) -> some View {
         modifier(ToolbarCircleFeedbackModifier(isSelected: isSelected, iconSize: iconSize))
     }
 }

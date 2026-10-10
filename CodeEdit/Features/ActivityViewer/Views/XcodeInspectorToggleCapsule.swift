@@ -33,7 +33,11 @@ private struct InspectorToggleButton: View {
     }
 
     var body: some View {
-        inspectorCapsule(isOpen: !isCollapsed) {
+        sidebarToggleCapsule(
+            symbol: "sidebar.trailing",
+            help: "Hide or show the Inspector",
+            isOpen: !isCollapsed
+        ) {
             windowController.toggleLastPanel()
         }
         .onReceive(windowController.$inspectorCollapsed.removeDuplicates()) { isCollapsed = $0 }
@@ -42,21 +46,8 @@ private struct InspectorToggleButton: View {
 
 private struct InspectorToggleButtonFallback: View {
     var body: some View {
-        inspectorCapsule(isOpen: false) {
+        sidebarToggleCapsule(symbol: "sidebar.trailing", help: "Hide or show the Inspector", isOpen: false) {
             NSApp.sendAction(#selector(CodeEditWindowController.objcToggleLastPanel), to: nil, from: nil)
         }
-    }
-}
-
-private func inspectorCapsule(isOpen: Bool, action: @escaping () -> Void) -> some View {
-    XcodeCapsuleContainer(horizontalPadding: 0) {
-        Button(action: action) {
-            Image(systemName: "sidebar.trailing")
-                .font(.system(size: 17, weight: .regular))
-                .foregroundColor(isOpen ? .accentColor : .primary)
-                .toolbarCircleFeedback(isSelected: isOpen)
-        }
-        .buttonStyle(.plain)
-        .help("Hide or show the Inspector")
     }
 }

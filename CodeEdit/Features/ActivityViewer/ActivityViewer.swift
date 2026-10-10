@@ -19,7 +19,7 @@ struct ActivityViewerLeading: View {
     var workspace: WorkspaceDocument?
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: ToolbarMetrics.groupSpacing) {
             XcodeHistoryCapsule()
             XcodeProjectInfoView(
                 workspaceSettingsManager: workspaceSettingsManager,
@@ -45,7 +45,7 @@ struct ActivityViewer: View {
     var workspace: WorkspaceDocument?
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: ToolbarMetrics.groupSpacing) {
             XcodeAssistantButton()
             XcodeSchemeDestinationCapsule(
                 workspaceSettingsManager: workspaceSettingsManager,
@@ -68,7 +68,7 @@ struct ActivityViewerTrailing: View {
     var workspace: WorkspaceDocument?
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: ToolbarMetrics.groupSpacing) {
             XcodeSplitOptionsCapsule(workspace: workspace)
             XcodeLayoutModesCapsule(workspace: workspace)
             XcodeInspectorToggleCapsule()

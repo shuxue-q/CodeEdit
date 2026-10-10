@@ -168,6 +168,19 @@ final class ActivityViewerXcodeUITests: XCTestCase {
         XCTAssertNotNil(capsule)
     }
 
+    func testXcodeNavigatorToggleCapsuleStandalone() {
+        let capsule = XcodeNavigatorToggleCapsule()
+        XCTAssertNotNil(capsule)
+    }
+
+    func testToolbarMetricsAreShared() {
+        let container = XcodeCapsuleContainer { Text("Test") }
+        XCTAssertEqual(container.horizontalPadding, ToolbarMetrics.iconCapsulePadding)
+        XCTAssertEqual(container.height, ToolbarMetrics.cellHeight)
+        XCTAssertEqual(ToolbarMetrics.separatorHeight, 16)
+        XCTAssertEqual(ToolbarMetrics.groupSpacing, 8)
+    }
+
     func testStopIsDisabledWhenIdle() {
         XCTAssertFalse(StopTaskToolbarButton.isStopEnabled(selectedStatus: nil, cmakeIsBuilding: false))
         XCTAssertFalse(StopTaskToolbarButton.isStopEnabled(selectedStatus: .notRunning, cmakeIsBuilding: false))
