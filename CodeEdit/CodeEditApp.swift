@@ -24,6 +24,7 @@ struct CodeEditApp: App {
         ServiceContainer.register(DebugService.shared)
 
         _ = CodeEditDocumentController.shared
+        RecentsPathRepair.start()
         NSMenuItem.swizzle()
         NSSplitViewItem.swizzle()
     }
