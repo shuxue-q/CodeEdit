@@ -35,8 +35,8 @@ struct IssuesNavigatorView: View {
             if allDiagnostics.isEmpty {
                 CEContentUnavailableView(
                     "No Issues",
-                    description: "Issues are collected when a CMake project is built"
-                        + " or published by a language server."
+                    description: "Issues are collected when a CMake project is built, when a Flutter"
+                        + " or Cargo task runs, or when a language server publishes them."
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {

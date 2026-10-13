@@ -45,6 +45,18 @@ struct TasksCommands: Commands {
             }
             .disabled(activeTaskStatus != .running)
 
+            Button("Hot Reload", systemImage: "bolt.fill") {
+                taskManager?.hotReload()
+            }
+            .keyboardShortcut("\\")
+            .disabled(taskManager?.canHotReload != true)
+
+            Button("Hot Restart") {
+                taskManager?.hotReload(restart: true)
+            }
+            .keyboardShortcut("\\", modifiers: [.command, .shift])
+            .disabled(taskManager?.canHotReload != true)
+
             Button("Show \(selectedTaskName) Output") {
                 showOutput()
             }

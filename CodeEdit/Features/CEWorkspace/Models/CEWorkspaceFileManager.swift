@@ -48,6 +48,9 @@ final class CEWorkspaceFileManager {
     var childrenMap: [String: [String]] = [:]
     var fsEventStream: DirectoryEventStream?
     var observers: NSHashTable<AnyObject> = .weakObjects()
+    /// Receives the absolute paths of every file system event on the main queue, including file
+    /// modifications the tree observers ignore. Used to notice configuration file edits.
+    var rawEventHandler: (([String]) -> Void)?
 
     let folderUrl: URL
     let workspaceItem: CEWorkspaceFile

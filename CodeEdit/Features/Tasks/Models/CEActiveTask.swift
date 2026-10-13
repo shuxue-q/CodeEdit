@@ -53,6 +53,16 @@ class CEActiveTask: ObservableObject, Identifiable, Hashable {
 
     private var cancellables = Set<AnyCancellable>()
 
+    /// Receives every chunk of output the task's process writes, before the terminal draws it.
+    /// Set by the task manager for generated tasks to parse problems and hot reload markers.
+    var outputObserver: (@MainActor (ArraySlice<UInt8>) -> Void)?
+
+    /// Called on the main actor after the process ended and the final status was set.
+    var onProcessFinished: (@MainActor () -> Void)?
+
+    /// When the last run's process ended, for letting its trailing output arrive before a rerun.
+    private(set) var lastFinishDate: Date?
+
     init(task: CETask) {
         self.task = task
 
@@ -133,6 +143,8 @@ class CEActiveTask: ObservableObject, Identifiable, Hashable {
             postDidFinishNotification(status: reportStatus)
         }
         lastStartDate = nil
+        lastFinishDate = Date()
+        onProcessFinished?()
 
         cancellationRequested = false
         deleteStatusTaskNotification()
@@ -164,6 +176,17 @@ class CEActiveTask: ObservableObject, Identifiable, Hashable {
         guard output?.runningPID() != nil, status == .stopped else { return }
         signalTask(SIGCONT)
         updateTaskStatus(to: .running)
+    }
+
+    /// Types `text` into the task's terminal, as if the user typed it, for example `r` to hot
+    /// reload a `flutter run`. Does nothing when the task is not running.
+    /// - Returns: Whether the text was sent.
+    @MainActor
+    @discardableResult
+    func sendInput(_ text: String) -> Bool {
+        guard status == .running, let output, output.runningPID() != nil else { return false }
+        output.process.send(data: ArraySlice(Array(text.utf8)))
+        return true
     }
 
     func terminate() {

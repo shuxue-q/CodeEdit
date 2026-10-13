@@ -56,6 +56,28 @@ enum CargoProject {
             .map(\.url)
     }
 
+    /// The manifests `cargo` commands run from: the workspace root's manifest when it has one, and
+    /// every discovered manifest that no `[workspace]` manifest covers. Third-party folders are
+    /// included; callers decide what to do with them.
+    /// - Parameter workspace: The workspace folder.
+    /// - Returns: Absolute manifest URLs, shallowest first.
+    static func rootManifests(in workspace: URL) -> [URL] {
+        let workspace = workspace.standardizedFileURL
+        var urls = discoverManifests(in: workspace)
+        if hasRootManifest(workspace) {
+            urls.insert(workspace.appending(path: CargoManifest.fileName), at: 0)
+        }
+        let manifests = urls.compactMap { url in
+            CargoManifest.read(at: url).map { (url: url, manifest: $0) }
+        }
+        let workspaces = manifests.filter(\.manifest.isWorkspace)
+        return manifests
+            .filter { candidate in
+                !workspaces.contains { covers($0.url, $0.manifest, candidate.url) }
+            }
+            .map(\.url)
+    }
+
     /// Finds `Cargo.toml` files below `workspace`, breadth first, at most ``maxSearchDepth`` levels deep.
     ///
     /// Skips ``skippedDirectoryNames``, hidden directories, and symbolic links. The workspace root's
@@ -111,7 +133,7 @@ enum CargoProject {
 
     /// Whether the workspace manifest at `workspaceURL` loads the manifest at `candidate`: it lies in
     /// the workspace's directory or below it, and not in a directory the workspace excludes.
-    private static func covers(_ workspaceURL: URL, _ workspace: CargoManifest, _ candidate: URL) -> Bool {
+    static func covers(_ workspaceURL: URL, _ workspace: CargoManifest, _ candidate: URL) -> Bool {
         guard candidate != workspaceURL else { return false }
         let root = workspaceURL.deletingLastPathComponent().path
         let candidateDirectory = candidate.deletingLastPathComponent().path

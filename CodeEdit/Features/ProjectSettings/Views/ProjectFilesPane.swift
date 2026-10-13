@@ -42,26 +42,36 @@ struct ProjectFilesPane: View {
     }
 
     private var fileList: some View {
-        List(state.configurationFiles, selection: $state.selectedConfigurationFile) { file in
-            HStack(spacing: 6) {
-                Image(systemName: file.exists ? "doc.text" : "doc.badge.plus")
-                    .foregroundStyle(file.exists ? .primary : .secondary)
-                Text(file.displayPath)
-                    .font(.system(.body, design: .monospaced))
-                    .foregroundStyle(file.exists ? .primary : .secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                if file.hasUnsavedChanges {
-                    Circle().fill(.secondary).frame(width: 6, height: 6)
-                        .help("Unsaved changes")
+        List(selection: $state.selectedConfigurationFile) {
+            ForEach(state.groupedConfigurationFiles, id: \.group) { group in
+                Section(group.group) {
+                    ForEach(group.files) { file in
+                        fileRow(file)
+                    }
                 }
             }
-            .help(file.exists ? file.displayPath : "\(file.displayPath) (not created)")
-            .tag(file.id)
         }
         .listStyle(.bordered)
-        .frame(width: 230)
+        .frame(width: 300)
         .accessibilityIdentifier("ProjectConfigurationFileList")
+    }
+
+    private func fileRow(_ file: ProjectTextFile) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: file.exists ? "doc.text" : "doc.badge.plus")
+                .foregroundStyle(file.exists ? .primary : .secondary)
+            Text(file.displayPath)
+                .font(.system(.body, design: .monospaced))
+                .foregroundStyle(file.exists ? .primary : .secondary)
+                .lineLimit(1)
+                .truncationMode(.middle)
+            if file.hasUnsavedChanges {
+                Circle().fill(.secondary).frame(width: 6, height: 6)
+                    .help("Unsaved changes")
+            }
+        }
+        .help(file.exists ? file.displayPath : "\(file.displayPath) (not created)")
+        .tag(file.id)
     }
 }
 

@@ -215,7 +215,11 @@ final class LSPService: ObservableObject {
         for languageId: String,
         workspacePath: String
     ) async throws -> LanguageServerType {
-        guard let resolvedBinary = await serverConfiguration(for: languageId) else {
+        var resolvedBinary = await workspaceServerOverride(for: languageId, workspacePath: workspacePath)
+        if resolvedBinary == nil {
+            resolvedBinary = await serverConfiguration(for: languageId)
+        }
+        guard let resolvedBinary else {
             logger.error("Couldn't find language server binary for \(languageId)")
             throw LSPError.binaryNotFound
         }
@@ -242,24 +246,6 @@ final class LSPService: ObservableObject {
 
         self.startListeningToEvents(for: key)
         return server
-    }
-
-    /// Resolves the binary configuration for a language, preferring binaries configured
-    /// in the developer settings, then servers picked in the LSP settings, and falling
-    /// back to servers auto-detected in the user's system `PATH` and environment.
-    /// - Parameter languageId: The LSP language identifier to find a server for.
-    /// - Returns: The binary configuration, or `nil` if no server was found.
-    private func serverConfiguration(for languageId: String) async -> LanguageServerBinary? {
-        if let configured = languageConfigs[languageId] {
-            return configured
-        }
-        if let configured = await settingsConfiguredServer(for: languageId) {
-            return configured
-        }
-        if detectedConfigs == nil {
-            await redetectServers()
-        }
-        return detectedConfigs?[languageId]
     }
 
     // MARK: - Document Management

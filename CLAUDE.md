@@ -129,15 +129,29 @@ running, git integration, extensions, and more.
       Server settings live in `Settings/Pages/LSPSettings/`.
     - `CMake` — static project/preset parsing, workspace preset selection,
       compilation database generation, build execution, and build-output parsing.
-    - `Flutter` — Flutter project recognition from `pubspec.yaml` (line-based
-      `PubspecParser`, no YAML dependency), the SDK of the login-shell `flutter`
-      (`FlutterSDK`), and native CMake root discovery: the workspace root, then
-      `src/`, `cpp/`, `native/`, `linux/`, `windows/`, `macos/`, `packages/*/src/`.
-      `FlutterWorkspace` owns the active root (user choice persisted in
-      `UserDefaults`); `WorkspaceDocument` builds the CMake models from it, and
-      `CMakeCompilationDatabase.sourceDirectory(forWorkspace:)` maps clangd's
-      workspace to it. The project editor's Flutter pane is `Views/FlutterProjectPane`.
-      See `docs/flutter-projects.md`.
+    - `Flutter` — Flutter project recognition from `pubspec.yaml` (`PubspecParser` over
+      the small `YAMLReader`, no YAML dependency; also `analysis_options.yaml`, `.metadata`,
+      pub resolution state, `hook/build.dart`), the SDK of the login-shell `flutter` or a
+      per-workspace override (`FlutterSDK`), `flutter devices` (`FlutterDevice`), and native
+      CMake root discovery: the workspace root, then `src/`, `cpp/`, `native/`, `linux/`,
+      `windows/`, `macos/`, `packages/*/src/`. `FlutterWorkspace` owns the active root and
+      the `.codeedit/flutter-settings.json` run settings; `WorkspaceDocument` builds the CMake
+      models from the root, and `CMakeCompilationDatabase.sourceDirectory(forWorkspace:)` maps
+      clangd's workspace to it. The project editor's Flutter pane is
+      `Views/FlutterProjectPane`. See `docs/flutter-projects.md`.
+    - `Rust` — `TOMLDocument`/`TOMLParser` (TOML 1.0 reader), `CargoManifest` (package,
+      workspace, targets, features, dependencies, profiles), `CargoPackage`/`CargoRoot`
+      (target auto-discovery, member globs), `RustToolchainFile`, `CargoProject`
+      (`linkedProjects` and root discovery), and the project editor's `Views/RustProjectPane`.
+    - `ProjectModel` — hybrid workspaces: `ProjectInventory` scans for Flutter/Dart
+      packages, CMake projects and Cargo roots (roles, detected build links, configuration
+      files); `ProjectInventoryModel` rescans on configuration file events and runs
+      `ToolchainProbe` (rustup with `RUSTUP_AUTO_INSTALL=0`, cmake); `ProjectTaskCatalog`
+      generates Flutter/Cargo/CTest tasks that `TaskManager` lists after user tasks;
+      `TaskOutputParsers` and `TaskDiagnosticsStore` turn their output into problems;
+      `Settings/` holds the `.codeedit/flutter-settings.json` and `cargo-settings.json`
+      models. Hot reload is `TaskManager.hotReload(restart:)`, typing `r`/`R` into the
+      `flutter run` task terminal. See `docs/hybrid-projects.md`.
     - `NavigatorArea` / `InspectorArea` / `UtilityArea` / `StatusBar` /
       `ActivityViewer` — the window's sidebars, bottom panel, and status UI.
       The navigator tab bar (project, source control, bookmarks, search,

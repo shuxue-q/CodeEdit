@@ -27,6 +27,24 @@ extension LSPService {
         }
     }
 
+    /// Restarts the running servers of some languages for a workspace, for example rust-analyzer
+    /// after the workspace's nested Cargo projects changed.
+    /// - Parameters:
+    ///   - languageIds: The LSP language identifiers whose servers restart.
+    ///   - workspacePath: The workspace folder path.
+    func restartServers(languageIds: Set<String>, workspacePath: String) {
+        let path = URL(fileURLWithPath: workspacePath).standardizedFileURL.path
+        let keys = languageClients.keys.filter {
+            languageIds.contains($0.languageId)
+                && URL(fileURLWithPath: $0.workspacePath).standardizedFileURL.path == path
+        }
+        Task {
+            for key in keys {
+                await restartServer(for: key)
+            }
+        }
+    }
+
     /// Restarts a single language server, re-opening the documents it was tracking.
     /// - Parameter key: The client key identifying the server to restart.
     private func restartServer(for key: ClientKey) async {

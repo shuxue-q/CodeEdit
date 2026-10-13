@@ -26,11 +26,11 @@ struct UtilityAreaProblemsView: View {
         workspace.cmakeBuildController
     }
 
-    /// Diagnostics published by the workspace's language servers.
+    /// Diagnostics from generated tasks (Flutter, Cargo, CTest) and the workspace's language servers.
     private var lspDiagnostics: [CMakeBuildDiagnostic] {
-        guard let workspacePath = workspace.fileURL?.absolutePath else { return [] }
+        guard let workspacePath = workspace.fileURL?.absolutePath else { return workspace.taskDiagnostics.all }
         return WorkspaceDiagnostics.merged(
-            cmake: [],
+            cmake: workspace.taskDiagnostics.all,
             lsp: lspService.diagnosticsStore.diagnostics(for: workspacePath)
         )
     }
@@ -58,8 +58,8 @@ struct UtilityAreaProblemsView: View {
                 } else {
                     CEContentUnavailableView(
                         "No Problems Detected",
-                        description: "Problems are collected when a CMake project is built"
-                            + " or published by a language server."
+                        description: "Problems are collected when a CMake project is built, when a Flutter"
+                            + " or Cargo task runs, or when a language server publishes them."
                     )
                 }
             }
@@ -144,9 +144,10 @@ struct UtilityAreaProblemsView: View {
                 }
             }
             Spacer()
-            if let buildController, !buildController.diagnostics.isEmpty {
+            if buildController?.diagnostics.isEmpty == false || !workspace.taskDiagnostics.isEmpty {
                 Button {
-                    buildController.clearDiagnostics()
+                    buildController?.clearDiagnostics()
+                    workspace.taskDiagnostics.clearAll()
                 } label: {
                     Image(systemName: "trash")
                         .foregroundColor(.secondary)
