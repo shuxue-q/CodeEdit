@@ -216,9 +216,13 @@ running, git integration, extensions, and more.
   starts. Static discovery does not imply that opening C-family files is free
   of configure side effects. Preserve the selected preset's build directory and
   user-supplied `--compile-commands-dir` arguments.
-- `LanguageServerDetector` locates `clangd` and `neocmakelsp` in the user's login
-  shell environment; detection must run off the main actor. CodeEdit does not
-  install these tools. Explicit server paths and arguments come from LSP settings.
+- `LanguageServerDetector` locates `clangd`, `neocmakelsp` and `dart` in the user's
+  login shell environment; detection must run off the main actor. For Dart it
+  resolves `flutter`/`dart` symlinks and launches the Flutter SDK's
+  `bin/cache/dart-sdk/bin/dart`, never the bash launcher, when that binary exists.
+  CodeEdit does not install these tools. Explicit server paths and arguments come
+  from LSP settings. Per-language `initializationOptions` and
+  `workspace/configuration` answers live in `LanguageServerConfiguration`.
 - Document LSP attachment is language-driven and also works for standalone files,
   using their parent directory as the root. Keep CMake completion independent of
   CMake workspace discovery. App-side completion is `Features/Completion/`

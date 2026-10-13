@@ -47,7 +47,7 @@ final class LSPCapabilityCheckTests: XCTestCase {
             binary: .init(execPath: "", args: [], env: nil),
             lspInstance: InitializingServer(
                 server: connection,
-                initializeParamsProvider: LanguageServerType.getInitParams(workspacePath: "/")
+                initializeParamsProvider: LanguageServerType.getInitParams(languageId: "cmake", workspacePath: "/")
             ),
             lspPid: -1,
             serverCapabilities: capabilities,

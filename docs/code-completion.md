@@ -129,6 +129,24 @@ Typing does not open the popup inside `#` comments (or `#[[ … ]]`) and inside 
 arguments, except after a `${`, since CMake expands variables inside quotes. Paths and versions
 (`src/main.cpp`, `3.20`) are plain arguments, so the popup stays available.
 
+## Dart files
+
+`.dart` files are served by the Dart analysis server (`dart language-server`). CodeEdit uses the Dart
+SDK of the `flutter` on your login shell `PATH` (`<flutter>/bin/cache/dart-sdk/bin/dart`), or `dart` on
+the `PATH` when there is no Flutter SDK; the **Language Servers** settings page shows the path and lets
+you pick another binary. The server analyzes only the packages that have open files and reports
+problems for open files only.
+
+- The popup offers symbols from libraries the file does not import yet. When such a row is
+  highlighted, its detail reads *Auto import from '…'*, and accepting it adds the `import`: the server
+  supplies the edit when the item is resolved, under the same **Apply Additional Completion Edits**
+  setting as `#include`s.
+- A request returns at most 500 items (the server's own default is 2000, about 1 MB for a one-letter
+  prefix in a Flutter project, which misses the language server's 150 ms window). The server filters
+  them by what you typed.
+- Dart has no completion intent rules of its own yet: its items are ranked by the server's order,
+  match quality, frequency and proximity.
+
 ## Document words
 
 When there is no better source (the language server is not installed, still starting, or slow), the

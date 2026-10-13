@@ -14,6 +14,8 @@ import Foundation
 /// supported language servers. Currently supported servers:
 /// - `clangd` (C, C++, Objective-C)
 /// - `neocmakelsp` (CMake)
+/// - `dart` (Dart; the analysis server of the Flutter or Dart SDK, see
+///   ``resolveDartExecutable(flutterPath:dartPath:fileManager:)``)
 enum LanguageServerDetector {
     /// A language server executable CodeEdit knows how to locate and launch.
     struct SupportedServer {
@@ -28,7 +30,12 @@ enum LanguageServerDetector {
     /// All language servers CodeEdit can auto-detect.
     static let supportedServers: [SupportedServer] = [
         SupportedServer(executable: "clangd", languageIds: ["c", "cpp", "objective-c"], arguments: []),
-        SupportedServer(executable: "neocmakelsp", languageIds: ["cmake"], arguments: ["stdio"])
+        SupportedServer(executable: "neocmakelsp", languageIds: ["cmake"], arguments: ["stdio"]),
+        SupportedServer(
+            executable: "dart",
+            languageIds: ["dart"],
+            arguments: ["language-server", "--protocol=lsp", "--client-id=codeedit"]
+        )
     ]
 
     /// All LSP language identifiers covered by ``supportedServers``.
@@ -42,19 +49,75 @@ enum LanguageServerDetector {
     /// - Returns: A map of LSP language identifiers to the detected server binaries.
     static func detectServers() -> [String: LanguageServerBinary] {
         let environment = userShellEnvironment()
+        // `flutter` is only looked up to find the Dart SDK bundled with Flutter.
         // Drop paths that resolve in the shell but don't point at an executable file.
-        let executablePaths = locateExecutables(supportedServers.map(\.executable))
+        let executablePaths = locateExecutables(supportedServers.map(\.executable) + ["flutter"])
             .filter { FileManager.default.isExecutableFile(atPath: $0.value) }
 
         var configurations: [String: LanguageServerBinary] = [:]
         for server in supportedServers {
-            guard let execPath = executablePaths[server.executable] else { continue }
+            guard let execPath = executablePath(for: server, located: executablePaths) else { continue }
             let binary = LanguageServerBinary(execPath: execPath, args: server.arguments, env: environment)
             for languageId in server.languageIds {
                 configurations[languageId] = binary
             }
         }
         return configurations
+    }
+
+    /// The binary to launch for a server, given the executables found on the login shell `PATH`.
+    /// - Parameters:
+    ///   - server: The server to launch.
+    ///   - located: Executable names mapped to their paths on the `PATH`.
+    /// - Returns: The path to launch, or `nil` if the server is not installed.
+    static func executablePath(for server: SupportedServer, located: [String: String]) -> String? {
+        guard server.executable == "dart" else {
+            return located[server.executable]
+        }
+        return resolveDartExecutable(flutterPath: located["flutter"], dartPath: located["dart"])
+    }
+
+    // MARK: - Dart SDK
+
+    /// Finds the real `dart` binary to run the Dart analysis server with.
+    ///
+    /// `flutter` and `dart` on the `PATH` are usually symlinks to the Flutter SDK's `bin/flutter` and
+    /// `bin/dart` bash launchers. Launching the server through them is slower, prints version-check
+    /// noise and may start a download, so when either resolves into a Flutter SDK whose
+    /// `bin/cache/dart-sdk/bin/dart` exists, that binary is used. Otherwise `dart` on the `PATH` is used
+    /// as found (a standalone Dart SDK's `bin/dart` is the real binary).
+    /// - Parameters:
+    ///   - flutterPath: The path of `flutter` on the login shell `PATH`, if any.
+    ///   - dartPath: The path of `dart` on the login shell `PATH`, if any.
+    ///   - fileManager: The file manager used to check the candidates.
+    /// - Returns: The path to launch the analysis server with, or `nil` if neither SDK is installed.
+    static func resolveDartExecutable(
+        flutterPath: String?,
+        dartPath: String?,
+        fileManager: FileManager = .default
+    ) -> String? {
+        for launcher in [flutterPath, dartPath].compactMap({ $0 }) {
+            if let bundled = flutterBundledDart(launcherPath: launcher, fileManager: fileManager) {
+                return bundled
+            }
+        }
+        guard let dartPath, fileManager.isExecutableFile(atPath: dartPath) else { return nil }
+        return dartPath
+    }
+
+    /// The Dart binary bundled with the Flutter SDK a `flutter` or `dart` launcher belongs to.
+    /// - Parameters:
+    ///   - launcherPath: The path of a launcher, possibly a symlink into the SDK's `bin` directory.
+    ///   - fileManager: The file manager used to check the candidate.
+    /// - Returns: `<sdk>/bin/cache/dart-sdk/bin/dart`, or `nil` if the launcher is not in a Flutter SDK
+    ///   or the SDK has not downloaded its Dart SDK yet.
+    static func flutterBundledDart(launcherPath: String, fileManager: FileManager = .default) -> String? {
+        let binDirectory = URL(fileURLWithPath: launcherPath).resolvingSymlinksInPath().deletingLastPathComponent()
+        guard binDirectory.lastPathComponent == "bin" else { return nil }
+        let candidate = binDirectory
+            .appendingPathComponent("cache/dart-sdk/bin/dart")
+            .path
+        return fileManager.isExecutableFile(atPath: candidate) ? candidate : nil
     }
 
     // MARK: - Shell Environment

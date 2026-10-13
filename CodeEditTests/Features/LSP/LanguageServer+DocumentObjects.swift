@@ -48,7 +48,7 @@ final class LanguageServerDocumentObjectsTests: XCTestCase {
             binary: .init(execPath: "", args: [], env: nil),
             lspInstance: InitializingServer(
                 server: BufferingServerConnection(),
-                initializeParamsProvider: LanguageServerType.getInitParams(workspacePath: "/")
+                initializeParamsProvider: LanguageServerType.getInitParams(languageId: "swift", workspacePath: "/")
             ),
             lspPid: -1,
             serverCapabilities: capabilities,
