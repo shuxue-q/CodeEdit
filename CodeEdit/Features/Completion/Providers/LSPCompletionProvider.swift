@@ -50,9 +50,12 @@ final class LSPCompletionProvider: CompletionProvider {
     /// Languages whose server's incomplete lists are re-requested as the prefix grows, and whose
     /// `labelDetails` fill an empty detail. The Dart analysis server marks a list incomplete when it
     /// hits the item cap, and sends the signature and declaring library only in `labelDetails`.
+    /// rust-analyzer marks every list incomplete (it filters by the prefix, and items from modules the
+    /// file does not import yet depend on it) and sends no `detail` at all: the signature is in
+    /// `labelDetails.description`, the `(use std::…)` an item would add in `labelDetails.detail`.
     /// clangd's lists are complete unless they hit its result limit, and it already fills `detail`, so
     /// the C family and CMake keep filtering the first list client-side and showing `detail` alone.
-    static let incompleteListLanguageIds: Set<String> = DartKeywords.languageIds
+    static let incompleteListLanguageIds: Set<String> = DartKeywords.languageIds.union(RustKeywords.languageIds)
 
     init(document: CodeFileDocument) {
         self.document = document

@@ -23,7 +23,9 @@ import SwiftTreeSitter
 /// Token rules apply to the C family. CMake has rules of its own (``CMakeTokenRules``): `#` comments,
 /// `${…}` references, command position, and command arguments, none of which the C scanner models.
 /// So does Dart (``DartTokenRules``): string interpolation, named arguments, the null-aware and cascade
-/// operators, and its declaration keywords. Other languages get the language-neutral rules (comments,
+/// operators, and its declaration keywords. So does Rust (``RustTokenRules``): raw strings, lifetimes,
+/// nested block comments, paths, attributes, and its item keywords. Other languages get the language-neutral
+/// rules (comments,
 /// strings, numbers, `.`, `->`, `::`) and the tree scope.
 ///
 /// `nodeTypesAt` is injected so this can be tested without a live `TreeSitterClient`: the
@@ -84,6 +86,9 @@ struct CompletionIntentRecognizer {
         }
         if DartKeywords.languageIds.contains(languageId) {
             return DartTokenRules.intent(types: types, prefix: prefix, line: lineTextBeforeCursor)
+        }
+        if RustKeywords.languageIds.contains(languageId) {
+            return RustTokenRules.intent(types: types, prefix: prefix, line: lineTextBeforeCursor)
         }
         let isCFamily = CFamilyKeywords.languageIds.contains(languageId)
         let beforePrefix = Self.text(lineTextBeforeCursor, droppingSuffix: prefix)

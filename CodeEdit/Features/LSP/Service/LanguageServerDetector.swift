@@ -16,6 +16,8 @@ import Foundation
 /// - `neocmakelsp` (CMake)
 /// - `dart` (Dart; the analysis server of the Flutter or Dart SDK, see
 ///   ``resolveDartExecutable(flutterPath:dartPath:fileManager:)``)
+/// - `rust-analyzer` (Rust; the rustup component or a standalone binary, see
+///   ``resolveRustAnalyzerExecutable(rustAnalyzerPath:rustupPath:run:)``)
 enum LanguageServerDetector {
     /// A language server executable CodeEdit knows how to locate and launch.
     struct SupportedServer {
@@ -25,6 +27,8 @@ enum LanguageServerDetector {
         let languageIds: [String]
         /// Additional arguments passed to the executable when launching the server.
         let arguments: [String]
+        /// How to install the server, shown in the settings when it is not found.
+        var installHint: String?
     }
 
     /// All language servers CodeEdit can auto-detect.
@@ -35,6 +39,12 @@ enum LanguageServerDetector {
             executable: "dart",
             languageIds: ["dart"],
             arguments: ["language-server", "--protocol=lsp", "--client-id=codeedit"]
+        ),
+        SupportedServer(
+            executable: "rust-analyzer",
+            languageIds: ["rust"],
+            arguments: [],
+            installHint: "rustup component add rust-analyzer"
         )
     ]
 
@@ -49,14 +59,16 @@ enum LanguageServerDetector {
     /// - Returns: A map of LSP language identifiers to the detected server binaries.
     static func detectServers() -> [String: LanguageServerBinary] {
         let environment = userShellEnvironment()
-        // `flutter` is only looked up to find the Dart SDK bundled with Flutter.
+        // `flutter` is only looked up to find the Dart SDK bundled with Flutter, `rustup` to find the
+        // rust-analyzer component's real binary.
         // Drop paths that resolve in the shell but don't point at an executable file.
-        let executablePaths = locateExecutables(supportedServers.map(\.executable) + ["flutter"])
+        let executablePaths = locateExecutables(supportedServers.map(\.executable) + ["flutter", "rustup"])
             .filter { FileManager.default.isExecutableFile(atPath: $0.value) }
+        let run: ToolRunner = { path, arguments in runTool(path, arguments: arguments, environment: environment) }
 
         var configurations: [String: LanguageServerBinary] = [:]
         for server in supportedServers {
-            guard let execPath = executablePath(for: server, located: executablePaths) else { continue }
+            guard let execPath = executablePath(for: server, located: executablePaths, run: run) else { continue }
             let binary = LanguageServerBinary(execPath: execPath, args: server.arguments, env: environment)
             for languageId in server.languageIds {
                 configurations[languageId] = binary
@@ -65,16 +77,32 @@ enum LanguageServerDetector {
         return configurations
     }
 
+    /// Runs a tool and returns its exit status and standard output, or `nil` when it cannot be launched.
+    typealias ToolRunner = (_ path: String, _ arguments: [String]) -> (status: Int32, output: String)?
+
     /// The binary to launch for a server, given the executables found on the login shell `PATH`.
     /// - Parameters:
     ///   - server: The server to launch.
     ///   - located: Executable names mapped to their paths on the `PATH`.
+    ///   - run: Runs a tool, for servers whose binary has to be asked whether it works.
     /// - Returns: The path to launch, or `nil` if the server is not installed.
-    static func executablePath(for server: SupportedServer, located: [String: String]) -> String? {
-        guard server.executable == "dart" else {
+    static func executablePath(
+        for server: SupportedServer,
+        located: [String: String],
+        run: ToolRunner = { _, _ in nil }
+    ) -> String? {
+        switch server.executable {
+        case "dart":
+            return resolveDartExecutable(flutterPath: located["flutter"], dartPath: located["dart"])
+        case "rust-analyzer":
+            return resolveRustAnalyzerExecutable(
+                rustAnalyzerPath: located["rust-analyzer"],
+                rustupPath: located["rustup"],
+                run: run
+            )
+        default:
             return located[server.executable]
         }
-        return resolveDartExecutable(flutterPath: located["flutter"], dartPath: located["dart"])
     }
 
     // MARK: - Dart SDK
@@ -118,6 +146,74 @@ enum LanguageServerDetector {
             .appendingPathComponent("cache/dart-sdk/bin/dart")
             .path
         return fileManager.isExecutableFile(atPath: candidate) ? candidate : nil
+    }
+
+    // MARK: - rust-analyzer
+
+    /// Finds the `rust-analyzer` binary to launch.
+    ///
+    /// With rustup, `~/.cargo/bin/rust-analyzer` is a proxy that exists whether or not the component is
+    /// installed, and that picks the toolchain of the directory it runs in: a project whose
+    /// `rust-toolchain.toml` pins a toolchain without the component fails to start the server even when
+    /// the default toolchain has it. So when `rustup` is on the `PATH`, the real binary of the default
+    /// toolchain (`rustup which rust-analyzer`) is launched, the way Dart's SDK binary is preferred over its
+    /// launcher. Otherwise `rust-analyzer` on the `PATH` is used if `rust-analyzer --version` exits 0;
+    /// a non-zero exit is the proxy reporting a missing component.
+    /// - Parameters:
+    ///   - rustAnalyzerPath: The path of `rust-analyzer` on the login shell `PATH`, if any.
+    ///   - rustupPath: The path of `rustup` on the login shell `PATH`, if any.
+    ///   - run: Runs a tool and reports its exit status and output.
+    /// - Returns: The path to launch, or `nil` if no working `rust-analyzer` is installed.
+    static func resolveRustAnalyzerExecutable(
+        rustAnalyzerPath: String?,
+        rustupPath: String?,
+        run: ToolRunner
+    ) -> String? {
+        if let rustupPath, let result = run(rustupPath, ["which", "rust-analyzer"]), result.status == 0 {
+            let path = result.output.trimmingCharacters(in: .whitespacesAndNewlines)
+            if path.hasPrefix("/"), FileManager.default.isExecutableFile(atPath: path) {
+                return path
+            }
+        }
+        guard let rustAnalyzerPath,
+              let result = run(rustAnalyzerPath, ["--version"]),
+              result.status == 0 else {
+            return nil
+        }
+        return rustAnalyzerPath
+    }
+
+    /// Runs `path` with `arguments` in `environment` and waits up to ten seconds for it to exit. Only for
+    /// tools with a few lines of output.
+    /// - Returns: The exit status and standard output, or `nil` if the tool could not be run or hung.
+    static func runTool(
+        _ path: String,
+        arguments: [String],
+        environment: [String: String]
+    ) -> (status: Int32, output: String)? {
+        let process = Process()
+        let pipe = Pipe()
+        process.executableURL = URL(fileURLWithPath: path)
+        process.arguments = arguments
+        process.environment = environment
+        process.standardOutput = pipe
+        process.standardError = FileHandle.nullDevice
+        // Outside any project, so rustup answers for the default toolchain, not a directory override.
+        process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser
+        let exited = DispatchSemaphore(value: 0)
+        process.terminationHandler = { _ in exited.signal() }
+        do {
+            try process.run()
+        } catch {
+            return nil
+        }
+        // Wait for the exit before reading: the tools asked here print one line, far below a pipe's buffer.
+        guard exited.wait(timeout: .now() + 10) == .success else {
+            process.terminate()
+            return nil
+        }
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        return (process.terminationStatus, String(bytes: data, encoding: .utf8) ?? "")
     }
 
     // MARK: - Shell Environment

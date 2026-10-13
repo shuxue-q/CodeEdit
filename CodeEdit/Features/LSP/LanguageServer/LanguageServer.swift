@@ -36,6 +36,10 @@ class LanguageServer<DocumentType: LanguageServerDocument> {
     /// The configuration options this server supports.
     var serverCapabilities: ServerCapabilities
 
+    /// The `initializationOptions` the server was started with, also the answer to its
+    /// `workspace/configuration` requests where the language needs one (see ``LanguageServerConfiguration``).
+    let initializationOptions: LSPAny
+
     var logContainer: LanguageServerLogContainer
 
     /// An instance of a language server, that may or may not be initialized
@@ -52,9 +56,12 @@ class LanguageServer<DocumentType: LanguageServerDocument> {
         lspPid: pid_t,
         serverCapabilities: ServerCapabilities,
         rootPath: URL,
-        logContainer: LanguageServerLogContainer
+        logContainer: LanguageServerLogContainer,
+        initializationOptions: LSPAny? = nil
     ) {
         self.languageId = languageId
+        self.initializationOptions = initializationOptions
+            ?? LanguageServerConfiguration.initializationOptions(for: languageId)
         self.binary = binary
         self.lspInstance = lspInstance
         self.pid = lspPid
@@ -90,6 +97,11 @@ class LanguageServer<DocumentType: LanguageServerDocument> {
             environment: binary.env
         )
 
+        // Workspace-dependent options can read the file system (rust-analyzer's Cargo project discovery).
+        let initializationOptions = await Task.detached(priority: .userInitiated) {
+            LanguageServerConfiguration.initializationOptions(for: languageId, workspacePath: workspacePath)
+        }.value
+
         let logContainer = LanguageServerLogContainer(languageId: languageId)
         let (connection, process) = try makeLocalServerConnection(
             languageId: languageId,
@@ -98,7 +110,11 @@ class LanguageServer<DocumentType: LanguageServerDocument> {
         )
         let server = InitializingServer(
             server: connection,
-            initializeParamsProvider: getInitParams(languageId: languageId, workspacePath: workspacePath)
+            initializeParamsProvider: getInitParams(
+                languageId: languageId,
+                workspacePath: workspacePath,
+                initializationOptions: initializationOptions
+            )
         )
         let initializationResponse = try await server.initializeIfNeeded()
 
@@ -109,7 +125,8 @@ class LanguageServer<DocumentType: LanguageServerDocument> {
             lspPid: process.processIdentifier,
             serverCapabilities: initializationResponse.capabilities,
             rootPath: URL(filePath: workspacePath),
-            logContainer: logContainer
+            logContainer: logContainer,
+            initializationOptions: initializationOptions
         )
     }
 
@@ -150,11 +167,16 @@ class LanguageServer<DocumentType: LanguageServerDocument> {
     ///   - languageId: The LSP language identifier the server is started for. Selects the
     ///     `initializationOptions` (see ``LanguageServerConfiguration``).
     ///   - workspacePath: The root of the workspace the server works in.
+    ///   - initializationOptions: The options to send, when already worked out for the workspace. `nil`
+    ///     sends the language's workspace-independent options.
     /// - Returns: A provider of the parameters.
     static func getInitParams(
         languageId: String,
-        workspacePath: String
+        workspacePath: String,
+        initializationOptions: LSPAny? = nil
     ) -> InitializingServer.InitializeParamsProvider {
+        let initializationOptions = initializationOptions
+            ?? LanguageServerConfiguration.initializationOptions(for: languageId)
         let provider: InitializingServer.InitializeParamsProvider = {
             // Text Document Capabilities
             let textDocumentCapabilities = TextDocumentClientCapabilities(
@@ -271,7 +293,7 @@ class LanguageServer<DocumentType: LanguageServerDocument> {
                 locale: nil,
                 rootPath: nil,
                 rootUri: "file://" + workspacePath, // Make it a URI
-                initializationOptions: LanguageServerConfiguration.initializationOptions(for: languageId),
+                initializationOptions: initializationOptions,
                 capabilities: capabilities,
                 trace: nil,
                 workspaceFolders: nil
