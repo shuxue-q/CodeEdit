@@ -31,7 +31,7 @@ final class CompletionAggregator: CodeSuggestionDelegate {
     /// Where popup, acceptance and latency measurements go.
     let metrics: any CompletionMetricsRecording
 
-    private let lspProvider: LSPCompletionProvider
+    let lspProvider: LSPCompletionProvider
     private let snippetProvider: TreeSitterSnippetProvider
     let wordProvider: DocumentWordProvider
     private let postfixProvider: PostfixCompletionProvider
@@ -80,6 +80,8 @@ final class CompletionAggregator: CodeSuggestionDelegate {
     var statistics = CompletionStatistics()
     /// Incremented on every request and on close so results from a superseded request are dropped.
     var requestGeneration = 0
+    /// The language server's list in the current session, re-requested while it is incomplete.
+    var serverList = ServerListState()
 
     init(
         document: CodeFileDocument,
@@ -184,6 +186,7 @@ final class CompletionAggregator: CodeSuggestionDelegate {
         requestContext = context
 
         rawCandidates = pool
+        noteServerList(requestedWith: context.prefix)
         wordCandidatesGathered = context.isExplicit || context.prefix.count >= DocumentWordProvider.minimumPrefixLength
         let ranked = rank(pool, prefix: context.prefix, context: context)
         let entries = CompletionPresenter.present(ranked.items)
@@ -219,7 +222,7 @@ final class CompletionAggregator: CodeSuggestionDelegate {
         guard location >= requestOffset, location <= string.length else { return nil }
 
         if location > requestOffset {
-            let wordRange = wordRange(in: string, at: location)
+            let wordRange = completionWordRange(in: string, at: location, for: context)
             // A non-word character typed since the request (the second `:` of `::`, `.`, `->`, a
             // space) starts a new word at a different completion site. The cached candidates don't
             // apply there, so close and let the trigger re-request.
@@ -229,18 +232,15 @@ final class CompletionAggregator: CodeSuggestionDelegate {
         }
 
         mergeWordCandidatesIfNeeded(context: context)
-        for late in lateResults {
-            for candidate in late.candidates { candidateOwners[candidate.id] = late.provider }
-            rawCandidates.append(contentsOf: late.candidates)
-        }
-        lateResults = []
+        mergeLateResults()
 
         requestContext = context
+        refreshServerListIfNeeded(context: context, location: location, textView: textView)
         let ranked = rank(rawCandidates, prefix: context.prefix, context: context)
         let entries = CompletionPresenter.present(ranked.items)
         guard !entries.isEmpty else { return nil }
         presentedIDs = ranked.items.map(\.id)
-        refreshesSincePopup += 1
+        refreshesSincePopup += serverList.isApplyingRefresh ? 0 : 1
         return CodeSuggestionUpdate(items: entries, preselectedIndex: ranked.preselectedIndex)
     }
 
@@ -313,6 +313,7 @@ final class CompletionAggregator: CodeSuggestionDelegate {
     func completionWindowDidClose() {
         inFlightProviderTasks.forEach { $0.cancel() }
         inFlightProviderTasks = []
+        serverList.reset()
         presentedIDs = []
         rawCandidates = []
         candidateOwners = [:]

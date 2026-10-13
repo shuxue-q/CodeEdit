@@ -13,8 +13,8 @@ import CodeEditTextView
 
 extension CompletionAggregator {
     func buildContext(string: NSString, location: Int, isExplicit: Bool) -> CompletionContext {
-        let prefixRange = wordRange(in: string, at: location)
-        let prefix = string.substring(with: prefixRange)
+        var prefixRange = wordRange(in: string, at: location)
+        var prefix = string.substring(with: prefixRange)
         let lineStart = lineStart(in: string, before: location)
         let lineTextBeforeCursor = string.substring(with: NSRange(location: lineStart, length: location - lineStart))
         let languageId = document?.getLanguage().id.rawValue ?? ""
@@ -25,6 +25,8 @@ extension CompletionAggregator {
             lineTextBeforeCursor: lineTextBeforeCursor,
             languageId: languageId
         )
+        prefixRange = completionWordRange(in: string, at: location, intent: intent, languageId: languageId)
+        prefix = string.substring(with: prefixRange)
 
         return CompletionContext(
             prefix: prefix,
@@ -46,6 +48,27 @@ extension CompletionAggregator {
             start -= 1
         }
         return NSRange(location: start, length: location - start)
+    }
+
+    /// The range of the word being completed. In a Dart string, `$` starts an interpolated name rather
+    /// than being part of one (`'Hi $na`, `'$a$b`), so the word starts after the last `$`.
+    func completionWordRange(
+        in string: NSString,
+        at location: Int,
+        intent: CompletionIntent,
+        languageId: String
+    ) -> NSRange {
+        let range = wordRange(in: string, at: location)
+        guard intent == .variableReference, DartKeywords.languageIds.contains(languageId) else { return range }
+        let dollar = string.range(of: "$", options: .backwards, range: range)
+        guard dollar.location != NSNotFound else { return range }
+        let start = dollar.location + dollar.length
+        return NSRange(location: start, length: range.location + range.length - start)
+    }
+
+    /// ``completionWordRange(in:at:intent:languageId:)`` for the request made with `context`.
+    func completionWordRange(in string: NSString, at location: Int, for context: CompletionContext) -> NSRange {
+        completionWordRange(in: string, at: location, intent: context.intent, languageId: context.languageId)
     }
 
     func lineStart(in string: NSString, before location: Int) -> Int {
@@ -76,6 +99,19 @@ extension CompletionAggregator {
             documentIdentifiers: context.documentIdentifiers,
             expectedType: context.expectedType
         )
+    }
+
+    /// Adds the results that arrived after the window opened. A late language server answer also says
+    /// whether its list is incomplete.
+    func mergeLateResults() {
+        for late in lateResults {
+            for candidate in late.candidates { candidateOwners[candidate.id] = late.provider }
+            rawCandidates.append(contentsOf: late.candidates)
+            if late.provider === lspProvider {
+                serverList.isIncomplete = lspProvider.lastListIsIncomplete
+            }
+        }
+        lateResults = []
     }
 
     /// Adds document words once the typed prefix is long enough, when the request was made too early

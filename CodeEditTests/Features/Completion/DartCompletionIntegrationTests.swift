@@ -90,6 +90,26 @@ final class DartServerFixture {
         }
     }
 
+    /// The package configuration of the project named by `TEST_RUNNER_DART_FLUTTER_PROJECT`, with relative
+    /// roots made absolute so a scratch package elsewhere resolves the same `package:` imports.
+    static func flutterPackageConfig() throws -> Data {
+        guard let project = ProcessInfo.processInfo.environment["DART_FLUTTER_PROJECT"] else {
+            throw XCTSkip("Set TEST_RUNNER_DART_FLUTTER_PROJECT to a Flutter project with resolved packages")
+        }
+        let toolDirectory = URL(fileURLWithPath: project).appending(path: ".dart_tool", directoryHint: .isDirectory)
+        let data = try Data(contentsOf: toolDirectory.appending(path: "package_config.json"))
+        var json = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let packages = try XCTUnwrap(json["packages"] as? [[String: Any]])
+        json["packages"] = packages.map { package in
+            var package = package
+            if let rootUri = package["rootUri"] as? String, !rootUri.contains(":") {
+                package["rootUri"] = URL(string: rootUri, relativeTo: toolDirectory)?.absoluteURL.absoluteString
+            }
+            return package
+        }
+        return try JSONSerialization.data(withJSONObject: json)
+    }
+
     /// Stops the server and removes the package.
     func tearDown() {
         let service = try? XCTUnwrap(ServiceContainer.resolve(.singleton, LSPService.self))
@@ -228,26 +248,6 @@ final class DartCompletionIntegrationTests: XCTestCase {
 
     // MARK: - Flutter
 
-    /// The package configuration of the project named by `TEST_RUNNER_DART_FLUTTER_PROJECT`, with relative
-    /// roots made absolute so a scratch package elsewhere resolves the same `package:` imports.
-    private func flutterPackageConfig() throws -> Data {
-        guard let project = ProcessInfo.processInfo.environment["DART_FLUTTER_PROJECT"] else {
-            throw XCTSkip("Set TEST_RUNNER_DART_FLUTTER_PROJECT to a Flutter project with resolved packages")
-        }
-        let toolDirectory = URL(fileURLWithPath: project).appending(path: ".dart_tool", directoryHint: .isDirectory)
-        let data = try Data(contentsOf: toolDirectory.appending(path: "package_config.json"))
-        var json = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
-        let packages = try XCTUnwrap(json["packages"] as? [[String: Any]])
-        json["packages"] = packages.map { package in
-            var package = package
-            if let rootUri = package["rootUri"] as? String, !rootUri.contains(":") {
-                package["rootUri"] = URL(string: rootUri, relativeTo: toolDirectory)?.absoluteURL.absoluteString
-            }
-            return package
-        }
-        return try JSONSerialization.data(withJSONObject: json)
-    }
-
     private static let flutterSource = """
     import 'package:flutter/material.dart';
 
@@ -267,7 +267,7 @@ final class DartCompletionIntegrationTests: XCTestCase {
         let fixture = try await makeFixture(
             files: ["lib/probe.dart": Self.flutterSource],
             open: "lib/probe.dart",
-            packageConfig: try flutterPackageConfig()
+            packageConfig: try DartServerFixture.flutterPackageConfig()
         )
 
         let (memberOffset, members) = try await fixture.complete(after: "context.") { items in
@@ -295,7 +295,7 @@ final class DartCompletionIntegrationTests: XCTestCase {
         let fixture = try await makeFixture(
             files: ["lib/probe.dart": Self.flutterSource],
             open: "lib/probe.dart",
-            packageConfig: try flutterPackageConfig()
+            packageConfig: try DartServerFixture.flutterPackageConfig()
         )
         func serverItems(_ items: [CodeSuggestionEntry]) -> Int {
             items.filter { ($0 as? AggregatedCompletionEntry)?.candidate.source == .lsp }.count

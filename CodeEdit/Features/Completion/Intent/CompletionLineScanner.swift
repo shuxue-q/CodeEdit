@@ -10,7 +10,18 @@
 /// It only needs to be right about the last few tokens and about whether the cursor sits inside a
 /// comment or an unterminated literal, which is exactly where an incomplete line tends to confuse the
 /// syntax tree.
+///
+/// The ``Dialect/dart`` dialect adds Dart's operators (`?.`, `..`, `?..`, `=>`, `??`, `??=`, `...`,
+/// `...?`) and reads `'…'` as a string. The C-family dialect is the default and is unaffected by them.
 enum CompletionLineScanner {
+    /// The operator set and quoting rules to scan with.
+    enum Dialect: Equatable {
+        /// C, C++, Objective-C, and the language-neutral fallback.
+        case cFamily
+        /// Dart: the shared operators plus the null-aware, cascade, arrow, spread, and `~/` operators.
+        case dart
+    }
+
     /// Where the end of the scanned text sits.
     enum State: Equatable {
         /// In code.
@@ -69,8 +80,17 @@ enum CompletionLineScanner {
         "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^="
     ]
 
+    /// Dart's operators, longest first. `::` and `->` are not Dart, so they are left out.
+    private static let dartOperators: [String] = [
+        "...?", ">>>=",
+        "...", "?..", "??=", "~/=", "<<=", ">>=", ">>>",
+        "?.", "..", "=>", "??", "~/", "==", "!=", "<=", ">=", "&&", "||", "++", "--", "<<", ">>",
+        "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^="
+    ]
+
     /// Scans `text`, which should be the cursor's line up to (not including) the typed prefix.
-    static func scan(_ text: String) -> Result {
+    static func scan(_ text: String, dialect: Dialect = .cFamily) -> Result {
+        let operators = dialect == .dart ? Self.dartOperators : Self.operators
         let chars = Array(text)
         var tokens: [Token] = []
         var sawSpace = false
@@ -100,7 +120,8 @@ enum CompletionLineScanner {
                 index = end
             } else if char == "\"" || char == "'" {
                 guard let end = closingQuote(char, in: chars, from: index + 1) else {
-                    return Result(state: char == "\"" ? .string : .character, tokens: [], hasTrailingSpace: false)
+                    let isString = char == "\"" || dialect == .dart
+                    return Result(state: isString ? .string : .character, tokens: [], hasTrailingSpace: false)
                 }
                 append(end, .literal)
             } else if isWordCharacter(char) {
