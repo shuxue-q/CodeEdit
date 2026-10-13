@@ -18,7 +18,7 @@ import OSLog
 @Observable
 final class CMakeProjectSettingsStore {
     /// Posted after saved settings change the configure step. The userInfo dictionary carries
-    /// the workspace's source directory path under ``CMakeWorkspace/sourceDirectoryUserInfoKey``.
+    /// the workspace folder's path under ``CMakeWorkspace/sourceDirectoryUserInfoKey``.
     static let configureInputsDidChangeNotification = Notification.Name(
         "CMakeProjectSettingsStore.configureInputsDidChange"
     )
@@ -50,7 +50,11 @@ final class CMakeProjectSettingsStore {
 
     private(set) var executableTargets: [CMakeExecutableTarget] = []
 
+    /// The directory holding the project's `CMakeLists.txt`; relative paths resolve against it.
     let sourceDirectory: URL
+    /// The workspace folder whose `.codeedit` folder holds the settings file.
+    let workspaceDirectory: URL
+    /// The settings file, `<workspace>/.codeedit/cmake-settings.json`.
     let fileURL: URL
 
     /// Supplies the selected presets; weak because the workspace document owns both models.
@@ -83,10 +87,16 @@ final class CMakeProjectSettingsStore {
         }
     }
 
-    init(sourceDirectory: URL, workspace: CMakeWorkspace?) {
+    /// - Parameters:
+    ///   - sourceDirectory: The directory holding the project's `CMakeLists.txt`.
+    ///   - workspaceDirectory: The workspace folder containing it, when different; the settings
+    ///     file lives in this folder.
+    ///   - workspace: Supplies the selected presets.
+    init(sourceDirectory: URL, workspaceDirectory: URL? = nil, workspace: CMakeWorkspace?) {
         self.sourceDirectory = sourceDirectory.standardizedFileURL
+        self.workspaceDirectory = (workspaceDirectory ?? sourceDirectory).standardizedFileURL
         self.workspace = workspace
-        fileURL = Self.fileURL(for: sourceDirectory)
+        fileURL = Self.fileURL(for: self.workspaceDirectory)
         var loaded = CMakeProjectSettings()
         do {
             loaded = try Self.read(from: fileURL) ?? CMakeProjectSettings()
@@ -100,6 +110,7 @@ final class CMakeProjectSettingsStore {
     // MARK: - Persistence
 
     /// The settings file for a workspace.
+    /// - Parameter sourceDirectory: The workspace folder holding `.codeedit`.
     nonisolated static func fileURL(for sourceDirectory: URL) -> URL {
         sourceDirectory.standardizedFileURL
             .appending(path: ".codeedit", directoryHint: .isDirectory)
@@ -108,6 +119,7 @@ final class CMakeProjectSettingsStore {
 
     /// Reads the saved settings of a workspace without creating a store, for background work
     /// such as compilation database generation.
+    /// - Parameter sourceDirectory: The workspace folder holding `.codeedit`.
     /// - Returns: The saved settings, or `nil` when the workspace has no readable settings file.
     nonisolated static func savedSettings(sourceDirectory: URL) -> CMakeProjectSettings? {
         try? read(from: fileURL(for: sourceDirectory))
@@ -201,7 +213,7 @@ final class CMakeProjectSettingsStore {
             NotificationCenter.default.post(
                 name: Self.configureInputsDidChangeNotification,
                 object: self,
-                userInfo: [CMakeWorkspace.sourceDirectoryUserInfoKey: self.sourceDirectory.path]
+                userInfo: [CMakeWorkspace.sourceDirectoryUserInfoKey: self.workspaceDirectory.path]
             )
         }
     }

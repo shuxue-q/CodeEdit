@@ -13,10 +13,12 @@ import Observation
 @Observable
 final class CMakeWorkspace {
     /// Posted when the selected configure preset changes. The userInfo dictionary carries the
-    /// workspace's source directory path under ``sourceDirectoryUserInfoKey``.
+    /// workspace folder's path under ``sourceDirectoryUserInfoKey``.
     static let configurePresetDidChangeNotification = Notification.Name("CMakeWorkspace.configurePresetDidChange")
 
-    /// The userInfo key holding the workspace's source directory path.
+    /// The userInfo key holding the path of the workspace folder whose CMake configuration changed:
+    /// the folder clangd runs in, which contains the CMake source directory (they are the same
+    /// folder unless the project's `CMakeLists.txt` is nested, as in Flutter FFI plugins).
     static let sourceDirectoryUserInfoKey = "sourceDirectory"
 
     private(set) var project: CMakeProject?
@@ -24,13 +26,21 @@ final class CMakeWorkspace {
     private(set) var selectedConfigurePreset = ""
     private(set) var selectedBuildPreset = ""
 
-    private let sourceDirectory: URL
+    /// The directory holding the project's `CMakeLists.txt`.
+    let sourceDirectory: URL
+    /// The workspace folder containing ``sourceDirectory``; equal to it for root-level projects.
+    let workspaceDirectory: URL
     private let defaults: UserDefaults
     private let selectionKey: String
     private var loadTask: Task<Void, Never>?
 
-    init(sourceDirectory: URL, defaults: UserDefaults = .standard) {
+    /// - Parameters:
+    ///   - sourceDirectory: The directory holding the project's `CMakeLists.txt`.
+    ///   - workspaceDirectory: The workspace folder containing it, when different.
+    ///   - defaults: Where the preset selection is persisted, keyed by the source directory.
+    init(sourceDirectory: URL, workspaceDirectory: URL? = nil, defaults: UserDefaults = .standard) {
         self.sourceDirectory = sourceDirectory.standardizedFileURL
+        self.workspaceDirectory = (workspaceDirectory ?? sourceDirectory).standardizedFileURL
         self.defaults = defaults
         selectionKey = Self.selectionKey(for: sourceDirectory)
         let saved = Self.savedSelection(sourceDirectory: sourceDirectory, defaults: defaults)
@@ -83,7 +93,7 @@ final class CMakeWorkspace {
         NotificationCenter.default.post(
             name: Self.configurePresetDidChangeNotification,
             object: self,
-            userInfo: [Self.sourceDirectoryUserInfoKey: sourceDirectory.path]
+            userInfo: [Self.sourceDirectoryUserInfoKey: workspaceDirectory.path]
         )
     }
 

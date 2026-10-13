@@ -12,7 +12,9 @@ import OSLog
 /// provide accurate C/C++/Objective-C completion, diagnostics, and semantic highlighting.
 ///
 /// When a C-family file is opened in a CMake workspace, ``LSPService`` asks for the workspace's
-/// database directory before starting clangd. An existing database is reused; otherwise CMake is
+/// database directory before starting clangd. The CMake project may sit in the workspace root or,
+/// for Flutter projects, in a nested native root such as `src/` (see
+/// ``sourceDirectory(forWorkspace:)``). An existing database is reused; otherwise CMake is
 /// configured once — honoring the configure preset selected in workspace settings — with
 /// `CMAKE_EXPORT_COMPILE_COMMANDS=ON`, and the resulting directory is passed to clangd via
 /// `--compile-commands-dir`.
@@ -64,12 +66,27 @@ enum CMakeCompilationDatabase {
     /// - Parameter workspacePath: The path clangd uses as its workspace root.
     /// - Returns: The directory containing `compile_commands.json`, or `nil` when unavailable.
     static func databaseDirectory(workspacePath: String) async -> URL? {
-        let sourceDirectory = URL(filePath: workspacePath).standardizedFileURL
-        let listFile = sourceDirectory.appending(path: "CMakeLists.txt")
-        guard FileManager.default.fileExists(atPath: listFile.path) else { return nil }
+        let workspaceDirectory = URL(filePath: workspacePath).standardizedFileURL
+        guard let sourceDirectory = sourceDirectory(forWorkspace: workspaceDirectory) else { return nil }
         return await cache.result(for: sourceDirectory) {
-            resolve(sourceDirectory: sourceDirectory)
+            resolve(sourceDirectory: sourceDirectory, workspaceDirectory: workspaceDirectory)
         }
+    }
+
+    /// The CMake source directory whose compilation database serves a workspace.
+    ///
+    /// For a Flutter project this is its active native root (see
+    /// ``FlutterProject/activeNativeRoot(workspaceDirectory:defaults:)``), which may be nested,
+    /// such as `src/` in an FFI plugin. Otherwise it is the workspace itself when it holds a
+    /// `CMakeLists.txt`.
+    /// - Parameter workspaceDirectory: The folder clangd uses as its workspace root.
+    /// - Returns: The source directory, or `nil` when the workspace has no CMake project.
+    static func sourceDirectory(forWorkspace workspaceDirectory: URL) -> URL? {
+        let workspaceDirectory = workspaceDirectory.standardizedFileURL
+        if let nativeRoot = FlutterProject.activeNativeRoot(workspaceDirectory: workspaceDirectory) {
+            return nativeRoot
+        }
+        return CMakeProject.isCMakeProject(at: workspaceDirectory) ? workspaceDirectory : nil
     }
 
     /// The build directory a configure step uses for the given preset selection.
@@ -98,17 +115,24 @@ enum CMakeCompilationDatabase {
     /// for example after the user selects a different configure preset.
     /// - Parameter workspacePath: The path clangd uses as its workspace root.
     static func invalidateCache(workspacePath: String) async {
-        let sourceDirectory = URL(filePath: workspacePath).standardizedFileURL
-        await cache.invalidate(sourceDirectory)
+        let workspaceDirectory = URL(filePath: workspacePath).standardizedFileURL
+        await cache.invalidate(workspaceDirectory)
+        if let sourceDirectory = sourceDirectory(forWorkspace: workspaceDirectory),
+           sourceDirectory.path != workspaceDirectory.path {
+            await cache.invalidate(sourceDirectory)
+        }
     }
 
     // MARK: - Private
 
     /// Locates an existing database or runs CMake configure to produce one. Runs off the main
     /// actor inside a detached task.
-    private static func resolve(sourceDirectory: URL) -> URL? {
+    /// - Parameters:
+    ///   - sourceDirectory: The directory holding the project's `CMakeLists.txt`.
+    ///   - workspaceDirectory: The workspace folder holding the project settings file.
+    private static func resolve(sourceDirectory: URL, workspaceDirectory: URL) -> URL? {
         let selection = CMakeWorkspace.savedSelection(sourceDirectory: sourceDirectory)
-        let settings = CMakeProjectSettingsStore.savedSettings(sourceDirectory: sourceDirectory)
+        let settings = CMakeProjectSettingsStore.savedSettings(sourceDirectory: workspaceDirectory)
 
         // Cheap checks first when no preset is selected: no project parsing or shell
         // environment needed. With a selection the preset's binary directory takes
@@ -133,7 +157,10 @@ enum CMakeCompilationDatabase {
 
         let environment = LanguageServerDetector.userShellEnvironment()
         let project = CMakeProject.load(at: sourceDirectory, environment: environment)
+        // Without a (valid) saved selection, use the first preset, as the workspace settings
+        // and the build do, so an existing database in its binary directory is reused.
         let configurePreset = project?.configurePresets.first { $0.name == selection.configure }
+            ?? project?.configurePresets.first
         let options = CMakeConfigureOptions(
             sourceDirectory: sourceDirectory,
             configurePreset: configurePreset,

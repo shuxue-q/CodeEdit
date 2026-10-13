@@ -129,6 +129,15 @@ running, git integration, extensions, and more.
       Server settings live in `Settings/Pages/LSPSettings/`.
     - `CMake` — static project/preset parsing, workspace preset selection,
       compilation database generation, build execution, and build-output parsing.
+    - `Flutter` — Flutter project recognition from `pubspec.yaml` (line-based
+      `PubspecParser`, no YAML dependency), the SDK of the login-shell `flutter`
+      (`FlutterSDK`), and native CMake root discovery: the workspace root, then
+      `src/`, `cpp/`, `native/`, `linux/`, `windows/`, `macos/`, `packages/*/src/`.
+      `FlutterWorkspace` owns the active root (user choice persisted in
+      `UserDefaults`); `WorkspaceDocument` builds the CMake models from it, and
+      `CMakeCompilationDatabase.sourceDirectory(forWorkspace:)` maps clangd's
+      workspace to it. The project editor's Flutter pane is `Views/FlutterProjectPane`.
+      See `docs/flutter-projects.md`.
     - `NavigatorArea` / `InspectorArea` / `UtilityArea` / `StatusBar` /
       `ActivityViewer` — the window's sidebars, bottom panel, and status UI.
       The navigator tab bar (project, source control, bookmarks, search,
