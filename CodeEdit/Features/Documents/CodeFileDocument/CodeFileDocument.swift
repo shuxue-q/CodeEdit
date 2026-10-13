@@ -34,6 +34,9 @@ final class CodeFileDocument: NSDocument, ObservableObject {
     static let didOpenNotification = Notification.Name(rawValue: "CodeFileDocument.didOpen")
     /// Sent when the document is closed. The document's `fileURL` will be sent in the notification's object.
     static let didCloseNotification = Notification.Name(rawValue: "CodeFileDocument.didClose")
+    /// Sent on the main queue after the document was written to its file, by a save or an autosave in place.
+    /// The document's `fileURL` will be sent in the notification's object.
+    static let didSaveNotification = Notification.Name(rawValue: "CodeFileDocument.didSave")
 
     /// The text content of the document, stored as a text storage
     ///
@@ -295,6 +298,22 @@ final class CodeFileDocument: NSDocument, ObservableObject {
             super.save(sender)
         } catch {
             presentError(error)
+        }
+    }
+
+    override func save(
+        to url: URL,
+        ofType typeName: String,
+        for saveOperation: NSDocument.SaveOperationType,
+        completionHandler: @escaping (Error?) -> Void
+    ) {
+        super.save(to: url, ofType: typeName, for: saveOperation) { error in
+            completionHandler(error)
+            // An autosave elsewhere writes a backup copy, not the file a language server reads.
+            guard error == nil, saveOperation != .autosaveElsewhereOperation else { return }
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: Self.didSaveNotification, object: url)
+            }
         }
     }
 

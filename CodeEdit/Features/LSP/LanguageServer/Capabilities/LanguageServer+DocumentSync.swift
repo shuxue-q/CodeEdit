@@ -56,6 +56,22 @@ extension LanguageServer {
         }
     }
 
+    /// Tells the language server an open document was saved, when the server asks for save notifications.
+    ///
+    /// Only sent for languages in ``LanguageServerConfiguration/didSaveLanguageIds``: rust-analyzer runs
+    /// `cargo check` on save. The text is never included; the server has it from the change notifications.
+    /// - Parameter uri: The URI of the saved document.
+    /// - Throws: Throws errors produced by the language server connection.
+    func documentSaved(_ uri: String) async throws {
+        guard LanguageServerConfiguration.didSaveLanguageIds.contains(languageId),
+              resolveSaveSupport(),
+              openFiles.document(for: uri) != nil else {
+            return
+        }
+        logger.debug("Saved document \(uri, privacy: .private)")
+        try await lspInstance.textDocumentDidSave(DidSaveTextDocumentParams(uri: uri))
+    }
+
     /// Represents a single document edit event.
     public struct DocumentChange: Sendable {
         let range: LSPRange
@@ -222,6 +238,12 @@ extension LanguageServer {
         default:
             return true
         }
+    }
+
+    /// Whether the server asked for `textDocument/didSave` in its synchronization options.
+    fileprivate func resolveSaveSupport() -> Bool {
+        guard case .optionA(let options) = serverCapabilities.textDocumentSync else { return false }
+        return options.effectiveSave != nil
     }
 
     // Used to avoid a lint error (`large_tuple`) for the return type of `getIsolatedDocumentContent`

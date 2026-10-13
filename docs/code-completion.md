@@ -2,9 +2,9 @@
 
 CodeEdit's completion popup gathers candidates from several sources, ranks them by what you are
 most likely writing at the cursor, and does the follow-up work when you accept one (an `#include`,
-the call parentheses, parameter hints). It is built for C and C++ with `clangd`; other languages
-keep working through their language server, snippets and document words, but get none of the C-family
-heuristics described below.
+the call parentheses, parameter hints). It is built for C and C++ with `clangd`; CMake, Dart and Rust have rules of their own (see their
+sections below), and other languages keep working through their language server, snippets and document words,
+but get none of the C-family heuristics described below.
 
 Everything here runs locally except the opt-in [AI completions](#ai-completions).
 
@@ -184,6 +184,68 @@ The keyword and snippet tables offer, where they fit:
   `extension`, `static`, `factory` and the class modifiers at file or class scope; `true`, `false`,
   `null`, `this`, `super`, `const` and `await` where a value goes, including call arguments; `required`
   and `covariant` in parameter lists. Types such as `int` and `String` come from the server.
+
+## Rust files
+
+`.rs` files are served by `rust-analyzer`. With rustup, CodeEdit launches the real binary of your default
+toolchain (`rustup which rust-analyzer`), not the `~/.cargo/bin/rust-analyzer` proxy: the proxy exists even
+when the component is missing, and inside a project whose `rust-toolchain.toml` pins a toolchain without the
+component it fails to start. Without rustup, `rust-analyzer` on your login shell `PATH` is used if
+`rust-analyzer --version` runs. When neither works, the **Language Servers** settings row says **Not Found**
+and shows how to install it: `rustup component add rust-analyzer`. Completion of `std` also needs the
+`rust-src` component of the toolchain the project builds with (`rustup component add rust-src`).
+
+- **Cargo projects below the folder.** rust-analyzer finds a `Cargo.toml` at the root of the opened folder
+  by itself. When there is none (a Flutter app with its crates in `rust/`, for example), CodeEdit looks for
+  `Cargo.toml` files up to three folders deep and hands them to the server as linked projects. It skips
+  `target/`, `build/`, `.dart_tool/`, `node_modules/`, hidden folders and symbolic links, and a manifest with
+  a `[workspace]` table stands for the crates below it (except those in its `exclude` list). Nothing is
+  run to find them, and nothing is stored: the search runs again when the server starts.
+- **Checks.** The server runs `cargo check` after loading the project and each time you save a Rust file
+  (autosave included), and its errors and warnings join the problems list next to its own.
+- **Unimported items.** The popup offers types and functions from modules the file does not import yet;
+  their row reads `(use std::collections::HashMap)`, and accepting one adds the `use` line (the server
+  supplies it when the item is resolved, under **Apply Additional Completion Edits**).
+- **Calls.** Functions and methods are inserted with their parameter names filled in as tab stops:
+  accepting `increment(…)` writes `increment(by)`.
+- Every list rust-analyzer sends is marked incomplete, so while the popup is open each character asks the
+  server again, as for Dart. Rows show the server's label details (the signature, and the `use` an item
+  would add), since rust-analyzer sends no other detail.
+- While rust-analyzer indexes a project for the first time, completion and hover answer with what it has
+  loaded so far; the editor stays responsive. Its progress reports are accepted and not shown.
+
+### Rust intents
+
+Rust has intent rules of its own, read from the line before the cursor first and from the syntax tree when
+the line is inconclusive (a new line):
+
+| Where | Example | What leads |
+| --- | --- | --- |
+| Member access | `self.`, `x?.`, `v.iter().` | Fields and methods; rust-analyzer's own postfix templates (`.ref`, `.match`) after them; no snippets or keywords. |
+| Path | `std::`, `Self::`, `crate::io::`, anywhere in a `use` | Modules and types first; no snippets or keywords. |
+| New name | `let `, `let mut `, `fn `, `struct `, `enum `, `trait `, `mod `, `const `, `static `, `type `, `for `, a parameter list, a closure's `\|` | Typing stays quiet (`⌃Space` still works). |
+| Type | `let x: `, `fn f(a: `, `-> `, `impl `, `dyn `, `as `, `where `, `T: `, `Vec<`, `::<`, `&` or `&mut ` there, `&'` | Types, then `dyn`, `impl`, `mut`, `Self`. |
+| Value | `= `, `return `, `=> `, `f(`, `f(a, `, `if `, `while `, `match `, `in `, `if let `, `Point { x: `, a macro's `(` or `[` | Values; no snippets. |
+| Attribute | `#[`, `#![`, `#[derive(` | The server's attributes and derive macros. |
+| Statement start | a new line in a function body or block | Statement keywords and snippets, then values. |
+| Item scope | file scope, `impl`, `trait` and `mod` bodies | Item keywords and snippets, then types. |
+| Struct or enum body | a new line in `struct S { … }` | Typing stays quiet: a field or variant name goes there. |
+| String, comment, number | `"…`, `r#"…`, `b'…`, `//`, `///`, `//!`, `/* /* */`, `42` | Typing stays quiet. |
+
+`if let ` and `while let ` are values because the pattern is usually a variant (`Some(`, `Ok(`). `'a`
+after `&`, `<` or `:` is a lifetime, and `'a'` a character.
+
+The keyword and snippet tables offer, where they fit:
+
+- **Snippets** at file scope and in `impl`, `trait` and `mod` bodies: `fn`, `impl`, `struct`, `enum`,
+  `trait`, `main`, `test` (a `#[test]` function), `derive` (`#[derive(Debug)]`) and `mod tests` (a
+  `#[cfg(test)]` module with `use super::*;`). At statement start: `match`, `if let`, `while let`, `loop`,
+  `for` and `fn`.
+- **Keywords**: `let`, `while`, `for`, `return`, `break`, `continue` and `else` at statement start; `if`,
+  `match` and `loop` there and where a value goes; item keywords (`fn`, `struct`, `impl`, `use`, `const`,
+  `unsafe`, `async`) wherever an item can start, and `mod`, `pub`, `extern`, `union`, `macro_rules!` at item
+  scope; `true`, `false`, `self`, `Self`, `None`, `Some`, `Ok`, `Err` and `move` where a value goes; `dyn`,
+  `impl`, `mut` and `Self` in a type. Primitive and library types come from the server.
 
 ## Document words
 

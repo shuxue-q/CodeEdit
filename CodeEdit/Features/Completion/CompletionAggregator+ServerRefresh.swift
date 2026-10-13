@@ -44,7 +44,8 @@ extension CompletionAggregator {
     ///
     /// Only for languages in ``LSPCompletionProvider/incompleteListLanguageIds``. The Dart analysis
     /// server caps its list (see `LanguageServerConfiguration`) and marks a capped list incomplete, so a
-    /// symbol that ranked below the cap for `P` can be the best match for `Pad`. A complete list is only
+    /// symbol that ranked below the cap for `P` can be the best match for `Pad`. rust-analyzer marks every
+    /// list incomplete and answers a warm request in tens of milliseconds. A complete list is only
     /// good for prefixes that extend the one it was asked with, so deleting back past that prefix asks
     /// again too. The window keeps showing the filtered list until the new answer replaces the server's
     /// candidates and the rows are re-read; a newer keystroke cancels the re-request in flight. An empty

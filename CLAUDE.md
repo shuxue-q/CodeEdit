@@ -216,10 +216,16 @@ running, git integration, extensions, and more.
   starts. Static discovery does not imply that opening C-family files is free
   of configure side effects. Preserve the selected preset's build directory and
   user-supplied `--compile-commands-dir` arguments.
-- `LanguageServerDetector` locates `clangd`, `neocmakelsp` and `dart` in the user's
-  login shell environment; detection must run off the main actor. For Dart it
+- `LanguageServerDetector` locates `clangd`, `neocmakelsp`, `dart` and `rust-analyzer` in the
+  user's login shell environment; detection must run off the main actor. For Dart it
   resolves `flutter`/`dart` symlinks and launches the Flutter SDK's
-  `bin/cache/dart-sdk/bin/dart`, never the bash launcher, when that binary exists.
+  `bin/cache/dart-sdk/bin/dart`, never the bash launcher, when that binary exists. For Rust
+  it launches `rustup which rust-analyzer` (the default toolchain's binary, not the
+  `~/.cargo/bin` proxy that a project's `rust-toolchain.toml` can break), else a
+  `rust-analyzer` on the `PATH` whose `--version` exits 0. `Features/Rust/` (`CargoProject`,
+  `CargoManifest`) finds `Cargo.toml` files below the workspace root for rust-analyzer's
+  `linkedProjects`; Rust also gets `window/workDoneProgress/create` replies and
+  `textDocument/didSave` (for `cargo check`), which other servers do not.
   CodeEdit does not install these tools. Explicit server paths and arguments come
   from LSP settings. Per-language `initializationOptions` and
   `workspace/configuration` answers live in `LanguageServerConfiguration`.
@@ -229,11 +235,12 @@ running, git integration, extensions, and more.
   (`CompletionAggregator`, providers, ranking; `Intent/` recognizes what the user is typing
   and gates/weights candidates by it: C-family token rules, plus CMake rules of their own in
   `CMakeTokenRules`, `CMakeLineScanner` and `CMakeKeywords` (command position, arguments,
-  `${…}` references, `#` comments; the `argument` and `variableReference` intents);
+  `${…}` references, `#` comments; the `argument` and `variableReference` intents), and Rust rules
+  in `RustLineScanner`, `RustTokenRules` and `RustKeywords`;
   `Semantics/` infers the expected and receiver types the ranker rewards; `AI/` holds the
   cloud backends, prompt and shared back-off; `Providers/` also has the postfix, chain and
   document-word providers, and the CMake keyword and snippet tables in
-  `CMakeCompletionTables.swift`), with LSP item mapping under
+  `CMakeCompletionTables.swift`; Dart and Rust tables sit beside it), with LSP item mapping under
   `LSP/Features/Completion/`; popup state and triggers (including the typing/explicit/chain
   `CodeSuggestionTrigger`) live in the local `CodeEditSourceEditor` package's
   `CodeSuggestion/Model/` and `Filters/` directories. Hover is under `LSP/Features/Hover/`.

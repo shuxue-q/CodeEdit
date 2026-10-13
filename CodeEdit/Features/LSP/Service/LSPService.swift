@@ -165,6 +165,17 @@ final class LSPService: ObservableObject {
             }
         }
 
+        NotificationCenter.default.addObserver(
+            forName: CodeFileDocument.didSaveNotification,
+            object: nil,
+            queue: .main
+        ) { notification in
+            MainActor.assumeIsolated {
+                guard let url = notification.object as? URL else { return }
+                self.documentSaved(url)
+            }
+        }
+
         for name in [
             CMakeWorkspace.configurePresetDidChangeNotification,
             CMakeProjectSettingsStore.configureInputsDidChangeNotification

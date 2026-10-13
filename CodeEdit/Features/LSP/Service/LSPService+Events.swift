@@ -26,6 +26,23 @@ extension LSPService {
         eventListeningTasks[key] = task
     }
 
+    /// Notify the document's language client that the document was saved. Only servers that run work on
+    /// save hear about it (see ``LanguageServerConfiguration/didSaveLanguageIds``).
+    /// - Parameter url: The url of the document that was saved.
+    func documentSaved(_ url: URL) {
+        guard let languageClient = languageClient(forDocument: url),
+              LanguageServerConfiguration.didSaveLanguageIds.contains(languageClient.languageId) else {
+            return
+        }
+        Task {
+            do {
+                try await languageClient.documentSaved(url.lspURI)
+            } catch {
+                self.logger.warning("Failed to send didSave for \(url.lspURI, privacy: .private): \(error)")
+            }
+        }
+    }
+
     func stopListeningToEvents(for key: ClientKey) {
         if let task = eventListeningTasks[key] {
             task.cancel()
@@ -54,12 +71,21 @@ extension LSPService {
     /// itself. Requests outside the LSP specification (servers' own extensions) are answered with
     /// `MethodNotFound` so the server does not wait on them. Other standard requests are left unanswered, as
     /// before; in particular an unanswered `window/workDoneProgress/create` keeps servers from streaming
-    /// progress notifications CodeEdit does not show.
+    /// progress notifications CodeEdit does not show. Servers that report their indexing through progress
+    /// (``LanguageServerConfiguration/workDoneProgressLanguageIds``) get a success reply; their `$/progress`
+    /// notifications are dropped in ``handleNotification(_:client:workspacePath:)``.
     private func handleRequest(_ request: ServerRequest, client: LanguageServerType) {
         switch request {
         case let .workspaceConfiguration(params, handler):
-            let values = LanguageServerConfiguration.workspaceConfiguration(for: params, languageId: client.languageId)
+            let values = LanguageServerConfiguration.workspaceConfiguration(
+                for: params,
+                languageId: client.languageId,
+                initializationOptions: client.initializationOptions
+            )
             Task { await handler(.success(values)) }
+        case let .windowWorkDoneProgressCreate(_, handler):
+            guard LanguageServerConfiguration.workDoneProgressLanguageIds.contains(client.languageId) else { return }
+            Task { await handler(nil) }
         case let .custom(_, _, handler):
             let error = AnyJSONRPCResponseError(code: Self.methodNotFoundCode, message: "Method not found", data: nil)
             Task { await handler(.failure(error)) }
@@ -77,6 +103,8 @@ extension LSPService {
     /// notifications (Dart's `$/analyzerStatus` or `dart/textDocument/publishOutline`, for example) before
     /// they reach CodeEdit. CodeEdit keeps the Dart ones from being sent at all: see
     /// ``LanguageServerConfiguration/initializationOptions(for:)`` and the `workDoneProgress` window capability.
+    /// rust-analyzer's `experimental/serverStatus` is only sent to clients that advertise it, which CodeEdit
+    /// does not; its `$/progress` notifications (indexing, `cargo check`) fall through to `default`.
     private func handleNotification(
         _ notification: ServerNotification,
         client: LanguageServerType,

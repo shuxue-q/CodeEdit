@@ -223,7 +223,7 @@ final class DartCompletionPolicyTests: XCTestCase {
         XCTAssertEqual(CompletionLabelDetails(detail: " ", description: nil).displayText, nil)
     }
 
-    func testOnlyDartReRequestsIncompleteLists() {
-        XCTAssertEqual(LSPCompletionProvider.incompleteListLanguageIds, ["dart"])
+    func testOnlyDartAndRustReRequestIncompleteLists() {
+        XCTAssertEqual(LSPCompletionProvider.incompleteListLanguageIds, ["dart", "rust"])
     }
 }

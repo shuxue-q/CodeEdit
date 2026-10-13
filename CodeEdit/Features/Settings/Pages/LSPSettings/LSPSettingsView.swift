@@ -53,6 +53,12 @@ struct LSPSettingsView: View {
                 Text(server.languageIds.joined(separator: ", "))
                     .font(.caption)
                     .foregroundColor(.secondary)
+                if status(for: server) == nil, let installHint = server.installHint {
+                    Text("Install with: \(installHint)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .textSelection(.enabled)
+                }
             }
             Spacer()
             if let status = status(for: server) {
