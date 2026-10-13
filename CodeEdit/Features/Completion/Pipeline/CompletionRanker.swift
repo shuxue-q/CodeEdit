@@ -101,7 +101,9 @@ enum CompletionRanker {
                 source: candidate.source,
                 intent: options.intent,
                 isExplicit: options.isExplicit,
-                languageId: options.languageId
+                languageId: options.languageId,
+                isNamedArgument: candidate.source == .lsp
+                    && CompletionIntentPolicy.isNamedArgumentLabel(candidate.label)
             ) else {
                 continue
             }

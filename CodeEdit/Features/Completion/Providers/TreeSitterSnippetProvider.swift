@@ -14,7 +14,8 @@ import LanguageServerProtocol
 /// Each snippet and keyword lists the ``CompletionIntent``s it makes sense for: `for` and `return`
 /// at the start of a statement, `nullptr` and `sizeof` where a value is expected, `const` and `int`
 /// where a type is, nothing after `.` or `::`. The tables cover C and C++, plus CMake
-/// (see ``CMakeCompletionTables``); more languages can be added the same way.
+/// (see ``CMakeCompletionTables``) and Dart (see ``DartCompletionTables``); more languages can be added
+/// the same way.
 final class TreeSitterSnippetProvider: CompletionProvider {
     /// One snippet table entry.
     struct Snippet {
@@ -236,12 +237,14 @@ final class TreeSitterSnippetProvider: CompletionProvider {
     private static let keywords: [String: [Keyword]] = [
         "c": cKeywords,
         "cpp": cppKeywords,
-        "cmake": CMakeCompletionTables.keywords
+        "cmake": CMakeCompletionTables.keywords,
+        "dart": DartCompletionTables.keywords
     ]
 
     private static let snippets: [String: [Snippet]] = [
         "c": cSnippets,
         "cpp": cppSnippets,
-        "cmake": CMakeCompletionTables.snippets
+        "cmake": CMakeCompletionTables.snippets,
+        "dart": DartCompletionTables.snippets
     ]
 }

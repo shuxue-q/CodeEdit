@@ -143,9 +143,47 @@ problems for open files only.
   setting as `#include`s.
 - A request returns at most 500 items (the server's own default is 2000, about 1 MB for a one-letter
   prefix in a Flutter project, which misses the language server's 150 ms window). The server filters
-  them by what you typed.
-- Dart has no completion intent rules of its own yet: its items are ranked by the server's order,
-  match quality, frequency and proximity.
+  them by what you typed. A list cut off at 500 is marked incomplete, so while the popup is open each
+  further character asks the server again; the popup keeps filtering the previous list until the new
+  answer replaces the server's rows. C, C++ and CMake keep filtering their first list.
+- A row shows the server's label details (the signature, and for a library not imported yet the
+  library, such as `dart:typed_data`) when the server sends no other detail.
+
+### Dart intents
+
+Dart has intent rules of its own, read from the line before the cursor first and from the syntax tree
+when the line is inconclusive (a new line of a multi-line argument list, a new statement). They decide
+what is offered and how it is ordered, as for C:
+
+| Where | Example | What leads |
+| --- | --- | --- |
+| Member access | `context.`, `a?.`, `b..`, `b?..` | Members; no snippets or keywords. |
+| Type position | `new `, `is `, `is! `, `as `, `extends `, `implements `, `with `, `on `, `List<`, a parameter list | Types, then `required`, `this`, `super`. |
+| New declaration name | `var `, `final `, `const `, `late `, `Widget `, `String? `, `List<int> ` | Typing stays quiet (`⌃Space` still works). |
+| Call arguments | `Text(`, `Padding(padding: x, `, a new line inside `Padding(…)` | The named arguments the call still accepts (`child: `, `padding: `), then values; no snippets. |
+| Value | `child: `, `= `, `return `, `=> `, `?? ` | Values and constructors; no snippets. |
+| Statement start | a new line in a function or closure body | Statement keywords and snippets, then values. |
+| File or class scope | `cl` at the top of a file or in a class body | Declaration keywords and snippets, then types. |
+| Interpolation | `'Hi $na`, `'Hi ${us` | Variables, then getters and functions; no keywords or snippets. |
+| Directive URI | `import 'package:fl` | Libraries and files from the server. |
+| String, comment, number | `'…`, `//`, `///`, `/* … */`, `42` | Typing stays quiet. |
+
+`const ` starts a declaration only where a statement or member can start (`const x = 1;`); after a
+named argument, `return`, `(` or `[`, or on a new line of a widget list, it introduces a constant
+constructor call (`child: const Text(…)`), a type position. Code inside `${…}` follows the rules
+above (`'${user.` is member access), and a bare `$` in a raw string (`r'…'`) or after a backslash
+(`'\$'`) is text. `$` starts the interpolated name, so `'Hi $na` completes `na`.
+
+The keyword and snippet tables offer, where they fit:
+
+- **Snippets** at file or class scope: `stless` (a `StatelessWidget`), `stful` (a `StatefulWidget` and
+  its `State`), `build` (an `@override` of `build`), and `main`. At statement start: `for`, `forin`,
+  `if`, `switch`, and `try`. Mirrored placeholders change together, such as the widget name in `stless`.
+- **Keywords**: statement keywords (`if`, `return`, `try`, `yield`) at statement start; `var`, `final`,
+  `late`, `const`, `void` and `dynamic` where a statement or member starts; `import`, `class`, `mixin`,
+  `extension`, `static`, `factory` and the class modifiers at file or class scope; `true`, `false`,
+  `null`, `this`, `super`, `const` and `await` where a value goes, including call arguments; `required`
+  and `covariant` in parameter lists. Types such as `int` and `String` come from the server.
 
 ## Document words
 

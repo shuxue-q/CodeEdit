@@ -40,6 +40,19 @@ final class LSPCompletionProvider: CompletionProvider {
     /// The document offset the cursor was at when the last completion request was made, used to
     /// pad a server text-edit range by anything typed since.
     var requestOffset: Int?
+    /// Whether the server marked its last list incomplete: typing more should ask it again instead of
+    /// only filtering what it sent. Reset when a new request starts.
+    private(set) var lastListIsIncomplete = false
+    /// The `labelDetails` of the items from the last request, keyed by candidate id, so a resolved
+    /// item keeps the detail it was shown with.
+    var labelDetailsByCandidateID: [String: CompletionLabelDetails] = [:]
+
+    /// Languages whose server's incomplete lists are re-requested as the prefix grows, and whose
+    /// `labelDetails` fill an empty detail. The Dart analysis server marks a list incomplete when it
+    /// hits the item cap, and sends the signature and declaring library only in `labelDetails`.
+    /// clangd's lists are complete unless they hit its result limit, and it already fills `detail`, so
+    /// the C family and CMake keep filtering the first list client-side and showing `detail` alone.
+    static let incompleteListLanguageIds: Set<String> = DartKeywords.languageIds
 
     init(document: CodeFileDocument) {
         self.document = document
@@ -56,6 +69,7 @@ final class LSPCompletionProvider: CompletionProvider {
     }
 
     func candidates(for context: CompletionContext, textView: TextViewController) async -> [CompletionCandidate] {
+        lastListIsIncomplete = false
         guard document?.languageServerURI != nil,
               languageClient() != nil,
               let position = textView.textView.lspPositionFrom(offset: context.cursorOffset) else {
@@ -63,20 +77,26 @@ final class LSPCompletionProvider: CompletionProvider {
         }
 
         do {
-            let scoredItems = try await completionItems(
+            let response = try await completionItems(
                 textView: textView,
                 position: position,
                 location: context.cursorOffset
             )
-            let items = scoredItems.map(\.item)
             // A newer request cancels this one; its state must not be overwritten by this stale answer.
             try Task.checkCancellation()
             requestOffset = context.cursorOffset
+            lastListIsIncomplete = response.isIncomplete
             itemsByCandidateID = [:]
+            labelDetailsByCandidateID = [:]
             resolvedCandidateIDs = []
-            let candidates = scoredItems.map { candidate(from: $0.item, score: $0.score) }
-            for (item, candidate) in zip(items, candidates) {
-                itemsByCandidateID[candidate.id] = item
+            let showsLabelDetails = Self.incompleteListLanguageIds.contains(context.languageId)
+            var candidates: [CompletionCandidate] = []
+            for scored in response.items {
+                let labelDetails = showsLabelDetails ? scored.labelDetails : nil
+                let mapped = self.candidate(from: scored.item, score: scored.score, labelDetails: labelDetails)
+                itemsByCandidateID[mapped.id] = scored.item
+                labelDetailsByCandidateID[mapped.id] = labelDetails
+                candidates.append(mapped)
             }
             return candidates
         } catch {
@@ -124,7 +144,7 @@ final class LSPCompletionProvider: CompletionProvider {
         itemsByCandidateID[candidate.id] = withOrigin
         resolvedCandidateIDs.insert(candidate.id)
         // Keep the same identity so the aggregator can find the row to replace.
-        let updated = self.candidate(from: withOrigin)
+        let updated = self.candidate(from: withOrigin, labelDetails: labelDetailsByCandidateID[candidate.id])
         return CompletionCandidate(
             id: candidate.id,
             label: updated.label,
@@ -142,8 +162,18 @@ final class LSPCompletionProvider: CompletionProvider {
 
     // MARK: - Requesting
 
-    /// A completion item with the relevance score the server attached to it, if any.
-    typealias ScoredItem = (item: CompletionItem, score: Double?)
+    /// A completion item with the relevance score and label details the server attached to it, if any.
+    struct ScoredItem {
+        /// The item as the server sent it.
+        let item: CompletionItem
+        /// The server's relevance score (clangd), if any.
+        var score: Double?
+        /// The item's `labelDetails`, if any.
+        var labelDetails: CompletionLabelDetails?
+    }
+
+    /// The items of one completion answer, and whether the server marked the list incomplete.
+    typealias ScoredList = (items: [ScoredItem], isIncomplete: Bool)
 
     /// Requests completions after pending edits have been sent.
     ///
@@ -152,7 +182,7 @@ final class LSPCompletionProvider: CompletionProvider {
         textView: TextViewController,
         position: Position,
         location: Int
-    ) async throws -> [ScoredItem] {
+    ) async throws -> ScoredList {
         guard let document,
               let uri = document.languageServerURI,
               let client = languageClient() else {
@@ -177,21 +207,34 @@ final class LSPCompletionProvider: CompletionProvider {
         textView: TextViewController,
         position: Position,
         location: Int
-    ) -> [ScoredItem] {
+    ) -> ScoredList {
         let string = textView.textView.textStorage.string as NSString
-        let scored = zip(response.items, response.scores).map { (item: $0, score: $1) }
-        return augmentIncludeCompletions(
+        let scored = response.items.indices.map { index in
+            ScoredItem(
+                item: response.items[index],
+                score: response.scores.indices.contains(index) ? response.scores[index] : nil,
+                labelDetails: response.labelDetails.indices.contains(index) ? response.labelDetails[index] : nil
+            )
+        }
+        let items = augmentIncludeCompletions(
             items: scored,
             textView: textView,
             position: position,
             location: location,
             string: string
         )
+        return (items, response.isIncomplete)
     }
 
-    /// Maps an LSP completion item to a pipeline candidate.
-    private func candidate(from item: CompletionItem, score: Double? = nil) -> CompletionCandidate {
+    /// Maps an LSP completion item to a pipeline candidate. `labelDetails` fill the detail when the
+    /// item has none.
+    private func candidate(
+        from item: CompletionItem,
+        score: Double? = nil,
+        labelDetails: CompletionLabelDetails? = nil
+    ) -> CompletionCandidate {
         let entry = LSPCompletionEntry(item: item)
+        let detail = entry.detail.flatMap { $0.isEmpty ? nil : $0 } ?? labelDetails?.displayText
         return CompletionCandidate(
             id: "lsp.\(UUID().uuidString)",
             label: entry.label,
@@ -200,7 +243,7 @@ final class LSPCompletionProvider: CompletionProvider {
             score: score,
             kind: LSPCompletionEntry.category(for: item),
             source: .lsp,
-            detail: entry.detail,
+            detail: detail,
             documentation: entry.documentation,
             deprecated: entry.deprecated,
             payload: .lsp(item)
@@ -273,6 +316,9 @@ extension LSPCompletionProvider {
             return label != "include" && !label.hasPrefix("#include")
         }
 
-        return [(item: includeAngle, score: nil), (item: includeQuote, score: nil)] + remaining
+        return [
+            ScoredItem(item: includeAngle),
+            ScoredItem(item: includeQuote)
+        ] + remaining
     }
 }

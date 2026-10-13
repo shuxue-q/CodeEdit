@@ -111,29 +111,41 @@ extension LanguageServer {
 
 /// A `textDocument/completion` answer whose items keep the non-standard `score` clangd sends with them.
 ///
-/// Decodes both response shapes (a bare array, or a list object with `items`) and `null`.
+/// Decodes both response shapes (a bare array, or a list object with `items`) and `null`. It also keeps
+/// what `LanguageServerProtocol.CompletionList` and `CompletionItem` drop: the list's `isIncomplete`
+/// flag and each item's `labelDetails`.
 struct ScoredCompletionResponse: Decodable, Sendable {
     /// The completion items, in the order the server sent them.
     var items: [CompletionItem] = []
     /// `scores[i]` is the server's `score` for `items[i]`, or `nil` when the server sent none.
     var scores: [Double?] = []
+    /// `labelDetails[i]` is the `labelDetails` of `items[i]`, or `nil` when the server sent none.
+    var labelDetails: [CompletionLabelDetails?] = []
+    /// Whether the server said typing more should ask it again rather than filter this list. A bare
+    /// array is complete.
+    var isIncomplete = false
 
     private struct ScoredItem: Decodable {
         let item: CompletionItem
         let score: Double?
+        let labelDetails: CompletionLabelDetails?
 
         private enum CodingKeys: String, CodingKey {
             case score
+            case labelDetails
         }
 
         init(from decoder: Decoder) throws {
             item = try CompletionItem(from: decoder)
-            score = try decoder.container(keyedBy: CodingKeys.self).decodeIfPresent(Double.self, forKey: .score)
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            score = try container.decodeIfPresent(Double.self, forKey: .score)
+            labelDetails = try? container.decodeIfPresent(CompletionLabelDetails.self, forKey: .labelDetails)
         }
     }
 
     private enum CodingKeys: String, CodingKey {
         case items
+        case isIncomplete
     }
 
     init() {}
@@ -145,9 +157,31 @@ struct ScoredCompletionResponse: Decodable, Sendable {
         if let array = try? single.decode([ScoredItem].self) {
             scored = array
         } else {
-            scored = try decoder.container(keyedBy: CodingKeys.self).decode([ScoredItem].self, forKey: .items)
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            scored = try container.decode([ScoredItem].self, forKey: .items)
+            isIncomplete = try container.decodeIfPresent(Bool.self, forKey: .isIncomplete) ?? false
         }
         items = scored.map(\.item)
         scores = scored.map(\.score)
+        labelDetails = scored.map(\.labelDetails)
+    }
+}
+
+/// The LSP 3.17 `CompletionItemLabelDetails` of an item: text shown after its label.
+///
+/// The Dart analysis server puts the signature in `detail` (`(int length) → Uint8List`) and the library
+/// that declares a not-yet-imported symbol in `description` (`dart:typed_data`).
+struct CompletionLabelDetails: Decodable, Sendable, Equatable {
+    /// Shown right after the label, without spacing: usually a signature.
+    var detail: String?
+    /// Shown after `detail`, less prominently: usually a qualified name or a file path.
+    var description: String?
+
+    /// `detail` and `description` as one line, or `nil` when both are empty.
+    var displayText: String? {
+        let parts = [detail, description]
+            .compactMap { $0?.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+        return parts.isEmpty ? nil : parts.joined(separator: "  ")
     }
 }

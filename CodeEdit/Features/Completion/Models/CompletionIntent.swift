@@ -37,15 +37,17 @@ enum CompletionIntent: Equatable, Hashable, Sendable, CaseIterable {
     case string
     /// Typing a number literal.
     case numberLiteral
-    /// The name of a variable inside `${…}`, `$ENV{…}`, or `$CACHE{…}`. Produced for CMake.
+    /// The name of a variable inside `${…}`, `$ENV{…}`, or `$CACHE{…}` in CMake, or after `$` or
+    /// inside `${…}` in a Dart string.
     ///
-    /// CMake is the only language with a variable-reference syntax that is also valid inside
-    /// quoted text, which no existing case could express: ``string`` suppresses the window and
-    /// ``expression`` would offer commands.
+    /// Both languages have a variable-reference syntax that is valid inside quoted text, which no
+    /// other case could express: ``string`` suppresses the window and ``expression`` would offer
+    /// commands or keywords.
     case variableReference
     /// An argument of a command call, after `(` or a space: a keyword (`PUBLIC`, `REQUIRED`), a
     /// target, a path, or a bare variable name. Produced for CMake, where every command takes
-    /// whitespace-separated arguments rather than expressions.
+    /// whitespace-separated arguments rather than expressions, and for Dart after the `(` or `,` of a
+    /// call, where named arguments (`child: `) lead.
     ///
     /// CMake's command position needs no case of its own: ``statement`` (inside a function, macro,
     /// `if`, or loop body) and ``topLevel`` (at file scope) already mean "a command name goes here".

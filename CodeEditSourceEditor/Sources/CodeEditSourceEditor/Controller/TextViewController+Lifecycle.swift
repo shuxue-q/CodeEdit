@@ -350,6 +350,25 @@ extension TextViewController {
         return showCodeCompletions(trigger: trigger) ? nil : event
     }
 
+    /// Refreshes the rows of the open suggestion window from the completion delegate, without a new
+    /// request.
+    ///
+    /// For a delegate that receives more candidates while the window is open, for example a language
+    /// server's answer to a re-request as the user types: it calls this once they are in, and the window
+    /// asks ``CodeSuggestionDelegate/completionSuggestionsUpdated(textView:cursorPosition:)`` for its rows
+    /// as it does when the cursor moves. Does nothing unless the window is showing this controller's
+    /// suggestions and no request is in flight.
+    public func refreshCodeCompletions() {
+        let controller = SuggestionController.shared
+        guard let completionDelegate, let cursorPosition = cursorPositions.first,
+              controller.isVisible,
+              controller.model.activeTextView === self,
+              controller.model.itemsRequestTask == nil else {
+            return
+        }
+        controller.cursorsUpdated(textView: self, delegate: completionDelegate, position: cursorPosition)
+    }
+
     /// Asks the completion delegate for completions at the cursor and shows the suggestion window.
     ///
     /// The same as pressing the show-completions key binding; `trigger` says which kind of request it is.

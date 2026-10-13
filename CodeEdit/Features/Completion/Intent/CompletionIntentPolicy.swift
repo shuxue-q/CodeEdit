@@ -41,13 +41,18 @@ enum CompletionIntentPolicy {
     /// The weight of a candidate of `kind` from `source` for `intent`, or `nil` to exclude it.
     ///
     /// `languageId` matters for ``CompletionIntent/statement`` and ``CompletionIntent/topLevel``,
-    /// which mean "a declaration or statement" in the C family but "a command name" in CMake.
+    /// which mean "a declaration or statement" in the C family and Dart but "a command name" in CMake,
+    /// and for ``CompletionIntent/argument`` and ``CompletionIntent/variableReference``, which mean a
+    /// call's arguments and an interpolated name in Dart but a command's arguments and a `${…}` name in
+    /// CMake. `isNamedArgument` marks a server item that fills a named argument (`padding: `), which
+    /// leads a Dart argument list.
     static func weight(
         kind: LSPCompletionCategory,
         source: CompletionSource,
         intent: CompletionIntent,
         isExplicit: Bool,
-        languageId: String = ""
+        languageId: String = "",
+        isNamedArgument: Bool = false
     ) -> Double? {
         if source == .word {
             return documentWordIntents.contains(intent) ? documentWordWeight : nil
@@ -70,7 +75,12 @@ enum CompletionIntentPolicy {
         case .statement, .topLevel:
             return blockWeight(kind: kind, intent: intent, languageId: languageId)
         case .variableReference, .argument:
-            return cmakeWeight(kind: kind, intent: intent)
+            return referenceOrArgumentWeight(
+                kind: kind,
+                intent: intent,
+                languageId: languageId,
+                isNamedArgument: isNamedArgument
+            )
         case .unknown:
             return 0.5
         }
@@ -146,6 +156,22 @@ enum CompletionIntentPolicy {
         return typeKinds.contains(kind) || kind == .namespace ? 0.6 : 0.4
     }
 
+    /// Weights for the two intents only CMake and Dart produce.
+    private static func referenceOrArgumentWeight(
+        kind: LSPCompletionCategory,
+        intent: CompletionIntent,
+        languageId: String,
+        isNamedArgument: Bool
+    ) -> Double? {
+        guard DartKeywords.languageIds.contains(languageId) else {
+            return cmakeWeight(kind: kind, intent: intent)
+        }
+        guard kind != .snippet else { return nil }
+        return intent == .argument
+            ? dartArgumentWeight(kind: kind, isNamedArgument: isNamedArgument)
+            : dartInterpolationWeight(kind: kind)
+    }
+
     // MARK: - CMake
 
     /// Weights at the start of a CMake command. The server sends commands as functions; the local
@@ -191,6 +217,39 @@ enum CompletionIntentPolicy {
         case .keyword, .macro, .enumMember: return 0.8
         case .folder: return 0.7
         case .function: return 0.5
+        default: return 0.3
+        }
+    }
+
+    // MARK: - Dart
+
+    /// Whether `label` is a Dart named argument as the analysis server labels it: `padding: `.
+    static func isNamedArgumentLabel(_ label: String) -> Bool {
+        let trimmed = label.trimmingCharacters(in: .whitespaces)
+        guard trimmed.count > 1, trimmed.hasSuffix(":"), !trimmed.hasSuffix("::") else { return false }
+        return !trimmed.dropLast().contains(where: \.isWhitespace)
+    }
+
+    /// Weights in a Dart call's arguments (snippets are excluded before). The named arguments the callee
+    /// still accepts (`child: `, `padding: `) lead, followed by values for a positional argument.
+    private static func dartArgumentWeight(kind: LSPCompletionCategory, isNamedArgument: Bool) -> Double {
+        if isNamedArgument { return 1.0 }
+        switch kind {
+        case .variable, .function, .enumMember, .macro: return 0.6
+        case .keyword: return 0.5
+        default: return typeKinds.contains(kind) ? 0.5 : 0.3
+        }
+    }
+
+    /// Weights for a name interpolated into a Dart string, `'$…'` or `'${…}'` (snippets are excluded
+    /// before). A variable is what the user wants; a getter or function call (`${f()}`) follows, keywords
+    /// and types trail.
+    private static func dartInterpolationWeight(kind: LSPCompletionCategory) -> Double {
+        switch kind {
+        case .variable: return 1.0
+        case .enumMember, .macro: return 0.8
+        case .function: return 0.6
+        case .keyword: return 0.4
         default: return 0.3
         }
     }
