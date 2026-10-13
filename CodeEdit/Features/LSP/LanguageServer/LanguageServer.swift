@@ -98,7 +98,7 @@ class LanguageServer<DocumentType: LanguageServerDocument> {
         )
         let server = InitializingServer(
             server: connection,
-            initializeParamsProvider: getInitParams(workspacePath: workspacePath)
+            initializeParamsProvider: getInitParams(languageId: languageId, workspacePath: workspacePath)
         )
         let initializationResponse = try await server.initializeIfNeeded()
 
@@ -145,12 +145,24 @@ class LanguageServer<DocumentType: LanguageServerDocument> {
     // MARK: - Get Init Params
 
     // swiftlint:disable function_body_length
-    static func getInitParams(workspacePath: String) -> InitializingServer.InitializeParamsProvider {
+    /// Builds the `initialize` request parameters for a server.
+    /// - Parameters:
+    ///   - languageId: The LSP language identifier the server is started for. Selects the
+    ///     `initializationOptions` (see ``LanguageServerConfiguration``).
+    ///   - workspacePath: The root of the workspace the server works in.
+    /// - Returns: A provider of the parameters.
+    static func getInitParams(
+        languageId: String,
+        workspacePath: String
+    ) -> InitializingServer.InitializeParamsProvider {
         let provider: InitializingServer.InitializeParamsProvider = {
             // Text Document Capabilities
             let textDocumentCapabilities = TextDocumentClientCapabilities(
                 completion: CompletionClientCapabilities(
-                    dynamicRegistration: true,
+                    // `serverCapabilities` is read once, after `initialize`, so a completion provider
+                    // registered later through `client/registerCapability` would never be used. Ask servers
+                    // to declare it statically (the Dart analysis server otherwise registers it dynamically).
+                    dynamicRegistration: false,
                     completionItem: CompletionClientCapabilities.CompletionItem(
                         snippetSupport: true,
                         commitCharactersSupport: true,
@@ -160,7 +172,8 @@ class LanguageServer<DocumentType: LanguageServerDocument> {
                         tagSupport: ValueSet(valueSet: [CompletionItemTag.deprecated]),
                         insertReplaceSupport: true,
                         resolveSupport: CompletionClientCapabilities.CompletionItem.ResolveSupport(
-                            properties: ["documentation", "detail"]
+                            // Servers such as Dart attach auto-import edits only when an item is resolved.
+                            properties: ["documentation", "detail", "additionalTextEdits"]
                         ),
                         insertTextModeSupport: ValueSet(valueSet: [InsertTextMode.adjustIndentation]),
                         labelDetailsSupport: true
@@ -252,19 +265,21 @@ class LanguageServer<DocumentType: LanguageServerDocument> {
                 experimental: nil
             )
              return InitializeParams(
-                processId: nil,
+                // The key is required (`null` allowed), and a `nil` here is left out of the JSON, which the Dart
+                // analysis server rejects. CodeEdit's own process lets servers exit when the editor goes away.
+                processId: Int(ProcessInfo.processInfo.processIdentifier),
                 locale: nil,
                 rootPath: nil,
                 rootUri: "file://" + workspacePath, // Make it a URI
-                initializationOptions: [],
+                initializationOptions: LanguageServerConfiguration.initializationOptions(for: languageId),
                 capabilities: capabilities,
                 trace: nil,
                 workspaceFolders: nil
              )
         }
         return provider
-        // swiftlint:enable function_body_length
     }
+    // swiftlint:enable function_body_length
 
     // MARK: - Shutdown
 

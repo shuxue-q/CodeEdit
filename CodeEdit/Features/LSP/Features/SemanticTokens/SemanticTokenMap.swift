@@ -38,8 +38,23 @@ struct SemanticTokenMap: Sendable { // swiftlint:enable line_length
             legend = tokensRegistrationOptions.legend
         }
 
-        tokenTypeMap = legend.tokenTypes.map { CaptureName.fromString($0) }
+        tokenTypeMap = legend.tokenTypes.map { Self.captureName(forTokenType: $0) }
         modifierMap = legend.tokenModifiers.map { CaptureModifier.fromString($0) }
+    }
+
+    /// Server token types named differently from the capture that styles the same role.
+    ///
+    /// Dart's `annotation` (`@override`) is what grammars capture as `attribute`.
+    private static let tokenTypeAliases: [String: CaptureName] = [
+        "annotation": .typeAlternate
+    ]
+
+    /// The capture for a token type in a server's legend, or `nil` when the type has no matching capture
+    /// (Dart's `source`, code inside documentation comments): the grammar's highlight stays in place there.
+    /// - Parameter tokenType: A token type name from the legend.
+    /// - Returns: The capture to style tokens of that type with.
+    static func captureName(forTokenType tokenType: String) -> CaptureName? {
+        tokenTypeAliases[tokenType] ?? CaptureName.fromString(tokenType)
     }
 
     /// Decodes the compressed semantic token data into a `HighlightRange` type for use in an editor.

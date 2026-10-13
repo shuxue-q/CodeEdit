@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import JSONRPC
 import LanguageClient
 import LanguageServerProtocol
 
@@ -47,34 +48,35 @@ extension LSPService {
         }
     }
 
+    /// Answers the server requests CodeEdit has something to say to.
+    ///
+    /// `client/registerCapability` and `client/unregisterCapability` are answered by `InitializingServer`
+    /// itself. Requests outside the LSP specification (servers' own extensions) are answered with
+    /// `MethodNotFound` so the server does not wait on them. Other standard requests are left unanswered, as
+    /// before; in particular an unanswered `window/workDoneProgress/create` keeps servers from streaming
+    /// progress notifications CodeEdit does not show.
     private func handleRequest(_ request: ServerRequest, client: LanguageServerType) {
-        // TODO: Handle Requests
         switch request {
-            //        case let .workspaceConfiguration(params, _):
-            //            print("workspaceConfiguration: \(params)")
-            //        case let .workspaceFolders(handler):
-            //            print("workspaceFolders: \(String(describing: handler))")
-            //        case let .workspaceApplyEdit(params, _):
-            //            print("workspaceApplyEdit: \(params)")
-//        case let .clientRegisterCapability(params, _):
-//            print("clientRegisterCapability: \(params)")
-//        case let .clientUnregisterCapability(params, _):
-//            print("clientUnregisterCapability: \(params)")
-            //        case let .workspaceCodeLensRefresh(handler):
-            //            print("workspaceCodeLensRefresh: \(String(describing: handler))")
-//        case let .workspaceSemanticTokenRefresh(handler):
-//            print("Refresh semantic tokens!", handler)
-            //        case let .windowShowMessageRequest(params, _):
-            //            print("windowShowMessageRequest: \(params)")
-            //        case let .windowShowDocument(params, _):
-            //            print("windowShowDocument: \(params)")
-            //        case let .windowWorkDoneProgressCreate(params, _):
-            //            print("windowWorkDoneProgressCreate: \(params)")
+        case let .workspaceConfiguration(params, handler):
+            let values = LanguageServerConfiguration.workspaceConfiguration(for: params, languageId: client.languageId)
+            Task { await handler(.success(values)) }
+        case let .custom(_, _, handler):
+            let error = AnyJSONRPCResponseError(code: Self.methodNotFoundCode, message: "Method not found", data: nil)
+            Task { await handler(.failure(error)) }
         default:
             return
         }
     }
 
+    /// The JSON-RPC `MethodNotFound` error code. `JSONRPCErrors.methodNotFound` has the wrong sign.
+    static let methodNotFoundCode = -32601
+
+    /// Handles a server notification.
+    ///
+    /// Only notifications the `LanguageServerProtocol` package decodes arrive here; it drops servers' own
+    /// notifications (Dart's `$/analyzerStatus` or `dart/textDocument/publishOutline`, for example) before
+    /// they reach CodeEdit. CodeEdit keeps the Dart ones from being sent at all: see
+    /// ``LanguageServerConfiguration/initializationOptions(for:)`` and the `workDoneProgress` window capability.
     private func handleNotification(
         _ notification: ServerNotification,
         client: LanguageServerType,
