@@ -15,6 +15,7 @@ import Observation
 final class ProjectEditorState {
     /// A section of the project editor.
     enum Section: Hashable, Identifiable {
+        case flutter
         case cmake(CMakeProjectSettingsStore.Pane)
         case versionControl
         case projectFiles
@@ -23,6 +24,7 @@ final class ProjectEditorState {
 
         var title: String {
             switch self {
+            case .flutter: "Flutter"
             case .cmake(let pane): pane.rawValue
             case .versionControl: "Version Control"
             case .projectFiles: "Project Files"

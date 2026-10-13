@@ -47,6 +47,8 @@ final class WorkspaceDocument: NSDocument, ObservableObject, NSToolbarDelegate {
     /// Toolchain, build, variable, and run settings edited in the project editor.
     var cmakeProjectSettings: CMakeProjectSettingsStore?
     var cmakeBuildController: CMakeBuildController?
+    /// Flutter project, SDK, and native CMake root discovery, for folders with a `pubspec.yaml`.
+    var flutterWorkspace: FlutterWorkspace?
     /// Section selection and text files of the project editor shown for the workspace root.
     var projectEditorState: ProjectEditorState?
     /// History of past builds, debug sessions, and tasks for this workspace; created in
@@ -172,6 +174,9 @@ final class WorkspaceDocument: NSDocument, ObservableObject, NSToolbarDelegate {
         if CMakeProject.isCMakeProject(at: url) {
             configureCMakeWorkspace(url: url, reportStore: reportStore)
         }
+        if FileManager.default.fileExists(atPath: url.appending(path: PubspecParser.fileName).path) {
+            configureFlutterWorkspace(url: url)
+        }
         if let workspaceSettingsManager {
             self.taskManager = TaskManager(
                 workspaceSettings: workspaceSettingsManager.settings,
@@ -191,12 +196,17 @@ final class WorkspaceDocument: NSDocument, ObservableObject, NSToolbarDelegate {
     /// Creates the project editor state, reloading the models that own configuration files
     /// after those files are saved as text.
     private func configureProjectEditorState(url: URL) {
-        let state = ProjectEditorState(rootURL: url, includesCMakeSettings: cmakeProjectSettings != nil)
+        // A Flutter project's CMake models appear once its native root is discovered.
+        let state = ProjectEditorState(
+            rootURL: url,
+            includesCMakeSettings: cmakeProjectSettings != nil || flutterWorkspace != nil
+        )
+        let cmakeSettingsURL = CMakeProjectSettingsStore.fileURL(for: url)
         for file in state.configurationFiles {
             if file.url == workspaceSettingsManager?.settingsURL.standardizedFileURL {
                 file.didSave = { [weak self] in self?.workspaceSettingsManager?.reloadFromDisk() }
-            } else if let store = cmakeProjectSettings, file.url == store.fileURL {
-                file.didSave = { [weak store] in store?.reloadFromDisk() }
+            } else if file.url == cmakeSettingsURL {
+                file.didSave = { [weak self] in self?.cmakeProjectSettings?.reloadFromDisk() }
             }
         }
         projectEditorState = state
@@ -229,13 +239,10 @@ final class WorkspaceDocument: NSDocument, ObservableObject, NSToolbarDelegate {
         workspaceFileManager = nil
         workspaceSettingsManager?.cleanUp()
         workspaceSettingsManager = nil
-        cmakeWorkspace?.cancel()
-        cmakeWorkspace = nil
-        cmakeProjectSettings?.close()
-        cmakeProjectSettings = nil
+        flutterWorkspace?.cancel()
+        flutterWorkspace = nil
+        releaseCMakeWorkspace()
         projectEditorState = nil
-        cmakeBuildController?.stop()
-        cmakeBuildController = nil
         taskManager = nil
         reportStore = nil
     }
@@ -328,37 +335,6 @@ final class WorkspaceDocument: NSDocument, ObservableObject, NSToolbarDelegate {
 // MARK: - Report recording
 
 extension WorkspaceDocument {
-    /// Creates the CMake workspace and build controller, recording each finished build
-    /// (with its diagnostics and log) in the workspace's report store.
-    func configureCMakeWorkspace(url: URL, reportStore: ReportStore) {
-        let cmakeWorkspace = CMakeWorkspace(sourceDirectory: url)
-        self.cmakeWorkspace = cmakeWorkspace
-        cmakeWorkspace.reload()
-        let projectSettings = CMakeProjectSettingsStore(sourceDirectory: url, workspace: cmakeWorkspace)
-        self.cmakeProjectSettings = projectSettings
-        let buildController = CMakeBuildController(
-            sourceDirectory: url,
-            workspace: cmakeWorkspace,
-            projectSettings: projectSettings
-        )
-        buildController.onBuildFinished = { [weak self, weak buildController] success in
-            guard let buildController else { return }
-            self?.reportStore?.recordBuild(
-                outcome: buildController.outcome,
-                diagnostics: buildController.diagnostics,
-                log: buildController.lastBuildLog,
-                startedAt: buildController.lastBuildStartDate
-            )
-            // Failed builds surface their diagnostics; a build the user stopped does not.
-            guard let self, !success, buildController.outcome != .cancelled else { return }
-            if self.utilityAreaModel?.isCollapsed == true {
-                CommandManager.shared.executeCommand("open.drawer")
-            }
-            self.utilityAreaModel?.selectedTab = .problems
-        }
-        self.cmakeBuildController = buildController
-    }
-
     /// Records finished workspace tasks in the report store. The notification carries no
     /// workspace identity, so reports are filtered by the task's workspace URL.
     func observeTaskReports(url: URL) {

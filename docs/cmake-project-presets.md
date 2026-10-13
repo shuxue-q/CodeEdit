@@ -115,9 +115,10 @@ same list, for CMake and non-CMake workspaces alike.
 When a C, C++, or Objective-C file is opened in a CMake workspace, CodeEdit
 ensures a compilation database exists before starting clangd. When a configure
 preset is selected, its binary directory takes precedence; otherwise an existing
-`compile_commands.json` in the source directory or `build/` is reused. Otherwise
-CMake is configured once — `cmake --preset <name>` when a configure preset is
-selected, or `cmake -S <source> -B build` — with
+`compile_commands.json` in the source directory or `build/` is reused, and then
+the first configure preset's binary directory (the preset Workspace Settings shows
+as selected). Otherwise CMake is configured once — `cmake --preset <name>` for
+that preset, or `cmake -S <source> -B build` without presets — with
 `CMAKE_EXPORT_COMPILE_COMMANDS=ON`, and clangd is launched with
 `--compile-commands-dir` pointing at the result. This gives completion,
 diagnostics, and semantic highlighting the project's real compile flags.

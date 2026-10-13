@@ -11,7 +11,7 @@ import SwiftUI
 /// editor Xcode shows when the project is selected in the navigator.
 ///
 /// Every workspace gets the Version Control and Project Files sections; CMake projects also get
-/// toolchain, build, variable, and run settings.
+/// toolchain, build, variable, and run settings, and Flutter projects a Flutter section.
 struct ProjectEditorView: View {
     @EnvironmentObject private var workspace: WorkspaceDocument
 
@@ -28,6 +28,7 @@ struct ProjectEditorView: View {
                 state: state,
                 cmakeStore: workspace.cmakeProjectSettings,
                 cmakeWorkspace: workspace.cmakeWorkspace,
+                flutterWorkspace: workspace.flutterWorkspace,
                 folderName: file.name,
                 openInTab: openInTab
             )
@@ -59,14 +60,19 @@ private struct ProjectEditorContent: View {
     @Bindable var state: ProjectEditorState
     let cmakeStore: CMakeProjectSettingsStore?
     let cmakeWorkspace: CMakeWorkspace?
+    let flutterWorkspace: FlutterWorkspace?
     let folderName: String
     let openInTab: (ProjectTextFile) -> Void
 
+    /// The Flutter model, once discovery recognized a Flutter project.
+    private var flutterProject: FlutterProject? { flutterWorkspace?.project }
+
     private var sections: [ProjectEditorState.Section] {
+        let flutterSections: [ProjectEditorState.Section] = flutterProject == nil ? [] : [.flutter]
         let cmakeSections = cmakeStore == nil || cmakeWorkspace == nil
             ? []
             : CMakeProjectSettingsStore.Pane.allCases.map { ProjectEditorState.Section.cmake($0) }
-        return cmakeSections + [.versionControl, .projectFiles]
+        return flutterSections + cmakeSections + [.versionControl, .projectFiles]
     }
 
     private var selectedSection: ProjectEditorState.Section {
@@ -101,6 +107,10 @@ private struct ProjectEditorContent: View {
 
             Group {
                 switch selectedSection {
+                case .flutter:
+                    if let flutterWorkspace {
+                        FlutterProjectPane(flutterWorkspace: flutterWorkspace)
+                    }
                 case .cmake(let pane):
                     if let cmakeStore, let cmakeWorkspace {
                         CMakeSectionView(pane: pane, store: cmakeStore, cmakeWorkspace: cmakeWorkspace)
@@ -139,11 +149,11 @@ private struct ProjectEditorContent: View {
 
     private var header: some View {
         HStack(spacing: 12) {
-            Image(systemName: cmakeWorkspace == nil ? "folder.circle.fill" : "hammer.circle.fill")
+            Image(systemName: headerSymbol)
                 .font(.system(size: 34))
                 .foregroundStyle(.secondary)
             VStack(alignment: .leading, spacing: 2) {
-                Text(cmakeWorkspace?.project?.name ?? folderName)
+                Text(flutterProject?.name ?? cmakeWorkspace?.project?.name ?? folderName)
                     .font(.title2.weight(.semibold))
                 Text(subtitle)
                     .font(.callout)
@@ -162,7 +172,20 @@ private struct ProjectEditorContent: View {
         .padding(.bottom, 12)
     }
 
+    private var headerSymbol: String {
+        if flutterProject != nil { return "macwindow.on.rectangle" }
+        return cmakeWorkspace == nil ? "folder.circle.fill" : "hammer.circle.fill"
+    }
+
     private var subtitle: String {
+        if let flutterProject {
+            var parts = [flutterProject.isFFIPlugin ? "Flutter FFI Plugin" : "Flutter Project"]
+            if let version = flutterProject.pubspec.version { parts.append("Version \(version)") }
+            if let flutterWorkspace, let root = flutterWorkspace.activeNativeRoot {
+                parts.append("Native code: \(flutterWorkspace.displayName(of: root))")
+            }
+            return parts.joined(separator: " · ")
+        }
         guard let cmakeWorkspace else { return "Folder · \(state.rootURL.path)" }
         var parts = ["CMake Project"]
         if let version = cmakeWorkspace.project?.version { parts.append("Version \(version)") }
