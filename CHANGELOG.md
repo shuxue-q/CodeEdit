@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.3 - 2026-10-14
+
+### Features
+- Flutter: recognize Flutter projects from `pubspec.yaml`, locate the Flutter SDK from the login shell (with a per-workspace override), and find native CMake roots (`src/`, `cpp/`, `native/`, platform folders, `packages/*/src/`) so clangd gets the right compilation database.
+- LSP: Dart analysis server, launched from the Flutter SDK's own `dart` binary, with auto-import on accept and incomplete-list refresh while typing.
+- LSP: rust-analyzer support (resolved through `rustup which`), Cargo `linkedProjects` discovery, `cargo check` diagnostics on save.
+- Completion: Dart and Rust intent recognition, keyword and snippet tables, and label details in the popup.
+- Projects: hybrid Flutter + C++ + Rust workspaces. A project inventory finds Flutter/Dart packages, CMake projects and Cargo roots with their roles and build links; the project editor gains Overview, Flutter and Rust panes; settings live in `.codeedit/flutter-settings.json` and `cargo-settings.json`.
+- Tasks: generated Flutter, Cargo and CTest tasks; hot reload and hot restart (toolbar bolt, ⌘\ / ⇧⌘\, on save); Cargo and Flutter output becomes problems in the Problems panel, Issues navigator and toolbar.
+
 ## 0.4.2 - 2026-10-10
 
 ### Features
