@@ -7,54 +7,88 @@
 
 import SwiftUI
 
-/// The project editor's Flutter section: the package, the Flutter SDK, and the native CMake
-/// roots with the active one selectable.
+/// The project editor's Flutter section: the package and its configuration files, the Flutter
+/// SDK, dependencies, platforms, the native CMake roots, and the run settings.
 struct FlutterProjectPane: View {
     let flutterWorkspace: FlutterWorkspace
+    let inventory: ProjectInventory?
+    /// Runs a generated task, such as `flutter pub get`.
+    let runTask: (ProjectToolchain, GeneratedTaskInfo.Role) -> Void
 
     var body: some View {
         Form {
             if let project = flutterWorkspace.project {
-                Section("Project") {
-                    LabeledContent("Name") { Text(project.name).textSelection(.enabled) }
-                    LabeledContent("Version", value: project.pubspec.version ?? "Not Set")
-                    LabeledContent("Type", value: projectType(project))
-                }
+                projectSection(project)
             }
-
-            Section {
-                sdkRows
-            } header: {
-                HStack {
-                    Text("Flutter SDK")
-                    Spacer()
-                    if flutterWorkspace.isLocatingSDK {
-                        ProgressView().controlSize(.small)
-                    }
-                    Button("Rescan") { flutterWorkspace.locateSDK() }
-                        .disabled(flutterWorkspace.isLocatingSDK)
-                        .accessibilityIdentifier("FlutterRescanSDK")
-                }
-            } footer: {
-                Text("The `flutter` command found in your login shell PATH.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            sdkSection
+            if let project = flutterWorkspace.project {
+                packagesSection(project)
+                platformsSection(project)
+                analysisSection(project)
             }
-
-            Section {
-                nativeRootRows
-            } header: {
-                Text("Native Code")
-            } footer: {
-                Text("The first folder with a CMakeLists.txt among the workspace root, src, cpp, native, "
-                     + "linux, windows, macos and packages/*/src is active unless you pick another. "
-                     + "The CMake sections and clangd use the active root's presets and compilation database.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
+            nativeCodeSection
+            FlutterRunSettingsSection(flutterWorkspace: flutterWorkspace, settings: flutterWorkspace.settings)
         }
         .formStyle(.grouped)
         .accessibilityIdentifier("ProjectEditorFlutter")
+    }
+
+    // MARK: - Project
+
+    @ViewBuilder
+    private func projectSection(_ project: FlutterProject) -> some View {
+        Section("Project") {
+            LabeledContent("Name") { Text(project.name).textSelection(.enabled) }
+            LabeledContent("Version", value: project.pubspec.version ?? "Not Set")
+            LabeledContent("Type", value: projectType(project))
+            if let description = project.pubspec.description {
+                LabeledContent("Description") {
+                    Text(description).multilineTextAlignment(.trailing).textSelection(.enabled)
+                }
+            }
+            if project.pubspec.sdkConstraint != nil || project.pubspec.flutterConstraint != nil {
+                LabeledContent("SDK Constraints", value: constraints(project.pubspec))
+            }
+            if let publishTo = project.pubspec.publishTo {
+                LabeledContent("Publish To", value: publishTo)
+            }
+        }
+    }
+
+    private func projectType(_ project: FlutterProject) -> String {
+        guard project.isFFIPlugin else { return project.typeTitle }
+        return "FFI Plugin (\(project.pubspec.ffiPluginPlatforms.joined(separator: ", ")))"
+    }
+
+    private func constraints(_ pubspec: Pubspec) -> String {
+        [pubspec.sdkConstraint.map { "Dart \($0)" }, pubspec.flutterConstraint.map { "Flutter \($0)" }]
+            .compactMap { $0 }
+            .joined(separator: " · ")
+    }
+
+    // MARK: - SDK
+
+    private var sdkSection: some View {
+        Section {
+            sdkRows
+            FlutterSDKOverrideField(flutterWorkspace: flutterWorkspace)
+        } header: {
+            HStack {
+                Text("Flutter SDK")
+                Spacer()
+                if flutterWorkspace.isLocatingSDK {
+                    ProgressView().controlSize(.small)
+                }
+                Button("Rescan") { flutterWorkspace.locateSDK() }
+                    .disabled(flutterWorkspace.isLocatingSDK)
+                    .accessibilityIdentifier("FlutterRescanSDK")
+            }
+        } footer: {
+            Text("The `flutter` command found in your login shell PATH, unless an SDK folder is chosen for this "
+                 + "workspace. The choice is kept on this Mac only and also selects the Dart analysis server.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
     }
 
     @ViewBuilder private var sdkRows: some View {
@@ -72,12 +106,48 @@ struct FlutterProjectPane: View {
         } else {
             LabeledContent("Path") {
                 Label(
-                    "Flutter was not found. Add the SDK's bin folder to your login shell PATH.",
+                    flutterWorkspace.sdkOverride == nil
+                        ? "Flutter was not found. Add the SDK's bin folder to your login shell PATH."
+                        : "The chosen folder is not a Flutter SDK.",
                     systemImage: "exclamationmark.triangle"
                 )
                 .foregroundStyle(.orange)
             }
         }
+    }
+
+    private func sdkVersion(_ sdk: FlutterSDK) -> String {
+        var parts = [sdk.version ?? "Unknown"]
+        if let channel = sdk.channel { parts.append(channel) }
+        if let dart = sdk.dartVersion { parts.append("Dart \(dart)") }
+        return parts.joined(separator: " · ")
+    }
+
+    // MARK: - Native code
+
+    private var nativeCodeSection: some View {
+        Section {
+            nativeRootRows
+            if let hook = flutterWorkspace.project?.nativeAssetsHook {
+                LabeledContent("Build Hook") {
+                    Text(hookSummary(hook))
+                }
+            }
+        } header: {
+            Text("Native Code")
+        } footer: {
+            Text("The first folder with a CMakeLists.txt among the workspace root, src, cpp, native, "
+                 + "linux, windows, macos and packages/*/src is active unless you pick another. "
+                 + "The C++ section and clangd use the active root's presets and compilation database.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func hookSummary(_ hook: NativeAssetsHook) -> String {
+        let tools = [hook.runsCMake ? "CMake" : nil, hook.runsCargo ? "Cargo" : nil].compactMap { $0 }
+        let runs = tools.isEmpty ? "" : ", runs \(tools.joined(separator: " and "))"
+        return "\(NativeAssetsHook.relativePath)\(runs)"
     }
 
     @ViewBuilder private var nativeRootRows: some View {
@@ -102,16 +172,129 @@ struct FlutterProjectPane: View {
             .accessibilityIdentifier("FlutterNativeRoot")
         }
     }
+}
 
-    private func projectType(_ project: FlutterProject) -> String {
-        guard project.isFFIPlugin else { return "App or Package" }
-        return "FFI Plugin (\(project.pubspec.ffiPluginPlatforms.joined(separator: ", ")))"
+// MARK: - Packages and analysis
+
+extension FlutterProjectPane {
+    @ViewBuilder
+    private func packagesSection(_ project: FlutterProject) -> some View {
+        Section {
+            LabeledContent("Resolution") {
+                HStack {
+                    pubStateLabel(project.pubState)
+                    Button("Pub Get") { runTask(.flutter, .dependencies) }
+                        .accessibilityIdentifier("FlutterPubGet")
+                }
+            }
+            let pubspec = project.pubspec
+            LabeledContent("Dependencies", value: dependencyCounts(pubspec))
+            let local = pubspec.dependencies.filter {
+                if case .path = $0.source { return true }
+                if case .git = $0.source { return true }
+                return false
+            }
+            if !local.isEmpty {
+                LabeledContent("Local and Git") {
+                    Text(local.map { "\($0.name) (\($0.sourceDescription))" }.joined(separator: "\n"))
+                        .multilineTextAlignment(.trailing)
+                        .textSelection(.enabled)
+                }
+            }
+            DisclosureGroup("All Dependencies") {
+                ForEach(PubDependency.Kind.allCases, id: \.self) { kind in
+                    let dependencies = pubspec.dependencies(of: kind)
+                    if !dependencies.isEmpty {
+                        Text(kind.rawValue).font(.caption).foregroundStyle(.secondary)
+                        ForEach(dependencies) { dependency in
+                            LabeledContent(dependency.name, value: dependency.sourceDescription)
+                        }
+                    }
+                }
+            }
+            if !pubspec.assets.isEmpty || !pubspec.fontFamilies.isEmpty {
+                LabeledContent("Assets", value: "\(pubspec.assets.count) paths")
+                if !pubspec.fontFamilies.isEmpty {
+                    LabeledContent("Fonts", value: pubspec.fontFamilies.joined(separator: ", "))
+                }
+            }
+        } header: {
+            Text("Packages")
+        }
     }
 
-    private func sdkVersion(_ sdk: FlutterSDK) -> String {
-        var parts = [sdk.version ?? "Unknown"]
-        if let channel = sdk.channel { parts.append(channel) }
-        if let dart = sdk.dartVersion { parts.append("Dart \(dart)") }
-        return parts.joined(separator: " · ")
+    @ViewBuilder
+    private func pubStateLabel(_ state: PubResolutionState) -> some View {
+        switch state {
+        case .upToDate:
+            Label("Up to date", systemImage: "checkmark.circle").foregroundStyle(.green)
+        case .outdated:
+            Label("Outdated", systemImage: "exclamationmark.triangle")
+                .foregroundStyle(.orange)
+                .help("pubspec.yaml or pubspec.lock changed since the last pub get")
+        case .missing:
+            Label("Not resolved yet", systemImage: "exclamationmark.triangle").foregroundStyle(.orange)
+        }
+    }
+
+    private func dependencyCounts(_ pubspec: Pubspec) -> String {
+        let normal = pubspec.dependencies(of: .normal).count
+        let dev = pubspec.dependencies(of: .development).count
+        let overrides = pubspec.dependencies(of: .override).count
+        var text = "\(normal) · \(dev) dev"
+        if overrides > 0 { text += " · \(overrides) overrides" }
+        return text
+    }
+
+    // MARK: - Platforms and analysis
+
+    @ViewBuilder
+    private func platformsSection(_ project: FlutterProject) -> some View {
+        Section("Platforms") {
+            HStack(spacing: 14) {
+                ForEach(FlutterPlatform.allCases) { platform in
+                    let present = project.platforms.contains(platform)
+                    Label(platform.title, systemImage: present ? "checkmark.circle.fill" : "circle.dashed")
+                        .foregroundStyle(present ? Color.primary : Color.secondary)
+                }
+            }
+            if !project.pubspec.pluginPlatforms.isEmpty {
+                LabeledContent("Plugin Platforms") {
+                    Text(project.pubspec.pluginPlatforms.map { platform in
+                        platform.isFFIPlugin ? "\(platform.name) (FFI)" : platform.name
+                    }.joined(separator: ", "))
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func analysisSection(_ project: FlutterProject) -> some View {
+        Section("Analysis") {
+            if let options = project.analysisOptions {
+                if !options.includes.isEmpty {
+                    LabeledContent("Includes", value: options.includes.joined(separator: ", "))
+                }
+                let count = options.excludes.count
+                let excluded = options.excludes.isEmpty ? "None" : (count == 1 ? "1 pattern" : "\(count) patterns")
+                LabeledContent("Excluded", value: excluded)
+                    .help(options.excludes.joined(separator: "\n"))
+                if !options.strictModes.isEmpty {
+                    LabeledContent("Strict Modes", value: options.strictModes.joined(separator: ", "))
+                }
+                if !options.enabledRules.isEmpty || !options.disabledRules.isEmpty {
+                    LabeledContent(
+                        "Lint Rules",
+                        value: "\(options.enabledRules.count) on · \(options.disabledRules.count) off"
+                    )
+                }
+                if !options.severityOverrides.isEmpty {
+                    LabeledContent("Severity Overrides", value: "\(options.severityOverrides.count)")
+                }
+            } else {
+                Text("No analysis_options.yaml; the analyzer uses its defaults.")
+                    .foregroundStyle(.secondary)
+            }
+        }
     }
 }

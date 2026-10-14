@@ -11,7 +11,9 @@ import SwiftUI
 /// editor Xcode shows when the project is selected in the navigator.
 ///
 /// Every workspace gets the Version Control and Project Files sections; CMake projects also get
-/// toolchain, build, variable, and run settings, and Flutter projects a Flutter section.
+/// toolchain, build, variable, and run settings, Flutter projects a Flutter section and Cargo
+/// projects a Rust section. A workspace combining several toolchains gets an Overview, and its
+/// CMake panes are grouped under one C++ section.
 struct ProjectEditorView: View {
     @EnvironmentObject private var workspace: WorkspaceDocument
 
@@ -29,6 +31,7 @@ struct ProjectEditorView: View {
                 cmakeStore: workspace.cmakeProjectSettings,
                 cmakeWorkspace: workspace.cmakeWorkspace,
                 flutterWorkspace: workspace.flutterWorkspace,
+                inventoryModel: workspace.projectInventory,
                 folderName: file.name,
                 openInTab: openInTab
             )
@@ -61,18 +64,31 @@ private struct ProjectEditorContent: View {
     let cmakeStore: CMakeProjectSettingsStore?
     let cmakeWorkspace: CMakeWorkspace?
     let flutterWorkspace: FlutterWorkspace?
+    let inventoryModel: ProjectInventoryModel?
     let folderName: String
     let openInTab: (ProjectTextFile) -> Void
 
     /// The Flutter model, once discovery recognized a Flutter project.
     private var flutterProject: FlutterProject? { flutterWorkspace?.project }
 
+    private var inventory: ProjectInventory? { inventoryModel?.inventory }
+
+    private var hasCargo: Bool { inventory?.cargoRoots.isEmpty == false }
+
     private var sections: [ProjectEditorState.Section] {
-        let flutterSections: [ProjectEditorState.Section] = flutterProject == nil ? [] : [.flutter]
-        let cmakeSections = cmakeStore == nil || cmakeWorkspace == nil
-            ? []
-            : CMakeProjectSettingsStore.Pane.allCases.map { ProjectEditorState.Section.cmake($0) }
-        return flutterSections + cmakeSections + [.versionControl, .projectFiles]
+        var sections: [ProjectEditorState.Section] = []
+        if inventory?.isHybrid == true { sections.append(.overview) }
+        if flutterProject != nil { sections.append(.flutter) }
+        if hasCargo { sections.append(.rust) }
+        if cmakeStore != nil && cmakeWorkspace != nil {
+            // Next to other toolchains the four CMake panes share one segment.
+            if sections.isEmpty {
+                sections += CMakeProjectSettingsStore.Pane.allCases.map { ProjectEditorState.Section.cmake($0) }
+            } else {
+                sections.append(.cpp)
+            }
+        }
+        return sections + [.versionControl, .projectFiles]
     }
 
     private var selectedSection: ProjectEditorState.Section {
@@ -107,9 +123,29 @@ private struct ProjectEditorContent: View {
 
             Group {
                 switch selectedSection {
+                case .overview:
+                    if let inventoryModel {
+                        ProjectOverviewPane(
+                            model: inventoryModel,
+                            flutterWorkspace: flutterWorkspace,
+                            select: { state.selectedSection = $0 }
+                        )
+                    }
                 case .flutter:
                     if let flutterWorkspace {
-                        FlutterProjectPane(flutterWorkspace: flutterWorkspace)
+                        FlutterProjectPane(
+                            flutterWorkspace: flutterWorkspace,
+                            inventory: inventory,
+                            runTask: runGeneratedTask
+                        )
+                    }
+                case .rust:
+                    if let inventoryModel {
+                        RustProjectPane(model: inventoryModel, state: state, runTask: runGeneratedTask)
+                    }
+                case .cpp:
+                    if let cmakeStore, let cmakeWorkspace {
+                        CPPSectionView(state: state, store: cmakeStore, cmakeWorkspace: cmakeWorkspace)
                     }
                 case .cmake(let pane):
                     if let cmakeStore, let cmakeWorkspace {
@@ -147,6 +183,16 @@ private struct ProjectEditorContent: View {
         }
     }
 
+    /// Runs a generated task and shows its output.
+    private func runGeneratedTask(_ toolchain: ProjectToolchain, _ role: GeneratedTaskInfo.Role) {
+        workspace.taskManager?.runGeneratedTask(toolchain: toolchain, role: role)
+        if workspace.utilityAreaModel?.isCollapsed == true {
+            CommandManager.shared.executeCommand("open.drawer")
+        }
+        workspace.utilityAreaModel?.selectedTab = .debugConsole
+        workspace.taskManager?.taskShowingOutput = workspace.taskManager?.selectedTaskID
+    }
+
     private var header: some View {
         HStack(spacing: 12) {
             Image(systemName: headerSymbol)
@@ -173,11 +219,19 @@ private struct ProjectEditorContent: View {
     }
 
     private var headerSymbol: String {
+        if inventory?.isHybrid == true { return "square.stack.3d.up.fill" }
         if flutterProject != nil { return "macwindow.on.rectangle" }
+        if hasCargo && cmakeWorkspace == nil { return "shippingbox.circle.fill" }
         return cmakeWorkspace == nil ? "folder.circle.fill" : "hammer.circle.fill"
     }
 
     private var subtitle: String {
+        if let inventory, inventory.isHybrid {
+            var parts = [inventory.toolchains.map(\.title).joined(separator: " + ")]
+            if let version = flutterProject?.pubspec.version { parts.append("Version \(version)") }
+            parts.append("\(inventory.components.count) components")
+            return parts.joined(separator: " · ")
+        }
         if let flutterProject {
             var parts = [flutterProject.isFFIPlugin ? "Flutter FFI Plugin" : "Flutter Project"]
             if let version = flutterProject.pubspec.version { parts.append("Version \(version)") }
@@ -185,6 +239,9 @@ private struct ProjectEditorContent: View {
                 parts.append("Native code: \(flutterWorkspace.displayName(of: root))")
             }
             return parts.joined(separator: " · ")
+        }
+        if cmakeWorkspace == nil, let root = inventory?.cargoRoots.first {
+            return root.isWorkspace ? "Cargo Workspace · \(root.packages.count) packages" : "Cargo Package"
         }
         guard let cmakeWorkspace else { return "Folder · \(state.rootURL.path)" }
         var parts = ["CMake Project"]
@@ -221,6 +278,29 @@ private struct CMakeSectionView: View {
         }
         .onChange(of: store.configureOptions.buildDirectory) {
             store.refreshExecutableTargets()
+        }
+    }
+}
+
+/// The C++ section of a workspace with several toolchains: the CMake panes behind their own picker.
+private struct CPPSectionView: View {
+    @Bindable var state: ProjectEditorState
+    @Bindable var store: CMakeProjectSettingsStore
+    let cmakeWorkspace: CMakeWorkspace
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Picker("C++ Settings", selection: $state.selectedCMakePane) {
+                ForEach(CMakeProjectSettingsStore.Pane.allCases) { pane in
+                    Text(pane.rawValue).tag(pane)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .fixedSize()
+            .padding(.vertical, 10)
+            .accessibilityIdentifier("ProjectEditorCMakePanePicker")
+            CMakeSectionView(pane: state.selectedCMakePane, store: store, cmakeWorkspace: cmakeWorkspace)
         }
     }
 }

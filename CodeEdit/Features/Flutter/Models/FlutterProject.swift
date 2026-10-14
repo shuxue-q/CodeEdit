@@ -9,13 +9,25 @@ import Foundation
 
 /// Static information about a Flutter app or plugin and the CMake projects holding its native
 /// code. Reading a workspace never runs `flutter`, `dart` or CMake.
-struct FlutterProject: Sendable {
+struct FlutterProject: Equatable, Sendable {
     /// The workspace folder holding `pubspec.yaml`.
     let rootDirectory: URL
     /// The parsed `pubspec.yaml`.
     var pubspec: Pubspec
     /// Directories containing a `CMakeLists.txt`, in discovery order (see ``discoverNativeRoots(in:)``).
     var nativeRoots: [URL] = []
+    /// The `.metadata` file `flutter create` wrote.
+    var metadata: FlutterMetadata?
+    /// The analyzer configuration.
+    var analysisOptions: AnalysisOptions?
+    /// Platform folders present in the project.
+    var platforms: [FlutterPlatform] = []
+    /// The native assets build hook, when the package has one.
+    var nativeAssetsHook: NativeAssetsHook?
+    /// Whether `flutter pub get` has resolved the current pubspec.
+    var pubState: PubResolutionState = .missing
+    /// Whether an `ffigen.yaml` configures binding generation.
+    var hasFFIgenConfig = false
 
     /// The package name, falling back to the folder name.
     var name: String { pubspec.name ?? rootDirectory.lastPathComponent }
@@ -39,7 +51,27 @@ struct FlutterProject: Sendable {
     static func load(at directory: URL) -> Self? {
         let directory = directory.standardizedFileURL
         guard let pubspec = readPubspec(in: directory), isFlutter(pubspec) else { return nil }
-        return Self(rootDirectory: directory, pubspec: pubspec, nativeRoots: discoverNativeRoots(in: directory))
+        var project = Self(rootDirectory: directory, pubspec: pubspec, nativeRoots: discoverNativeRoots(in: directory))
+        project.metadata = FlutterMetadata.read(in: directory)
+        project.analysisOptions = AnalysisOptions.read(in: directory)
+        project.platforms = FlutterPlatform.present(in: directory)
+        project.nativeAssetsHook = NativeAssetsHook.read(in: directory)
+        project.pubState = PubResolutionState.check(in: directory)
+        project.hasFFIgenConfig = FileManager.default.fileExists(atPath: directory.appending(path: "ffigen.yaml").path)
+        return project
+    }
+
+    /// A short label for the project type: the `.metadata` type, else what the pubspec implies.
+    var typeTitle: String {
+        switch metadata?.projectType {
+        case "app": return "App"
+        case "plugin": return "Plugin"
+        case "plugin_ffi": return "FFI Plugin"
+        case "package": return "Package"
+        case "module": return "Module"
+        case let other?: return other
+        case nil: return isFFIPlugin ? "FFI Plugin" : (pubspec.pluginPlatforms.isEmpty ? "App or Package" : "Plugin")
+        }
     }
 
     /// Finds the directories holding a native CMake project.
@@ -80,9 +112,14 @@ struct FlutterProject: Sendable {
         return root.hasPrefix(prefix) ? String(root.dropFirst(prefix.count)) : root
     }
 
-    /// The user's persisted native root, as a path relative to the workspace.
+    /// The user's persisted native root, as a path relative to the workspace: the value in
+    /// `.codeedit/flutter-settings.json`, else the one CodeEdit kept in `UserDefaults` before
+    /// that file existed.
     static func savedNativeRoot(workspaceDirectory: URL, defaults: UserDefaults = .standard) -> String? {
-        defaults.string(forKey: nativeRootSelectionKey(for: workspaceDirectory))
+        if let saved = ProjectSettingsFile<FlutterProjectSettings>.saved(in: workspaceDirectory)?.nativeRoot {
+            return saved
+        }
+        return defaults.string(forKey: nativeRootSelectionKey(for: workspaceDirectory))
     }
 
     /// Persists the user's native root choice.

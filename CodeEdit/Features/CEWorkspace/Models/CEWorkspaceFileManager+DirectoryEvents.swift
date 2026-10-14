@@ -16,6 +16,11 @@ extension CEWorkspaceFileManager {
     /// - Parameter events: An array of events that occurred.
     func fileSystemEventReceived(events: [DirectoryEventStream.Event]) {
         DispatchQueue.main.async {
+            if let rawEventHandler = self.rawEventHandler {
+                rawEventHandler(events.map { event in
+                    event.path.hasPrefix("/") ? event.path : self.folderUrl.appending(path: event.path).path
+                })
+            }
             var files: Set<CEWorkspaceFile> = []
             for event in events {
                 // Event returns file/folder that was changed, but in tree we need to update it's parent

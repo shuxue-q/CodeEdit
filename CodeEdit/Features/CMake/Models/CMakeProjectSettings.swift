@@ -203,7 +203,7 @@ enum CMakeGenerator: String, CaseIterable, Identifiable, Sendable {
 
 // MARK: - Decoding helpers
 
-private extension KeyedDecodingContainer {
+extension KeyedDecodingContainer {
     /// Decodes a value, treating a missing key or a type mismatch as absent.
     func lenient<T: Decodable>(_ type: T.Type, forKey key: Key) -> T? {
         (try? decodeIfPresent(type, forKey: key)) ?? nil

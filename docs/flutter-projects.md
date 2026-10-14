@@ -29,7 +29,10 @@ Symlinks are followed (for example `~/.local/bin/flutter` →
 version comes from `<sdk>/version` or, in recent SDKs that no longer write that
 file, from `<sdk>/bin/cache/flutter.version.json` (which also gives the channel
 and the Dart version). fvm and other version managers are not consulted. Use
-**Rescan** in the Flutter pane after installing or switching SDKs.
+**Rescan** in the Flutter pane after installing or switching SDKs. An **SDK
+Folder** chosen in the Flutter pane replaces the `PATH` SDK for that workspace on
+this Mac only (it is kept in `UserDefaults`); the generated tasks and the Dart
+analysis server then use that SDK.
 
 ## Native code and the active root
 
@@ -41,9 +44,10 @@ Native C/C++ code is found as a CMake project. CodeEdit looks for a
 3. `packages/*/src/`, by package name.
 
 The first match is the **active native root**. When several exist, pick another
-one in **Project Settings → Flutter → Native Code**; the choice is remembered
-per workspace (in `UserDefaults`) and is dropped automatically if that folder no
-longer has a `CMakeLists.txt`.
+one in **Project Settings → Flutter → Native Code**; the choice is saved in the
+workspace's `.codeedit/flutter-settings.json` (choices made by earlier versions,
+kept in `UserDefaults`, are still read) and is dropped automatically if that
+folder no longer has a `CMakeLists.txt`.
 
 The active root is the CMake source directory for everything CMake-related:
 
@@ -92,5 +96,7 @@ native_add/
 
 ## Not covered
 
-Running, hot reload, device selection and debugging of Flutter apps are not
-part of this support. Dart editing features come from the Dart language server.
+Debugging Flutter apps is not part of this support. Running, hot reload, device
+selection and the parsed project configuration are described in
+[Flutter, C++ and Rust in one workspace](hybrid-projects.md). Dart editing
+features come from the Dart language server.

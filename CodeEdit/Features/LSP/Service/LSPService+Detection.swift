@@ -36,6 +36,39 @@ extension LSPService {
         return configs
     }
 
+    /// Resolves the binary configuration for a language, preferring binaries configured
+    /// in the developer settings, then servers picked in the LSP settings, and falling
+    /// back to servers auto-detected in the user's system `PATH` and environment.
+    /// - Parameter languageId: The LSP language identifier to find a server for.
+    /// - Returns: The binary configuration, or `nil` if no server was found.
+    func serverConfiguration(for languageId: String) async -> LanguageServerBinary? {
+        if let configured = languageConfigs[languageId] {
+            return configured
+        }
+        if let configured = await settingsConfiguredServer(for: languageId) {
+            return configured
+        }
+        if detectedConfigs == nil {
+            await redetectServers()
+        }
+        return detectedConfigs?[languageId]
+    }
+
+    /// A server binary chosen for one workspace: the Dart analysis server of a Flutter SDK the
+    /// user picked for the workspace in the project editor. Explicit LSP settings still win.
+    func workspaceServerOverride(for languageId: String, workspacePath: String) async -> LanguageServerBinary? {
+        guard languageId == "dart", languageConfigs[languageId] == nil,
+              await settingsConfiguredServer(for: languageId) == nil,
+              let sdk = FlutterWorkspace.sdkOverride(for: URL(fileURLWithPath: workspacePath)) else {
+            return nil
+        }
+        let dart = sdk.appending(path: "bin/cache/dart-sdk/bin/dart").path
+        guard FileManager.default.isExecutableFile(atPath: dart),
+              let detected = LanguageServerDetector.supportedServers.first(where: { $0.languageIds.contains("dart") })
+        else { return nil }
+        return LanguageServerBinary(execPath: dart, args: detected.arguments, env: await shellEnvironment())
+    }
+
     /// Builds the binary configuration for a server the user picked in the LSP settings.
     /// - Parameter languageId: The LSP language identifier to find a server for.
     /// - Returns: The binary configuration, or `nil` if the language has no configured server.
@@ -83,7 +116,7 @@ extension LSPService {
     }
 
     /// The user's login shell environment, resolved once and cached.
-    private func shellEnvironment() async -> [String: String] {
+    func shellEnvironment() async -> [String: String] {
         if let cachedShellEnvironment {
             return cachedShellEnvironment
         }

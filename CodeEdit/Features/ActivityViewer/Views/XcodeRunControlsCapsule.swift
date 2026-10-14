@@ -23,9 +23,38 @@ struct XcodeRunControlsCapsule: View {
                 StartTaskToolbarButton(taskManager: taskManager)
                 ToolbarSeparator()
                 StopTaskToolbarButton(taskManager: taskManager)
+                if taskManager.canHotReload {
+                    ToolbarSeparator()
+                    HotReloadToolbarButton(taskManager: taskManager)
+                }
             }
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Run/Stop")
+    }
+}
+
+/// Hot reloads the running Flutter app; ⌥-click hot restarts it. Shown only while a `flutter run`
+/// task accepts hot reload.
+struct HotReloadToolbarButton: View {
+    @Environment(\.controlActiveState)
+    private var activeState
+
+    @ObservedObject var taskManager: TaskManager
+
+    var body: some View {
+        Button {
+            taskManager.hotReload(restart: NSEvent.modifierFlags.contains(.option))
+        } label: {
+            Label("Hot Reload", systemImage: "bolt.fill")
+                .labelStyle(.iconOnly)
+                .font(.system(size: 15, weight: .regular))
+                .toolbarCircleFeedback()
+                .opacity(activeState == .inactive ? 0.5 : 1.0)
+        }
+        .buttonStyle(.plain)
+        .help("Hot Reload (⌘\\) · Option-click to Hot Restart (⇧⌘\\)")
+        .accessibilityLabel("Hot Reload")
+        .accessibilityIdentifier("HotReload")
     }
 }

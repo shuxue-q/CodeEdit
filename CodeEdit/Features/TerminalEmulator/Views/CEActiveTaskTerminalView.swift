@@ -59,6 +59,11 @@ class CEActiveTaskTerminalView: CELocalShellTerminalView {
         )
     }
 
+    override func dataReceived(slice: ArraySlice<UInt8>) {
+        activeTask.outputObserver?(slice)
+        super.dataReceived(slice: slice)
+    }
+
     override func processTerminated(_ source: LocalProcess, exitCode: Int32?) {
         activeTask.handleProcessFinished(terminationStatus: exitCode ?? 1)
     }

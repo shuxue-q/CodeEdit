@@ -51,6 +51,11 @@ extension WorkspaceDocument {
         }
         self.cmakeBuildController = buildController
         taskManager?.cmakeBuildController = buildController
+        // The CMake build and CTest tasks need the project name and build directory.
+        Task { [weak self, weak cmakeWorkspace] in
+            await cmakeWorkspace?.waitForReload()
+            self?.regenerateTasks()
+        }
     }
 
     /// Stops and drops the CMake models, before closing or switching to another native root.

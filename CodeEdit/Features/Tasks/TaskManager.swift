@@ -22,7 +22,19 @@ class TaskManager: ObservableObject {
     /// no separate build UI is added for this.
     var cmakeBuildController: CMakeBuildController?
 
-    private var workspaceURL: URL?
+    /// Tasks generated from the workspace's Flutter, Cargo and CMake projects, listed after the
+    /// user's own tasks. Not saved to the workspace settings.
+    @Published var generatedTasks: [CETask] = []
+    /// What each generated task is, keyed by task ID.
+    @Published var generatedTaskInfo: [UUID: GeneratedTaskInfo] = [:]
+    /// Running `flutter run` tasks that accept hot reload keys.
+    @Published var hotReloadReadyTaskIDs: Set<UUID> = []
+    /// Where generated tasks' problems go; set by the workspace document.
+    var diagnosticsStore: TaskDiagnosticsStore?
+    /// Output monitors of generated task runs, keyed by task ID.
+    var outputMonitors: [UUID: TaskOutputMonitor] = [:]
+
+    private(set) var workspaceURL: URL?
     private var settingsListener: AnyCancellable?
 
     init(workspaceSettings: CEWorkspaceSettingsData, workspaceURL: URL?) {
@@ -37,9 +49,12 @@ class TaskManager: ObservableObject {
     }
 
     /// Whether the start/stop controls run a CMake build: the workspace is a CMake project
-    /// (the document sets ``cmakeBuildController``) and no user-configured tasks exist.
+    /// (the document sets ``cmakeBuildController``) and either no tasks exist or the generated
+    /// CMake build task is selected.
     var isCMakeBuildTarget: Bool {
-        workspaceSettings.tasks.isEmpty && cmakeBuildController != nil
+        guard cmakeBuildController != nil else { return false }
+        if availableTasks.isEmpty { return true }
+        return generatedTaskInfo[selectedTaskID ?? availableTasks[0].id]?.action == .cmakeBuild
     }
 
     var selectedTask: CETask? {
@@ -59,7 +74,7 @@ class TaskManager: ObservableObject {
     }
 
     var availableTasks: [CETask] {
-        return workspaceSettings.tasks
+        workspaceSettings.tasks + generatedTasks
     }
 
     func taskStatus(taskID: UUID) -> CETaskStatus {
@@ -76,7 +91,7 @@ class TaskManager: ObservableObject {
             cmakeBuildController?.start()
             return
         }
-        guard let task = workspaceSettings.tasks.first(where: { $0.id == selectedTaskID }) else { return }
+        guard let task = availableTasks.first(where: { $0.id == selectedTaskID }) else { return }
         Task {
             await runTask(task: task)
         }
@@ -92,9 +107,12 @@ class TaskManager: ObservableObject {
             while activeTask.status == .running {
                 await Task.yield()
             }
+            await waitForTrailingOutput(of: activeTask)
+            prepareOutputMonitor(for: activeTask, task: task)
             activeTask.run(workspaceURL: workspaceURL)
         } else {
             let runningTask = CEActiveTask(task: task)
+            prepareOutputMonitor(for: runningTask, task: task)
             runningTask.run(workspaceURL: workspaceURL)
             await MainActor.run {
                 activeTasks[task.id] = runningTask
@@ -110,7 +128,7 @@ class TaskManager: ObservableObject {
         guard let taskID = selectedTaskID else {
             return
         }
-
+        if stopFlutterRunGracefully(taskID: taskID) { return }
         terminateTask(taskID: taskID)
     }
 

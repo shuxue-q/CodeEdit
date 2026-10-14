@@ -49,6 +49,14 @@ final class WorkspaceDocument: NSDocument, ObservableObject, NSToolbarDelegate {
     var cmakeBuildController: CMakeBuildController?
     /// Flutter project, SDK, and native CMake root discovery, for folders with a `pubspec.yaml`.
     var flutterWorkspace: FlutterWorkspace?
+    /// Flutter, CMake and Cargo projects found in the workspace, their settings and tool versions.
+    var projectInventory: ProjectInventoryModel?
+    /// Problems parsed from generated Flutter, Cargo and CTest tasks.
+    let taskDiagnostics = TaskDiagnosticsStore()
+    /// Notification observers installed by ``configureProjectInventory(url:)``.
+    var projectObservers: [NSObjectProtocol] = []
+    /// Coalesces hot reloads when several Dart files are saved at once.
+    var hotReloadOnSaveTask: Task<Void, Never>?
     /// Section selection and text files of the project editor shown for the workspace root.
     var projectEditorState: ProjectEditorState?
     /// History of past builds, debug sessions, and tasks for this workspace; created in
@@ -183,8 +191,10 @@ final class WorkspaceDocument: NSDocument, ObservableObject, NSToolbarDelegate {
                 workspaceURL: url
             )
             self.taskManager?.cmakeBuildController = cmakeBuildController
+            self.taskManager?.diagnosticsStore = taskDiagnostics
         }
         configureProjectEditorState(url: url)
+        configureProjectInventory(url: url)
         self.taskNotificationHandler.workspaceURL = url
         observeTaskReports(url: url)
 
@@ -199,7 +209,8 @@ final class WorkspaceDocument: NSDocument, ObservableObject, NSToolbarDelegate {
         // A Flutter project's CMake models appear once its native root is discovered.
         let state = ProjectEditorState(
             rootURL: url,
-            includesCMakeSettings: cmakeProjectSettings != nil || flutterWorkspace != nil
+            includesCMakeSettings: cmakeProjectSettings != nil || flutterWorkspace != nil,
+            includesFlutterSettings: flutterWorkspace != nil
         )
         let cmakeSettingsURL = CMakeProjectSettingsStore.fileURL(for: url)
         for file in state.configurationFiles {
@@ -207,6 +218,10 @@ final class WorkspaceDocument: NSDocument, ObservableObject, NSToolbarDelegate {
                 file.didSave = { [weak self] in self?.workspaceSettingsManager?.reloadFromDisk() }
             } else if file.url == cmakeSettingsURL {
                 file.didSave = { [weak self] in self?.cmakeProjectSettings?.reloadFromDisk() }
+            } else if file.url == ProjectSettingsFile<FlutterProjectSettings>.fileURL(for: url) {
+                file.didSave = { [weak self] in self?.flutterWorkspace?.settings.reloadFromDisk() }
+            } else if file.url == ProjectSettingsFile<CargoProjectSettings>.fileURL(for: url) {
+                file.didSave = { [weak self] in self?.projectInventory?.cargoSettings.reloadFromDisk() }
             }
         }
         projectEditorState = state
@@ -241,6 +256,7 @@ final class WorkspaceDocument: NSDocument, ObservableObject, NSToolbarDelegate {
         workspaceSettingsManager = nil
         flutterWorkspace?.cancel()
         flutterWorkspace = nil
+        releaseProjectInventory()
         releaseCMakeWorkspace()
         projectEditorState = nil
         taskManager = nil

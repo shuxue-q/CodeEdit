@@ -116,7 +116,8 @@ enum WorkspaceDiagnostics {
     /// All diagnostics currently known for `workspace`.
     @MainActor
     static func all(in workspace: WorkspaceDocument, store: LSPDiagnosticsStore) -> [CMakeBuildDiagnostic] {
-        let cmake = workspace.cmakeBuildController?.diagnostics ?? []
+        // Build problems: the CMake build, then generated Flutter, Cargo and CTest tasks.
+        let cmake = (workspace.cmakeBuildController?.diagnostics ?? []) + workspace.taskDiagnostics.all
         let lsp: [String: [Diagnostic]]
         if let path = workspace.fileURL?.absolutePath {
             lsp = store.diagnostics(for: path)
