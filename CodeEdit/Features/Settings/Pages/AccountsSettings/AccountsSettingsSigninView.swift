@@ -66,7 +66,7 @@ struct AccountsSettingsSigninView: View {
                         VStack(alignment: .center, spacing: 10) {
                             FeatureIcon(image: Image(provider.iconResource), size: 52)
                                 .padding(.top, 5)
-                            Text("Sign in to \(provider.name)")
+                            Text("Sign in to \(provider.localizedName)")
                                 .multilineTextAlignment(.center)
                         }
                         .frame(maxWidth: .infinity)
@@ -74,7 +74,7 @@ struct AccountsSettingsSigninView: View {
                     footer: {
                         VStack(alignment: .leading, spacing: 5) {
                             if provider == .github {
-                                Text("\(provider.name) personal access tokens must have these scopes set:")
+                                Text("\(provider.localizedName) personal access tokens must have these scopes set:")
                                     .font(.system(size: 10.5))
                                     .foregroundColor(.secondary)
                                     .multilineTextAlignment(.leading)
@@ -114,10 +114,10 @@ struct AccountsSettingsSigninView: View {
                                 createToken(provider.authHelpURL)
                             } label: {
                                 if provider.authType == .password {
-                                    Text("Create a Password on \(provider.name)")
+                                    Text("Create a Password on \(provider.localizedName)")
                                         .font(.system(size: 10.5))
                                 } else {
-                                    Text("Create a Token on \(provider.name)")
+                                    Text("Create a Token on \(provider.localizedName)")
                                         .font(.system(size: 10.5))
                                 }
                             }
@@ -178,7 +178,7 @@ struct AccountsSettingsSigninView: View {
             }
         ) {
             // Show alert when adding a duplicated account
-            signinErrorDetail = "Account with the same username and provider already exists!"
+            signinErrorDetail = String(localized: "Account with the same username and provider already exists!")
             signinErrorAlertIsPresented.toggle()
         } else {
             let configURL = provider.apiURL?.absoluteString ?? server
@@ -239,11 +239,11 @@ struct AccountsSettingsSigninView: View {
         case -1009:
             signinErrorDetail = error.localizedDescription
         case 401:
-            signinErrorDetail = "Authentication Failed"
+            signinErrorDetail = String(localized: "Authentication Failed")
         case 403:
-            signinErrorDetail = "API Access Forbidden"
+            signinErrorDetail = String(localized: "API Access Forbidden")
         default:
-            signinErrorDetail = "Unknown Error"
+            signinErrorDetail = String(localized: "Unknown Error")
         }
         signinErrorAlertIsPresented.toggle()
     }

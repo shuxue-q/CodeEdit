@@ -281,10 +281,10 @@ extension TextViewController {
         if checkGitWorkTree(directory: directory) {
             let uncommittedInfo = GitBlameLineInfo(
                 commitHash: "0000000000000000000000000000000000000000",
-                author: "Not Committed Yet",
+                author: String(localized: "Not Committed Yet", bundle: .module),
                 authorEmail: "",
                 date: Date(),
-                summary: "Uncommitted changes on this line",
+                summary: String(localized: "Uncommitted changes on this line", bundle: .module),
                 lineContent: ""
             )
             DispatchQueue.main.async { [weak self] in
@@ -305,7 +305,7 @@ extension TextViewController {
 
     private func parseGitBlameOutput(_ output: String) -> GitBlameLineInfo {
         var commitHash = ""
-        var author = "Unknown"
+        var author = String(localized: "Unknown", bundle: .module)
         var authorEmail = ""
         var authorTime: TimeInterval = 0
         var summary = ""
@@ -331,8 +331,8 @@ extension TextViewController {
         }
 
         if !commitHash.isEmpty && commitHash.allSatisfy({ $0 == "0" }) {
-            author = "Not Committed Yet"
-            summary = "Uncommitted changes on this line"
+            author = String(localized: "Not Committed Yet", bundle: .module)
+            summary = String(localized: "Uncommitted changes on this line", bundle: .module)
         }
 
         let date = authorTime > 0 ? Date(timeIntervalSince1970: authorTime) : Date()
@@ -341,7 +341,7 @@ extension TextViewController {
             author: author,
             authorEmail: authorEmail,
             date: date,
-            summary: summary.isEmpty ? "No commit message" : summary,
+            summary: summary.isEmpty ? String(localized: "No commit message", bundle: .module) : summary,
             lineContent: lineContent
         )
     }

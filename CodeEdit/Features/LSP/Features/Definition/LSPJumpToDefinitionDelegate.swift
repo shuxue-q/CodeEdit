@@ -135,7 +135,7 @@ final class LSPJumpToDefinitionDelegate: JumpToDefinitionDelegate {
         symbol: String,
         textView: TextViewController
     ) -> JumpToDefinitionLink? {
-        let label = symbol.isEmpty ? "Definition" : symbol
+        let label = symbol.isEmpty ? String(localized: "Definition") : symbol
         if location.uri == currentURI {
             guard let nsRange = textView.textView.nsRangeFrom(lspRange: location.range) else { return nil }
             return JumpToDefinitionLink(

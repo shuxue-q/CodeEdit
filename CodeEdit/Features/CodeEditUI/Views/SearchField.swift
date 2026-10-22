@@ -19,7 +19,11 @@ struct SearchField: NSViewRepresentable {
     func makeNSView(context: Context) -> NSSearchField {
         let searchField = NSSearchField()
         searchField.delegate = context.coordinator
-        searchField.placeholderString = placeholder
+        searchField.placeholderString = Bundle.main.localizedString(
+            forKey: placeholder,
+            value: nil,
+            table: nil
+        )
         return searchField
     }
 

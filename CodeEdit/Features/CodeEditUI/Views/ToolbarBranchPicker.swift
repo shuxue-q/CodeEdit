@@ -96,7 +96,7 @@ struct ToolbarBranchPicker: View {
     }
 
     private var title: String {
-        workspaceFileManager?.folderUrl.lastPathComponent ?? "Empty"
+        workspaceFileManager?.folderUrl.lastPathComponent ?? String(localized: "Empty")
     }
 
     // MARK: Popover View
@@ -167,7 +167,7 @@ struct ToolbarBranchPicker: View {
             .frame(width: 340)
         }
 
-        func headerLabel(_ title: String) -> some View {
+        func headerLabel(_ title: LocalizedStringKey) -> some View {
             Text(title)
                 .font(.subheadline.bold())
                 .foregroundColor(.secondary)
@@ -216,7 +216,10 @@ struct ToolbarBranchPicker: View {
                     do {
                         try await sourceControlManager.checkoutBranch(branch: branch)
                     } catch {
-                        await sourceControlManager.showAlertForError(title: "Failed to checkout", error: error)
+                        await sourceControlManager.showAlertForError(
+                            title: String(localized: "Failed to checkout"),
+                            error: error
+                        )
                     }
                 }
             }

@@ -24,21 +24,21 @@ struct FontWeightPicker: View {
     ]
 
     var weightNames: [NSFont.Weight: String] = [
-        .ultraLight: "Ultra Light",
-        .thin: "Thin",
-        .light: "Light",
-        .regular: "Regular",
-        .medium: "Medium",
-        .semibold: "Semi Bold",
-        .bold: "Bold",
-        .heavy: "Heavy",
-        .black: "Black"
+        .ultraLight: String(localized: "Ultra Light"),
+        .thin: String(localized: "Thin"),
+        .light: String(localized: "Light"),
+        .regular: String(localized: "Regular"),
+        .medium: String(localized: "Medium"),
+        .semibold: String(localized: "Semi Bold"),
+        .bold: String(localized: "Bold"),
+        .heavy: String(localized: "Heavy"),
+        .black: String(localized: "Black")
     ]
 
     var body: some View {
-        Picker(label ?? "Font Weight", selection: $selection) {
+        Picker(label ?? String(localized: "Font Weight"), selection: $selection) {
             ForEach(fontWeights, id: \.self) { weight in
-                Text(weightNames[weight] ?? "Unknown")
+                Text(weightNames[weight] ?? String(localized: "Unknown"))
                     .tag(weight)
             }
         }

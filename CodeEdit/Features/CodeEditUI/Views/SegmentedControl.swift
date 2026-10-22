@@ -66,7 +66,7 @@ struct SegmentedControlItem: View {
     @State var isPressing: Bool = false
 
     var body: some View {
-        Text(label)
+        Text(label.localizedAtRuntime)
             .font(.subheadline)
             .foregroundColor(textColor)
             .opacity(textOpacity)

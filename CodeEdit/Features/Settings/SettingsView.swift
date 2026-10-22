@@ -109,6 +109,12 @@ struct SettingsView: View {
 
     let updater: SoftwareUpdater
 
+    /// Whether the search text matches a page title, in the display language or in English.
+    private func pageNameMatches(_ name: SettingsPage.Name, _ lowercasedSearchText: String) -> Bool {
+        name.localizedName.lowercased().contains(lowercasedSearchText)
+            || name.rawValue.lowercased().contains(lowercasedSearchText)
+    }
+
     /// Searches through an array of pages to check if a page name exists in the array
     private func resultFound(_ page: SettingsPage, pages: [SettingsPage]) -> SettingsSearchResult {
         let lowercasedSearchText = searchText.lowercased()
@@ -118,7 +124,7 @@ struct SettingsView: View {
         for item in pages where item.name == page.name {
             if item.isSetting && item.settingName.lowercased().contains(lowercasedSearchText) {
                 returnedPages.append(item)
-            } else if item.name.rawValue.contains(lowercasedSearchText) && !item.isSetting {
+            } else if pageNameMatches(item.name, lowercasedSearchText) && !item.isSetting {
                 foundPage = true
             }
         }
@@ -147,7 +153,7 @@ struct SettingsView: View {
                             .padding(.leading, 22)
                     }
                 }
-            } else if page.name.rawValue.lowercased().contains(searchText.lowercased()) && !page.isSetting {
+            } else if pageNameMatches(page.name, searchText.lowercased()) && !page.isSetting {
                 SettingsPageView(page, searchText: searchText)
             }
         } else if !page.isSetting {
@@ -222,7 +228,7 @@ struct SettingsView: View {
             }
         }
         .hideSidebarToggle()
-        .navigationTitle(selectedPage.name.rawValue)
+        .navigationTitle(selectedPage.name.localizedName)
         .toolbar {
             /// macOS 26 automatically adjusts the leading padding for navigationTitle
             if #unavailable(macOS 26.0) {

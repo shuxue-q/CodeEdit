@@ -83,7 +83,7 @@ struct PaneTextField<LeadingAccessories: View, TrailingAccessories: View>: View 
                     .frame(height: 20)
             }
             VStack {
-                TextField(label, text: $text, axis: axis)
+                TextField(label.localizedAtRuntime, text: $text, axis: axis)
                     .textFieldStyle(.plain)
                     .focused($isFocused)
                     .controlSize(.small)

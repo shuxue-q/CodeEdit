@@ -21,28 +21,28 @@ struct ActivityStatusInput {
 enum ActivityStatusResolver {
     static func status(_ input: ActivityStatusInput) -> String {
         if input.cmakeIsBuilding {
-            return input.cmakeStatusText.isEmpty ? "Building..." : input.cmakeStatusText
+            return input.cmakeStatusText.isEmpty ? String(localized: "Building...") : input.cmakeStatusText
         }
         if let runningTaskName = input.runningTaskName, !runningTaskName.isEmpty {
-            return "Running \(runningTaskName)"
+            return String(localized: "Running \(runningTaskName)")
         }
         if let notificationTitle = input.notificationTitle, !notificationTitle.isEmpty {
             return notificationTitle
         }
         switch input.cmakeOutcome {
         case .success:
-            return "Build Succeeded"
+            return String(localized: "Build Succeeded")
         case .failed:
-            return "Build Failed"
+            return String(localized: "Build Failed")
         case .cancelled:
-            return "Build Stopped"
+            return String(localized: "Build Stopped")
         case .none:
             break
         }
         if let finishedTaskName = input.finishedTaskName, !finishedTaskName.isEmpty {
-            return "Finished running \(finishedTaskName)"
+            return String(localized: "Finished running \(finishedTaskName)")
         }
-        return "Ready"
+        return String(localized: "Ready")
     }
 }
 

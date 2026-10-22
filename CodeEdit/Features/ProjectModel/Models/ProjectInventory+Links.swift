@@ -23,11 +23,21 @@ extension ProjectInventory {
             guard let hook = NativeAssetsHook.read(in: package.directory) else { continue }
             let evidence = relativePath(of: package.directory.appending(path: NativeAssetsHook.relativePath))
             if hook.runsCMake, let cmake = nearestComponent(of: .cmakeProject, to: package.directory) {
-                links.append(ProjectLink(source: package.id, target: cmake.id, summary: "builds", evidence: evidence))
+                links.append(ProjectLink(
+                    source: package.id,
+                    target: cmake.id,
+                    summary: String(localized: "builds"),
+                    evidence: evidence
+                ))
             }
             let primaryCargo = components.first { $0.kind.toolchain == .cargo && $0.role == .primary }
             if hook.runsCargo, let cargo = primaryCargo {
-                links.append(ProjectLink(source: package.id, target: cargo.id, summary: "builds", evidence: evidence))
+                links.append(ProjectLink(
+                    source: package.id,
+                    target: cargo.id,
+                    summary: String(localized: "builds"),
+                    evidence: evidence
+                ))
             }
         }
     }
@@ -48,7 +58,7 @@ extension ProjectInventory {
                     links.append(ProjectLink(
                         source: cmake.id,
                         target: cargo.id,
-                        summary: "builds",
+                        summary: String(localized: "builds"),
                         evidence: relativePath(of: listFile)
                     ))
                 }
@@ -69,7 +79,7 @@ extension ProjectInventory {
                 links.append(ProjectLink(
                     source: package.id,
                     target: dependencyComponent.id,
-                    summary: "depends on",
+                    summary: String(localized: "depends on"),
                     evidence: relativePath(of: package.directory.appending(path: PubspecParser.fileName))
                 ))
             }

@@ -74,5 +74,7 @@ struct CMakePreset: Identifiable, Sendable {
 struct CMakeParseError: LocalizedError {
     let message: String
     init(_ message: String) { self.message = message }
+    /// Creates an error whose message is localized for display in settings.
+    init(localized message: String.LocalizationValue) { self.message = String(localized: message) }
     var errorDescription: String? { message }
 }

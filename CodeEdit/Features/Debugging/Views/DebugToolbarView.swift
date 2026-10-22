@@ -130,10 +130,13 @@ struct DebugToolbarView: View {
     private func startDebugging(with store: CMakeProjectSettingsStore) async {
         guard let launch = await store.resolveLaunchConfiguration(),
               FileManager.default.isExecutableFile(atPath: launch.executable.path(percentEncoded: false)) else {
-            let name = store.settings.run.targetName ?? store.settings.run.customExecutable ?? "The run target"
+            let name = store.settings.run.targetName ?? store.settings.run.customExecutable
+                ?? String(localized: "The run target")
             debugService.appendConsole(
                 category: "error",
-                text: "\(name) has no built executable yet. Build the project, then start debugging again."
+                text: String(
+                    localized: "\(name) has no built executable yet. Build the project, then start debugging again."
+                )
             )
             debugService.showDebugArea()
             return
@@ -186,7 +189,7 @@ struct DebugTargetPicker: View {
                 Self.chooseExecutable(for: defaultsKey)
                 executablePath = UserDefaults.standard.string(forKey: defaultsKey)
             } label: {
-                Label(executableName ?? "Choose Target", systemImage: "hammer")
+                Label(executableName ?? String(localized: "Choose Target"), systemImage: "hammer")
                     .lineLimit(1)
             }
             .buttonStyle(.plain)
@@ -226,7 +229,7 @@ struct DebugTargetPicker: View {
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
         panel.directoryURL = directory
-        panel.message = "Choose the executable to debug"
+        panel.message = String(localized: "Choose the executable to debug")
         guard panel.runModal() == .OK, let url = panel.url else { return nil }
         return url.path
     }
@@ -278,6 +281,6 @@ private struct CMakeRunTargetMenu: View {
         if let custom = run.customExecutable, !custom.isEmpty {
             return URL(fileURLWithPath: custom).lastPathComponent
         }
-        return run.targetName ?? fallbackName ?? "Choose Target"
+        return run.targetName ?? fallbackName ?? String(localized: "Choose Target")
     }
 }

@@ -63,7 +63,7 @@ struct TOMLParser {
             try root.withTable(at: parent) { table in
                 var array = table[last]?.array ?? []
                 if table[last] != nil && table[last]?.array == nil {
-                    throw TOMLParseError(message: "'\(last)' is not an array of tables")
+                    throw TOMLParseError(localized: "'\(last)' is not an array of tables")
                 }
                 array.append(.table(TOMLTable()))
                 table[last] = .array(array)
@@ -83,7 +83,7 @@ struct TOMLParser {
         let last = keys[keys.count - 1]
         try root.withTable(at: (path + keys.dropLast())[...]) { table in
             if table[last] != nil {
-                throw TOMLParseError(message: "'\(last)' is defined twice")
+                throw TOMLParseError(localized: "'\(last)' is defined twice")
             }
             table[last] = value
         }
@@ -102,7 +102,7 @@ struct TOMLParser {
         var keys: [String] = []
         while true {
             skipInlineWhitespace()
-            guard let char = peek() else { throw TOMLParseError(message: "Expected a key") }
+            guard let char = peek() else { throw TOMLParseError(localized: "Expected a key") }
             if char == "\"" {
                 keys.append(try parseBasicString())
             } else if char == "'" {
@@ -112,7 +112,7 @@ struct TOMLParser {
                 while let next = peek(), next.isLetter || next.isNumber || next == "_" || next == "-" {
                     index += 1
                 }
-                guard index > start else { throw TOMLParseError(message: "Expected a key") }
+                guard index > start else { throw TOMLParseError(localized: "Expected a key") }
                 keys.append(String(chars[start..<index]))
             }
             skipInlineWhitespace()
@@ -124,7 +124,7 @@ struct TOMLParser {
     // MARK: Values
 
     private mutating func parseValue() throws -> TOMLValue {
-        guard let char = peek() else { throw TOMLParseError(message: "Expected a value") }
+        guard let char = peek() else { throw TOMLParseError(localized: "Expected a value") }
         switch char {
         case "\"":
             return .string(hasPrefix("\"\"\"") ? try parseMultilineBasicString() : try parseBasicString())
@@ -144,7 +144,7 @@ struct TOMLParser {
         var values: [TOMLValue] = []
         while true {
             skipWhitespaceCommentsAndNewlines()
-            guard let char = peek() else { throw TOMLParseError(message: "Unterminated array") }
+            guard let char = peek() else { throw TOMLParseError(localized: "Unterminated array") }
             if char == "]" {
                 index += 1
                 return .array(values)
@@ -154,7 +154,7 @@ struct TOMLParser {
             if peek() == "," {
                 index += 1
             } else if peek() != "]" {
-                throw TOMLParseError(message: "Expected ',' or ']' in array")
+                throw TOMLParseError(localized: "Expected ',' or ']' in array")
             }
         }
     }
@@ -172,14 +172,14 @@ struct TOMLParser {
             let (keys, value) = try parseKeyValue()
             let last = keys[keys.count - 1]
             try table.withTable(at: keys.dropLast()) { inner in
-                if inner[last] != nil { throw TOMLParseError(message: "'\(last)' is defined twice") }
+                if inner[last] != nil { throw TOMLParseError(localized: "'\(last)' is defined twice") }
                 inner[last] = value
             }
             skipInlineWhitespace()
-            guard let char = peek() else { throw TOMLParseError(message: "Unterminated inline table") }
+            guard let char = peek() else { throw TOMLParseError(localized: "Unterminated inline table") }
             index += 1
             if char == "}" { return .table(table) }
-            guard char == "," else { throw TOMLParseError(message: "Expected ',' or '}' in inline table") }
+            guard char == "," else { throw TOMLParseError(localized: "Expected ',' or '}' in inline table") }
         }
     }
 
@@ -195,13 +195,13 @@ struct TOMLParser {
             index += 1
         }
         let token = String(chars[start..<index]).trimmingCharacters(in: .whitespaces)
-        guard !token.isEmpty else { throw TOMLParseError(message: "Expected a value") }
+        guard !token.isEmpty else { throw TOMLParseError(localized: "Expected a value") }
         if token == "true" { return .boolean(true) }
         if token == "false" { return .boolean(false) }
         if let integer = Self.integer(token) { return .integer(integer) }
         if let float = Self.float(token) { return .float(float) }
         if isDate(token) || token.contains(":") { return .dateTime(token) }
-        throw TOMLParseError(message: "Invalid value '\(token)'")
+        throw TOMLParseError(localized: "Invalid value '\(token)'")
     }
 
     private func isDate(_ text: String) -> Bool {
@@ -249,7 +249,7 @@ struct TOMLParser {
     }
 
     private mutating func expect(_ char: Character) throws {
-        guard peek() == char else { throw TOMLParseError(message: "Expected '\(char)'") }
+        guard peek() == char else { throw TOMLParseError(localized: "Expected '\(String(char))'") }
         index += 1
     }
 
@@ -282,7 +282,7 @@ struct TOMLParser {
         skipInlineWhitespace()
         skipComment()
         guard let char = peek() else { return }
-        guard char.isNewline else { throw TOMLParseError(message: "Unexpected text after value") }
+        guard char.isNewline else { throw TOMLParseError(localized: "Unexpected text after value") }
     }
 
     private mutating func skipToNextLine() {

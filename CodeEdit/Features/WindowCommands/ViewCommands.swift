@@ -80,7 +80,9 @@ struct ViewCommands: Commands {
 
             Divider()
 
-            Button("\(showEditorJumpBar ? "Hide" : "Show") Jump Bar") {
+            Button(
+                showEditorJumpBar ? String(localized: "Hide Jump Bar") : String(localized: "Show Jump Bar")
+            ) {
                 showEditorJumpBar.toggle()
             }
 
@@ -121,31 +123,41 @@ extension ViewCommands {
         }
 
         var body: some View {
-            Button("\(navigatorCollapsed ? "Show" : "Hide") Navigator") {
+            Button(
+                navigatorCollapsed ? String(localized: "Show Navigator") : String(localized: "Hide Navigator")
+            ) {
                 windowController?.toggleFirstPanel()
             }
             .disabled(windowController == nil)
             .keyboardShortcut("0", modifiers: [.command])
 
-            Button("\(inspectorCollapsed ? "Show" : "Hide") Inspector") {
+            Button(
+                inspectorCollapsed ? String(localized: "Show Inspector") : String(localized: "Hide Inspector")
+            ) {
                 windowController?.toggleLastPanel()
             }
             .disabled(windowController == nil)
             .keyboardShortcut("i", modifiers: [.control, .command])
 
-            Button("\(utilityAreaCollapsed ? "Show" : "Hide") Utility Area") {
+            Button(
+                utilityAreaCollapsed ? String(localized: "Show Utility Area") : String(localized: "Hide Utility Area")
+            ) {
                 CommandManager.shared.executeCommand("open.drawer")
             }
             .disabled(windowController == nil)
             .keyboardShortcut("y", modifiers: [.shift, .command])
 
-            Button("\(toolbarCollapsed ? "Show" : "Hide") Toolbar") {
+            Button(
+                toolbarCollapsed ? String(localized: "Show Toolbar") : String(localized: "Hide Toolbar")
+            ) {
                 windowController?.toggleToolbar()
             }
             .disabled(windowController == nil)
             .keyboardShortcut("t", modifiers: [.option, .command])
 
-            Button("\(isInterfaceHidden ? "Show" : "Hide") Interface") {
+            Button(
+                isInterfaceHidden ? String(localized: "Show Interface") : String(localized: "Hide Interface")
+            ) {
                 windowController?.toggleInterface(shouldHide: !isInterfaceHidden)
             }
             .disabled(windowController == nil)

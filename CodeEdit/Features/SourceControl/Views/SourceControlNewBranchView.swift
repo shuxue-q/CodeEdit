@@ -31,8 +31,10 @@ struct SourceControlNewBranchView: View {
                     } header: {
                         Text("Create a new branch")
                         Text(
-                            "Create a branch from the current branch and switch to it. " +
-                            "All uncommited changes will be preserved on the new branch. "
+                            """
+                            Create a branch from the current branch and switch to it. \
+                            All uncommited changes will be preserved on the new branch.
+                            """
                         )
                     }
                 }
@@ -75,7 +77,7 @@ struct SourceControlNewBranchView: View {
                 }
             } catch {
                 await sourceControlManager.showAlertForError(
-                    title: "Failed to create branch",
+                    title: String(localized: "Failed to create branch"),
                     error: error
                 )
             }

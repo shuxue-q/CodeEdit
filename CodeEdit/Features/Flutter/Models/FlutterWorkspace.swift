@@ -69,7 +69,7 @@ final class FlutterWorkspace {
     /// A root's name for display: "Workspace Root", or its relative path with a trailing slash.
     func displayName(of nativeRoot: URL) -> String {
         let path = relativePath(of: nativeRoot)
-        return path == "." ? "Workspace Root" : path + "/"
+        return path == "." ? String(localized: "Workspace Root") : path + "/"
     }
 
     /// Makes `nativeRoot` the active root and saves the choice in the project settings right away,

@@ -22,11 +22,11 @@ struct LSPSettingsView: View {
                 }
             } header: {
                 Text("Language Servers")
-                Text(
-                    "CodeEdit does not install language servers itself. " +
-                    "Servers installed on your system are detected automatically " +
-                    "and provide completion, hover, and more."
-                )
+                Text("""
+                CodeEdit does not install language servers itself. \
+                Servers installed on your system are detected automatically \
+                and provide completion, hover, and more.
+                """)
             } footer: {
                 HStack {
                     if model.isDetecting {

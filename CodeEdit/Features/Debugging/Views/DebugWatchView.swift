@@ -46,7 +46,7 @@ struct DebugWatchView: View {
                         Image(systemName: isAddingExpression ? "minus" : "plus")
                     }
                     .buttonStyle(.icon(isActive: isAddingExpression))
-                    .help(isAddingExpression ? "Cancel" : "Add Watch Expression")
+                    .help(isAddingExpression ? String(localized: "Cancel") : String(localized: "Add Watch Expression"))
                     .accessibilityIdentifier("DebugWatchAdd")
                 }
             }

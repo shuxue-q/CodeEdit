@@ -29,13 +29,13 @@ final class ProjectEditorState {
 
         var title: String {
             switch self {
-            case .overview: "Overview"
+            case .overview: String(localized: "Overview")
             case .flutter: "Flutter"
             case .rust: "Rust"
             case .cpp: "C++"
-            case .cmake(let pane): pane.rawValue
-            case .versionControl: "Version Control"
-            case .projectFiles: "Project Files"
+            case .cmake(let pane): pane.title
+            case .versionControl: String(localized: "Version Control")
+            case .projectFiles: String(localized: "Project Files")
             }
         }
     }

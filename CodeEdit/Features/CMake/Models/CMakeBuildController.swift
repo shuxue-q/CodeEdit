@@ -112,7 +112,7 @@ final class CMakeBuildController {
                         self.beginRun(cmake: cmake, environment: environment)
                     } else {
                         self.diagnostics = []; self.outcome = .none
-                        self.statusText = "CMake was not found in the login shell PATH."
+                        self.statusText = String(localized: "CMake was not found in the login shell PATH.")
                     }
                 }
             }
@@ -185,7 +185,7 @@ final class CMakeBuildController {
 
     /// Runs the build step itself; shared by direct builds and post-configure builds.
     private func runBuild(request: LaunchRequest, options: CMakeConfigureOptions, generation: Int) {
-        statusText = "Building…"
+        statusText = String(localized: "Building…")
         let arguments = options.buildArguments
         Self.logger.info("cmake \(arguments.joined(separator: " "))")
         runProcess(request, arguments: arguments, generation: generation) { [weak self] exitCode in
@@ -196,7 +196,7 @@ final class CMakeBuildController {
     /// Runs a configure step first, then the build. The configure asks CMake for the File API
     /// codemodel (for run targets) and records its arguments so later builds skip it.
     private func configureThenBuild(request: LaunchRequest, options: CMakeConfigureOptions, generation: Int) {
-        statusText = "Configuring…"
+        statusText = String(localized: "Configuring…")
         let arguments = options.configureArguments
         CMakeExecutableTargets.writeQuery(buildDirectory: options.buildDirectory)
         Self.logger.info("cmake \(arguments.joined(separator: " "))")
@@ -220,22 +220,22 @@ final class CMakeBuildController {
             diagnostics.append(contentsOf: remainder)
         }
         if parser.isTruncated {
+            let limit = CMakeBuildOutputParser.maximumDiagnostics
             diagnostics.append(CMakeBuildDiagnostic(
                 severity: .warning,
-                message: "Build output was truncated; only the first "
-                    + "\(CMakeBuildOutputParser.maximumDiagnostics) diagnostics are shown."
+                message: String(localized: "Build output was truncated; only the first \(limit) diagnostics are shown.")
             ))
         }
         isBuilding = false
         if stopRequested {
             outcome = .cancelled
-            statusText = "Build stopped."
+            statusText = String(localized: "Build stopped.")
         } else if exitCode == 0 {
             outcome = .success
-            statusText = "Build succeeded."
+            statusText = String(localized: "Build succeeded.")
         } else {
             outcome = .failed(exitCode: exitCode)
-            statusText = "Build failed (exit code \(exitCode))."
+            statusText = String(localized: "Build failed (exit code \(Int(exitCode))).")
         }
         onBuildFinished?(outcome == .success)
     }

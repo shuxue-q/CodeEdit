@@ -27,21 +27,21 @@ struct CMakePresetExpansion {
             if let version = includeVersion {
                 guard namespace == "penv" || (version >= 9 && namespace.isEmpty &&
                     !["presetName", "generator"].contains(name)) else {
-                    throw CMakeParseError("Unsupported macro in include path: \(namespace){\(name)}")
+                    throw CMakeParseError(localized: "Unsupported macro in include path: \(namespace){\(name)}")
                 }
             }
             switch namespace {
             case "env": replacement = try environmentValue(name, visiting: visiting) ?? ""
             case "penv": replacement = parent[name] ?? ""
             case "": replacement = try macro(name)
-            default: throw CMakeParseError("Unsupported preset macro: $\(namespace){\(name)}")
+            default: throw CMakeParseError(localized: "Unsupported preset macro: $\(namespace){\(name)}")
             }
             result = (result as NSString).replacingCharacters(in: match.range, with: replacement)
         }
         // Detect unterminated macros in the input, without interpreting dollar signs in expanded values.
         let unmatched = regex.stringByReplacingMatches(in: value, range: range, withTemplate: "")
         if unmatched.range(of: #"\$\w*\{"#, options: .regularExpression) != nil {
-            throw CMakeParseError("Unclosed preset macro in '\(value)'.")
+            throw CMakeParseError(localized: "Unclosed preset macro in '\(value)'.")
         }
         return result
     }
@@ -57,16 +57,18 @@ struct CMakePresetExpansion {
         case "fileDir": return file.deletingLastPathComponent().path
         case "dollar": return "$"
         case "pathListSep": return ":"
-        default: throw CMakeParseError("Unknown preset macro: ${\(name)}")
+        default: throw CMakeParseError(localized: "Unknown preset macro: ${\(name)}")
         }
     }
 
     private func environmentValue(_ name: String, visiting: Set<String> = []) throws -> String? {
-        guard !visiting.contains(name) else { throw CMakeParseError("Environment reference cycle at '\(name)'.") }
+        guard !visiting.contains(name) else {
+            throw CMakeParseError(localized: "Environment reference cycle at '\(name)'.")
+        }
         guard let value = environment[name] else { return parent[name] }
         if case .null = value { return nil }
         guard let string = value.string else {
-            throw CMakeParseError("Environment variable '\(name)' must be a string.")
+            throw CMakeParseError(localized: "Environment variable '\(name)' must be a string.")
         }
         return try expand(string, visiting: visiting.union([name]))
     }
@@ -85,19 +87,25 @@ struct CMakePresetExpansion {
     }
 
     private func enabledObject(_ condition: CMakeJSON) throws -> Bool {
-        guard let type = condition["type"]?.string else { throw CMakeParseError("Invalid preset condition.") }
+        guard let type = condition["type"]?.string else {
+            throw CMakeParseError(localized: "Invalid preset condition.")
+        }
         switch type {
         case "const":
-            guard let value = condition["value"]?.bool else { throw CMakeParseError("Invalid constant condition.") }
+            guard let value = condition["value"]?.bool else {
+                throw CMakeParseError(localized: "Invalid constant condition.")
+            }
             return value
         case "allOf", "anyOf":
             guard let conditions = condition["conditions"]?.array else {
-                throw CMakeParseError("Missing nested conditions.")
+                throw CMakeParseError(localized: "Missing nested conditions.")
             }
             if type == "allOf" { return try conditions.allSatisfy { try enabled($0) } }
             return try conditions.contains { try enabled($0) }
         case "not":
-            guard let nested = condition["condition"] else { throw CMakeParseError("Missing nested condition.") }
+            guard let nested = condition["condition"] else {
+                throw CMakeParseError(localized: "Missing nested condition.")
+            }
             return try !enabled(nested)
         default: return try comparison(condition, type: type)
         }
@@ -105,7 +113,9 @@ struct CMakePresetExpansion {
 
     private func comparison(_ condition: CMakeJSON, type: String) throws -> Bool {
         func string(_ key: String) throws -> String {
-            guard let value = condition[key]?.string else { throw CMakeParseError("Missing condition field '\(key)'.") }
+            guard let value = condition[key]?.string else {
+                throw CMakeParseError(localized: "Missing condition field '\(key)'.")
+            }
             return try expand(value)
         }
         switch type {
@@ -113,7 +123,9 @@ struct CMakePresetExpansion {
             let equal = try string("lhs") == string("rhs")
             return type == "equals" ? equal : !equal
         case "inList", "notInList":
-            guard let list = condition["list"]?.strings else { throw CMakeParseError("Invalid condition list.") }
+            guard let list = condition["list"]?.strings else {
+                throw CMakeParseError(localized: "Invalid condition list.")
+            }
             let contains = try list.map { try expand($0) }.contains(string("string"))
             return type == "inList" ? contains : !contains
         case "matches", "notMatches":
@@ -121,7 +133,7 @@ struct CMakePresetExpansion {
             let value = try string("string")
             let matches = regex.firstMatch(in: value, range: NSRange(value.startIndex..., in: value)) != nil
             return type == "matches" ? matches : !matches
-        default: throw CMakeParseError("Unknown preset condition '\(type)'.")
+        default: throw CMakeParseError(localized: "Unknown preset condition '\(type)'.")
         }
     }
 }

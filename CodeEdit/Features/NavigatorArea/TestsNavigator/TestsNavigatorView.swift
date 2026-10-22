@@ -22,10 +22,12 @@ struct TestsNavigatorView: View {
         VStack(spacing: 0) {
             if filteredFiles.isEmpty {
                 CEContentUnavailableView(
-                    "No Tests",
+                    String(localized: "No Tests"),
                     description: viewModel.files.isEmpty
-                        ? "No XCTest or swift-testing declarations were found in this workspace."
-                        : "No tests match the current filter.",
+                        ? String(
+                            localized: "No XCTest or swift-testing declarations were found in this workspace."
+                        )
+                        : String(localized: "No tests match the current filter."),
                     systemImage: "checkmark.diamond"
                 ) {
                     Button("Refresh") {

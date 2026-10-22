@@ -24,19 +24,26 @@ struct FindSearchField: View {
     @Binding var findModePickerWidth: CGFloat
     var condensed: Bool
 
+    private var matchCountText: String {
+        if viewModel.matchCount == 1 {
+            return String(localized: "1 match", bundle: .module)
+        }
+        return String(localized: "\(viewModel.matchCount) matches", bundle: .module)
+    }
+
     private var helperText: String? {
         if viewModel.findText.isEmpty {
             nil
         } else if condensed {
             "\(viewModel.matchCount)"
         } else {
-            "\(viewModel.matchCount) \(viewModel.matchCount == 1 ? "match" : "matches")"
+            matchCountText
         }
     }
 
     var body: some View {
         PanelTextField(
-            "Text",
+            String(localized: "Text", bundle: .module),
             text: $viewModel.findText,
             leadingAccessories: {
                 if condensed {
@@ -94,6 +101,7 @@ struct FindSearchField: View {
                         .frame(width: 30, height: 20)
                 })
                 .toggleStyle(.icon)
+                .help(Text("Match Case", bundle: .module))
                 Divider()
                 FindMethodPicker(method: $viewModel.findMethod, condensed: condensed)
             },

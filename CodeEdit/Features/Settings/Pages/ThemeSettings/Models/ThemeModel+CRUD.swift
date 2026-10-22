@@ -131,7 +131,7 @@ extension ThemeModel {
         let openPanel = NSOpenPanel()
         let allowedTypes = [UTType(filenameExtension: "cetheme")!]
 
-        openPanel.prompt = "Import"
+        openPanel.prompt = String(localized: "Import")
         openPanel.allowedContentTypes = allowedTypes
         openPanel.canChooseFiles = true
         openPanel.canChooseDirectories = false

@@ -31,15 +31,15 @@ extension CodeFileDocument {
     }
 
     private func unsavedCloseAlert() -> NSAlert {
-        let fileName = fileURL?.lastPathComponent ?? "Untitled"
+        let fileName = fileURL?.lastPathComponent ?? String(localized: "Untitled")
         let alert = NSAlert()
-        alert.messageText = "Do you want to save the changes made to “\(fileName)”?"
-        alert.informativeText = "Your changes will be lost if you don't save them."
+        alert.messageText = String(localized: "Do you want to save the changes made to “\(fileName)”?")
+        alert.informativeText = String(localized: "Your changes will be lost if you don't save them.")
         alert.alertStyle = .warning
-        alert.addButton(withTitle: "Save")
-        alert.addButton(withTitle: "Don't Save")
+        alert.addButton(withTitle: String(localized: "Save"))
+        alert.addButton(withTitle: String(localized: "Don't Save"))
         alert.buttons.last?.hasDestructiveAction = true
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: String(localized: "Cancel"))
         alert.buttons.last?.keyEquivalent = "\u{1b}"
         return alert
     }

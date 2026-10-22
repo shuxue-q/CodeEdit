@@ -48,14 +48,14 @@ struct BreakpointsNavigatorView: View {
         VStack(spacing: 0) {
             if groups.isEmpty {
                 CEContentUnavailableView(
-                    "No Breakpoints",
-                    description: "Click a line number in the editor gutter to add a breakpoint."
+                    String(localized: "No Breakpoints"),
+                    description: String(localized: "Click a line number in the editor gutter to add a breakpoint.")
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if filteredGroups.isEmpty {
                 CEContentUnavailableView(
-                    "No Filter Results",
-                    description: "No breakpoints match the current filter."
+                    String(localized: "No Filter Results"),
+                    description: String(localized: "No breakpoints match the current filter.")
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
@@ -167,7 +167,11 @@ struct BreakpointsNavigatorView: View {
         }
         .buttonStyle(.plain)
         .frame(maxWidth: 18, alignment: .center)
-        .help(store.isEnabled ? "Deactivate Breakpoints" : "Activate Breakpoints")
+        .help(
+            store.isEnabled
+            ? String(localized: "Deactivate Breakpoints")
+            : String(localized: "Activate Breakpoints")
+        )
         .accessibilityLabel("Toggle Breakpoints")
     }
 

@@ -178,7 +178,14 @@ running, git integration, extensions, and more.
       `About`, `Feedback`, `Notifications`, `SplitView`, `CEWorkspaceSettings`.
   - `Utils/` — cross-cutting helpers: `DependencyInjection`, `Extensions`,
     `KeyChain`, `ShellClient`, `Formatters`, `Environment`, `Protocols`.
-  - `Localization/` — `en.lproj` strings plus `Localized+Ex.swift`.
+  - `Localization/` — String Catalogs `Localizable.xcstrings` (English source, `zh-Hans`) and
+    `InfoPlist.xcstrings` (document type names), the Settings › General language picker
+    (`AppLanguage`, stored as the app's `AppleLanguages` default, applied on relaunch), and
+    `Localized+Ex.swift` (`String.localizedAtRuntime` for display text that arrives as a `String`).
+    Tests run in English (`CodeEditTestPlan.xctestplan` sets `language`/`region`).
+    The vendored `CodeEditSourceEditor` and `CodeEditTextView` packages have their own
+    `Sources/<Package>/Resources/Localizable.xcstrings` (`defaultLocalization: "en"`); strings in them
+    must use `String(localized: …, bundle: .module)` / `Text(…, bundle: .module)`.
   - `ShellIntegration/` — shell scripts bundled for terminal integration.
   - `Assets.xcassets`, `Info.plist`, `CodeEdit.entitlements`. Channel app
     icons are Icon Composer `.icon` bundles in `Assets.xcassets`

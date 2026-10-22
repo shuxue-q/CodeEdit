@@ -58,9 +58,9 @@ struct AICompletionConnectionTester {
         } catch let AIBackendError.server(status, message) {
             return .failure(message: Self.describe(status: status, message: message))
         } catch AIBackendError.malformedResponse {
-            return .failure(message: "The server answered, but not in the expected format")
+            return .failure(message: String(localized: "The server answered, but not in the expected format"))
         } catch let error as URLError where error.code == .timedOut {
-            return .failure(message: "No answer within \(Int(Self.timeout)) seconds")
+            return .failure(message: String(localized: "No answer within \(Int(Self.timeout)) seconds"))
         } catch {
             return .failure(message: error.localizedDescription)
         }

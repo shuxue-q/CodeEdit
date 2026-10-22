@@ -43,8 +43,8 @@ struct EditorTabBarLeadingAccessories: View {
                 )
                 .help(
                     editorManager.isFocusingActiveEditor
-                    ? "Unfocus this Editor"
-                    : "Focus this Editor"
+                    ? String(localized: "Unfocus this Editor")
+                    : String(localized: "Focus this Editor")
                 )
 
                 Divider()

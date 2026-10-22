@@ -8,13 +8,13 @@
 import SwiftUI
 
 struct MonospacedFontPicker: View {
-    var title: String
+    var title: LocalizedStringKey
     @Binding var selectedFontName: String
     @State private var recentFonts: [String]
     @State private var monospacedFontFamilyNames: [String] = []
     @State private var otherFontFamilyNames: [String] = []
 
-    init(title: String, selectedFontName: Binding<String>) {
+    init(title: LocalizedStringKey, selectedFontName: Binding<String>) {
         self.title = title
         self._selectedFontName = selectedFontName
         self.recentFonts = UserDefaults.standard.stringArray(forKey: "recentFonts") ?? []

@@ -41,7 +41,10 @@ struct ProjectNavigatorToolbarBottom: View {
     }
 
     @ViewBuilder private var filterMenu: some View {
-        ForEach([(true, "Folders on top"), (false, "Alphabetically")], id: \.0) { value, title in
+        ForEach(
+            [(true, LocalizedStringKey("Folders on top")), (false, LocalizedStringKey("Alphabetically"))],
+            id: \.0
+        ) { value, title in
             Toggle(title, isOn: Binding(get: {
                 workspace.sortFoldersOnTop == value
             }, set: { _ in
@@ -111,7 +114,7 @@ struct ProjectNavigatorToolbarBottom: View {
                     }
                 } catch {
                     let alert = NSAlert(error: error)
-                    alert.addButton(withTitle: "Dismiss")
+                    alert.addButton(withTitle: String(localized: "Dismiss"))
                     alert.runModal()
                 }
             }
@@ -128,7 +131,7 @@ struct ProjectNavigatorToolbarBottom: View {
                     }
                 } catch {
                     let alert = NSAlert(error: error)
-                    alert.addButton(withTitle: "Dismiss")
+                    alert.addButton(withTitle: String(localized: "Dismiss"))
                     alert.runModal()
                 }
             }

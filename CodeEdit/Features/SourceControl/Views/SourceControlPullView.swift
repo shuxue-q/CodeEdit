@@ -96,7 +96,7 @@ struct SourceControlPullView: View {
                 }
             } catch {
                 self.loading = false
-                await sourceControlManager.showAlertForError(title: "Failed to pull", error: error)
+                await sourceControlManager.showAlertForError(title: String(localized: "Failed to pull"), error: error)
             }
         }
     }

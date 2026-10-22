@@ -85,17 +85,19 @@ enum ClangFormatPresenter {
     /// Shown when Format Code is invoked for a language clang-format does not handle.
     static func showUnsupportedFile() {
         present(
-            message: "Format Code supports C, C++, Objective-C, Java, JavaScript, " +
-                "TypeScript, JSON, C#, and Protobuf files."
+            message: String(localized: """
+                Format Code supports C, C++, Objective-C, Java, JavaScript, \
+                TypeScript, JSON, C#, and Protobuf files.
+                """)
         )
     }
 
     private static func present(message: String) {
         let alert = NSAlert()
-        alert.messageText = "Unable to Format Code"
+        alert.messageText = String(localized: "Unable to Format Code")
         alert.informativeText = message
         alert.alertStyle = .warning
-        alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: String(localized: "OK"))
         if let window = NSApp.keyWindow ?? NSApp.mainWindow {
             alert.beginSheetModal(for: window)
         } else {

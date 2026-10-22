@@ -38,7 +38,7 @@ extension TextView {
     }
 
     override open func accessibilityLabel() -> String? {
-        "Text Editor"
+        String(localized: "Text Editor", bundle: .module)
     }
 
     override open func accessibilityRole() -> NSAccessibility.Role? {

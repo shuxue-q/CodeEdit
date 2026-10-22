@@ -23,11 +23,11 @@ extension GitClient {
 
         var label: String {
             switch self {
-            case .initialState: "Cloning"
-            case .counting: "Counting"
-            case .compressing: "Compressing"
-            case .receiving: "Receiving"
-            case .resolving: "Resolving"
+            case .initialState: String(localized: "Cloning")
+            case .counting: String(localized: "Counting")
+            case .compressing: String(localized: "Compressing")
+            case .receiving: String(localized: "Receiving")
+            case .resolving: String(localized: "Resolving")
             }
         }
     }

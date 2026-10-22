@@ -12,16 +12,20 @@ extension TextViewController {
     // MARK: - Submenu Builders
 
     func createCodingToolsMenuItem() -> NSMenuItem {
-        let item = NSMenuItem(title: "Show Coding Tools", action: nil, keyEquivalent: "")
-        let submenu = NSMenu(title: "Show Coding Tools")
+        let item = NSMenuItem(
+            title: String(localized: "Show Coding Tools", bundle: .module),
+            action: nil,
+            keyEquivalent: ""
+        )
+        let submenu = NSMenu(title: String(localized: "Show Coding Tools", bundle: .module))
 
         let tools: [(String, Selector)] = [
-            ("Show Coding Tools…", #selector(contextMenuShowCodingTools(_:))),
-            ("Proofread", #selector(contextMenuCodingToolProofread(_:))),
-            ("Rewrite", #selector(contextMenuCodingToolRewrite(_:))),
-            ("Summary", #selector(contextMenuCodingToolSummary(_:))),
-            ("Explain Code", #selector(contextMenuCodingToolExplain(_:))),
-            ("Generate Tests", #selector(contextMenuCodingToolTests(_:)))
+            (String(localized: "Show Coding Tools…", bundle: .module), #selector(contextMenuShowCodingTools(_:))),
+            (String(localized: "Proofread", bundle: .module), #selector(contextMenuCodingToolProofread(_:))),
+            (String(localized: "Rewrite", bundle: .module), #selector(contextMenuCodingToolRewrite(_:))),
+            (String(localized: "Summary", bundle: .module), #selector(contextMenuCodingToolSummary(_:))),
+            (String(localized: "Explain Code", bundle: .module), #selector(contextMenuCodingToolExplain(_:))),
+            (String(localized: "Generate Tests", bundle: .module), #selector(contextMenuCodingToolTests(_:)))
         ]
 
         for (index, tool) in tools.enumerated() {
@@ -36,8 +40,8 @@ extension TextViewController {
     }
 
     func createRefactorMenuItem() -> NSMenuItem {
-        let item = NSMenuItem(title: "Refactor", action: nil, keyEquivalent: "")
-        let submenu = NSMenu(title: "Refactor")
+        let item = NSMenuItem(title: String(localized: "Refactor", bundle: .module), action: nil, keyEquivalent: "")
+        let submenu = NSMenu(title: String(localized: "Refactor", bundle: .module))
         let hasSelection = textView.selectionManager.textSelections.contains { $0.range.length > 0 }
 
         addRefactorExtractItems(to: submenu, hasSelection: hasSelection)
@@ -50,7 +54,7 @@ extension TextViewController {
 
     private func addRefactorExtractItems(to menu: NSMenu, hasSelection: Bool) {
         let rename = NSMenuItem(
-            title: "Rename…",
+            title: String(localized: "Rename…", bundle: .module),
             action: #selector(contextMenuRefactorRename(_:)),
             keyEquivalent: "r"
         )
@@ -60,7 +64,7 @@ extension TextViewController {
         menu.addItem(rename)
 
         let extractFunc = NSMenuItem(
-            title: "Extract to Function",
+            title: String(localized: "Extract to Function", bundle: .module),
             action: #selector(contextMenuRefactorExtractFunction(_:)),
             keyEquivalent: ""
         )
@@ -69,7 +73,7 @@ extension TextViewController {
         menu.addItem(extractFunc)
 
         let extractVar = NSMenuItem(
-            title: "Extract to Variable",
+            title: String(localized: "Extract to Variable", bundle: .module),
             action: #selector(contextMenuRefactorExtractVariable(_:)),
             keyEquivalent: ""
         )
@@ -80,7 +84,7 @@ extension TextViewController {
 
     private func addRefactorGenerationItems(to menu: NSMenu) {
         let switchCases = NSMenuItem(
-            title: "Add Missing Switch Cases",
+            title: String(localized: "Add Missing Switch Cases", bundle: .module),
             action: #selector(contextMenuRefactorAddMissingSwitchCases(_:)),
             keyEquivalent: ""
         )
@@ -89,7 +93,7 @@ extension TextViewController {
         menu.addItem(switchCases)
 
         let memberwiseInit = NSMenuItem(
-            title: "Generate Memberwise Initializer",
+            title: String(localized: "Generate Memberwise Initializer", bundle: .module),
             action: #selector(contextMenuRefactorGenerateMemberwiseInit(_:)),
             keyEquivalent: ""
         )
@@ -99,11 +103,11 @@ extension TextViewController {
     }
 
     func createFindMenuItem() -> NSMenuItem {
-        let item = NSMenuItem(title: "Find", action: nil, keyEquivalent: "")
-        let submenu = NSMenu(title: "Find")
+        let item = NSMenuItem(title: String(localized: "Find", bundle: .module), action: nil, keyEquivalent: "")
+        let submenu = NSMenu(title: String(localized: "Find", bundle: .module))
 
         let findWorkspace = NSMenuItem(
-            title: "Find in Workspace…",
+            title: String(localized: "Find in Workspace…", bundle: .module),
             action: #selector(contextMenuFindInWorkspace(_:)),
             keyEquivalent: "F"
         )
@@ -120,9 +124,15 @@ extension TextViewController {
 
     private func addFindWorkspaceSubItems(to menu: NSMenu) {
         let items: [(String, Selector)] = [
-            ("Find Selected Text in Workspace", #selector(contextMenuFindSelectedTextInWorkspace(_:))),
-            ("Find Selected Symbol in Workspace", #selector(contextMenuFindSelectedSymbolInWorkspace(_:))),
-            ("Find Call Hierarchy", #selector(contextMenuFindCallHierarchy(_:)))
+            (
+                String(localized: "Find Selected Text in Workspace", bundle: .module),
+                #selector(contextMenuFindSelectedTextInWorkspace(_:))
+            ),
+            (
+                String(localized: "Find Selected Symbol in Workspace", bundle: .module),
+                #selector(contextMenuFindSelectedSymbolInWorkspace(_:))
+            ),
+            (String(localized: "Find Call Hierarchy", bundle: .module), #selector(contextMenuFindCallHierarchy(_:)))
         ]
         for item in items {
             let menuItem = NSMenuItem(title: item.0, action: item.1, keyEquivalent: "")
@@ -134,7 +144,7 @@ extension TextViewController {
 
     private func addFindFileSubItems(to menu: NSMenu) {
         let findInFile = NSMenuItem(
-            title: "Find in File…",
+            title: String(localized: "Find in File…", bundle: .module),
             action: #selector(contextMenuFindInFile(_:)),
             keyEquivalent: "f"
         )
@@ -143,7 +153,7 @@ extension TextViewController {
         menu.addItem(findInFile)
 
         let findReplace = NSMenuItem(
-            title: "Find and Replace…",
+            title: String(localized: "Find and Replace…", bundle: .module),
             action: #selector(contextMenuFindAndReplace(_:)),
             keyEquivalent: "f"
         )
@@ -152,7 +162,7 @@ extension TextViewController {
         menu.addItem(findReplace)
 
         let findNext = NSMenuItem(
-            title: "Find Next",
+            title: String(localized: "Find Next", bundle: .module),
             action: #selector(contextMenuFindNext(_:)),
             keyEquivalent: "g"
         )
@@ -161,7 +171,7 @@ extension TextViewController {
         menu.addItem(findNext)
 
         let findPrev = NSMenuItem(
-            title: "Find Previous",
+            title: String(localized: "Find Previous", bundle: .module),
             action: #selector(contextMenuFindPrevious(_:)),
             keyEquivalent: "g"
         )
@@ -175,7 +185,7 @@ extension TextViewController {
 
     private func addFindSelectionSubItems(to menu: NSMenu) {
         let useSelection = NSMenuItem(
-            title: "Use Selection for Find",
+            title: String(localized: "Use Selection for Find", bundle: .module),
             action: #selector(contextMenuUseSelectionForFind(_:)),
             keyEquivalent: "e"
         )
@@ -184,7 +194,7 @@ extension TextViewController {
         menu.addItem(useSelection)
 
         let useSelectionReplace = NSMenuItem(
-            title: "Use Selection for Replace",
+            title: String(localized: "Use Selection for Replace", bundle: .module),
             action: #selector(contextMenuUseSelectionForReplace(_:)),
             keyEquivalent: "e"
         )
@@ -193,7 +203,7 @@ extension TextViewController {
         menu.addItem(useSelectionReplace)
 
         let jumpToSelection = NSMenuItem(
-            title: "Jump to Selection",
+            title: String(localized: "Jump to Selection", bundle: .module),
             action: #selector(contextMenuJumpToSelection(_:)),
             keyEquivalent: "j"
         )
@@ -203,8 +213,8 @@ extension TextViewController {
     }
 
     func createNavigateMenuItem() -> NSMenuItem {
-        let item = NSMenuItem(title: "Navigate", action: nil, keyEquivalent: "")
-        let submenu = NSMenu(title: "Navigate")
+        let item = NSMenuItem(title: String(localized: "Navigate", bundle: .module), action: nil, keyEquivalent: "")
+        let submenu = NSMenu(title: String(localized: "Navigate", bundle: .module))
 
         addJumpSubItems(to: submenu)
         addCounterpartSubItems(to: submenu)
@@ -216,7 +226,7 @@ extension TextViewController {
 
     private func addJumpSubItems(to menu: NSMenu) {
         let jumpToDef = NSMenuItem(
-            title: "Jump to Definition",
+            title: String(localized: "Jump to Definition", bundle: .module),
             action: #selector(contextMenuJumpToDefinition(_:)),
             keyEquivalent: "j"
         )
@@ -225,7 +235,7 @@ extension TextViewController {
         menu.addItem(jumpToDef)
 
         let jumpToType = NSMenuItem(
-            title: "Jump to Type Definition",
+            title: String(localized: "Jump to Type Definition", bundle: .module),
             action: #selector(contextMenuJumpToTypeDefinition(_:)),
             keyEquivalent: ""
         )
@@ -233,7 +243,7 @@ extension TextViewController {
         menu.addItem(jumpToType)
 
         let reveal = NSMenuItem(
-            title: "Reveal in Project Navigator",
+            title: String(localized: "Reveal in Project Navigator", bundle: .module),
             action: #selector(contextMenuRevealInProjectNavigator(_:)),
             keyEquivalent: "j"
         )
@@ -246,7 +256,7 @@ extension TextViewController {
 
     private func addCounterpartSubItems(to menu: NSMenu) {
         let next = NSMenuItem(
-            title: "Jump to Next Counterpart",
+            title: String(localized: "Jump to Next Counterpart", bundle: .module),
             action: #selector(contextMenuJumpToNextCounterpart(_:)),
             keyEquivalent: String(utf16CodeUnits: [0xF700], count: 1)
         )
@@ -255,7 +265,7 @@ extension TextViewController {
         menu.addItem(next)
 
         let prev = NSMenuItem(
-            title: "Jump to Previous Counterpart",
+            title: String(localized: "Jump to Previous Counterpart", bundle: .module),
             action: #selector(contextMenuJumpToPreviousCounterpart(_:)),
             keyEquivalent: String(utf16CodeUnits: [0xF701], count: 1)
         )
@@ -268,7 +278,7 @@ extension TextViewController {
 
     private func addTabAndHistorySubItems(to menu: NSMenu) {
         let prevTab = NSMenuItem(
-            title: "Show Previous Tab",
+            title: String(localized: "Show Previous Tab", bundle: .module),
             action: #selector(contextMenuShowPreviousTab(_:)),
             keyEquivalent: "{"
         )
@@ -277,7 +287,7 @@ extension TextViewController {
         menu.addItem(prevTab)
 
         let nextTab = NSMenuItem(
-            title: "Show Next Tab",
+            title: String(localized: "Show Next Tab", bundle: .module),
             action: #selector(contextMenuShowNextTab(_:)),
             keyEquivalent: "}"
         )
@@ -288,7 +298,7 @@ extension TextViewController {
         menu.addItem(.separator())
 
         let goBack = NSMenuItem(
-            title: "Go Back",
+            title: String(localized: "Go Back", bundle: .module),
             action: #selector(contextMenuGoBack(_:)),
             keyEquivalent: String(utf16CodeUnits: [0xF702], count: 1)
         )
@@ -297,7 +307,7 @@ extension TextViewController {
         menu.addItem(goBack)
 
         let goForward = NSMenuItem(
-            title: "Go Forward",
+            title: String(localized: "Go Forward", bundle: .module),
             action: #selector(contextMenuGoForward(_:)),
             keyEquivalent: String(utf16CodeUnits: [0xF703], count: 1)
         )
@@ -307,17 +317,17 @@ extension TextViewController {
     }
 
     func createAutoFillMenuItem() -> NSMenuItem {
-        let item = NSMenuItem(title: "AutoFill", action: nil, keyEquivalent: "")
+        let item = NSMenuItem(title: String(localized: "AutoFill", bundle: .module), action: nil, keyEquivalent: "")
         if let symbolImage = NSImage(
             systemSymbolName: "rectangle.and.pencil.and.ellipsis",
-            accessibilityDescription: "AutoFill"
+            accessibilityDescription: String(localized: "AutoFill", bundle: .module)
         ) {
             item.image = symbolImage
         }
-        let submenu = NSMenu(title: "AutoFill")
+        let submenu = NSMenu(title: String(localized: "AutoFill", bundle: .module))
 
         let passwords = NSMenuItem(
-            title: "Passwords…",
+            title: String(localized: "Passwords…", bundle: .module),
             action: #selector(contextMenuAutoFillPasswords(_:)),
             keyEquivalent: ""
         )
@@ -325,7 +335,7 @@ extension TextViewController {
         submenu.addItem(passwords)
 
         let contacts = NSMenuItem(
-            title: "Contact…",
+            title: String(localized: "Contact…", bundle: .module),
             action: #selector(contextMenuAutoFillContacts(_:)),
             keyEquivalent: ""
         )

@@ -196,13 +196,13 @@ final class TreeSitterSnippetProvider: CompletionProvider {
         Snippet(
             label: "#include <insert>",
             body: "#include <$0>",
-            detail: "Include system header",
+            detail: String(localized: "Include system header"),
             intents: [.preprocessor]
         ),
         Snippet(
             label: "#include \"insert\"",
             body: "#include \"$0\"",
-            detail: "Include user header",
+            detail: String(localized: "Include user header"),
             intents: [.preprocessor]
         )
     ]

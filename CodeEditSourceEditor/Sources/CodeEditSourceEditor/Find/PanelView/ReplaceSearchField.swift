@@ -25,7 +25,7 @@ struct ReplaceSearchField: View {
 
     var body: some View {
         PanelTextField(
-            "Text",
+            String(localized: "Text", bundle: .module),
             text: $viewModel.replaceText,
             leadingAccessories: {
                 if condensed {
@@ -39,7 +39,7 @@ struct ReplaceSearchField: View {
                                 .foregroundStyle(.secondary)
                                 .padding(.leading, 8)
                                 .padding(.trailing, 5)
-                            Text("With")
+                            Text("With", bundle: .module)
                         }
                         .frame(width: findModePickerWidth, alignment: .leading)
                         Divider()

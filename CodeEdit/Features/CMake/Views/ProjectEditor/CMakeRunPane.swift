@@ -72,13 +72,13 @@ struct CMakeRunPane: View {
 
             Section("Launch") {
                 ProjectPathField(
-                    title: "Working Directory",
+                    title: String(localized: "Working Directory"),
                     path: Binding {
                         store.settings.run.workingDirectory ?? ""
                     } set: {
                         store.settings.run.workingDirectory = $0.isEmpty ? nil : $0
                     },
-                    prompt: "Project root",
+                    prompt: String(localized: "Project root"),
                     choosesDirectories: true,
                     baseDirectory: store.sourceDirectory,
                     prefersRelativePaths: true
@@ -137,7 +137,7 @@ struct CMakeRunPane: View {
             EmptyView()
         case .custom:
             ProjectPathField(
-                title: "Executable Path",
+                title: String(localized: "Executable Path"),
                 path: Binding {
                     store.settings.run.customExecutable ?? ""
                 } set: {

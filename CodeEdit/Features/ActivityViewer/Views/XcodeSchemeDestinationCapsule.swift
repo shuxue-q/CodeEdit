@@ -44,7 +44,7 @@ struct XcodeSchemeDestinationCapsule: View {
 
     /// Text of the destination segment for a CMake configure preset selection.
     static func destinationTitle(presetTitle: String?) -> String {
-        guard let presetTitle, !presetTitle.isEmpty else { return "No Preset" }
+        guard let presetTitle, !presetTitle.isEmpty else { return String(localized: "No Preset") }
         return presetTitle
     }
 
@@ -307,7 +307,7 @@ extension XcodeSchemeDestinationCapsule {
     /// The Flutter device and build mode the Run and Build tasks use.
     @ViewBuilder
     private func flutterSection(_ flutter: FlutterWorkspace) -> some View {
-        sectionTitle("Flutter Device")
+        sectionTitle(String(localized: "Flutter Device"))
         let selected = flutter.selectedDevice
         let devices = flutter.devices.isEmpty ? [FlutterDevice.macOS] : flutter.devices
         ForEach(devices.contains(selected) ? devices : devices + [selected]) { device in
@@ -315,7 +315,7 @@ extension XcodeSchemeDestinationCapsule {
                 flutter.settings.value.device = device.id == FlutterDevice.macOS.id ? nil : device.id
             }
         }
-        sectionTitle("Build Mode")
+        sectionTitle(String(localized: "Build Mode"))
         ForEach(FlutterBuildMode.allCases) { mode in
             choiceRow(mode.title, symbol: "slider.horizontal.3", isSelected: flutter.settings.value.buildMode == mode) {
                 flutter.settings.value.buildMode = mode
@@ -327,7 +327,7 @@ extension XcodeSchemeDestinationCapsule {
     @ViewBuilder
     private func cargoSection(model: ProjectInventoryModel, root: CargoRoot) -> some View {
         let path = model.inventory?.relativePath(of: root.directory) ?? "."
-        sectionTitle("Cargo Profile")
+        sectionTitle(String(localized: "Cargo Profile"))
         ForEach(root.profiles.filter { $0.name != "test" && $0.name != "bench" }) { profile in
             choiceRow(
                 profile.name,

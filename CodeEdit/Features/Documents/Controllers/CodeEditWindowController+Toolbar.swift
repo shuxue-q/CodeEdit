@@ -67,7 +67,7 @@ extension CodeEditWindowController {
     func updateToolbarVisibility() {
         if toolbarCollapsed {
             window?.titleVisibility = .visible
-            window?.title = workspace?.workspaceFileManager?.folderUrl.lastPathComponent ?? "Empty"
+            window?.title = workspace?.workspaceFileManager?.folderUrl.lastPathComponent ?? String(localized: "Empty")
             window?.toolbar = nil
         } else {
             window?.titleVisibility = .hidden
@@ -94,8 +94,8 @@ extension CodeEditWindowController {
             return navigatorToggleItem()
         case .toggleLastSidebarItem:
             let toolbarItem = NSToolbarItem(itemIdentifier: NSToolbarItem.Identifier.toggleLastSidebarItem)
-            toolbarItem.paletteLabel = "Inspector Sidebar"
-            toolbarItem.toolTip = "Hide or show the Inspectors"
+            toolbarItem.paletteLabel = String(localized: "Inspector Sidebar")
+            toolbarItem.toolTip = String(localized: "Hide or show the Inspectors")
             toolbarItem.isBordered = false
             toolbarItem.target = self
             toolbarItem.action = #selector(self.objcToggleLastPanel)
@@ -137,8 +137,8 @@ extension CodeEditWindowController {
     /// The navigator toggle, drawn by the same SwiftUI capsule as the inspector toggle.
     private func navigatorToggleItem() -> NSToolbarItem {
         let toolbarItem = NSToolbarItem(itemIdentifier: .toggleFirstSidebarItem)
-        toolbarItem.paletteLabel = " Navigator Sidebar"
-        toolbarItem.toolTip = "Hide or show the Navigator"
+        toolbarItem.paletteLabel = String(localized: "Navigator Sidebar")
+        toolbarItem.toolTip = String(localized: "Hide or show the Navigator")
         toolbarItem.view = NSHostingView(
             rootView: XcodeNavigatorToggleCapsule()
                 .environment(\.window, WindowBox(value: window))
@@ -191,8 +191,8 @@ extension CodeEditWindowController {
         // Keep run controls out of the overflow menu: the activity viewer groups
         // carry the default priority and are pushed into overflow first instead.
         toolbarItem.visibilityPriority = .user
-        toolbarItem.paletteLabel = "Run/Stop"
-        toolbarItem.toolTip = "Start or stop the selected task"
+        toolbarItem.paletteLabel = String(localized: "Run/Stop")
+        toolbarItem.toolTip = String(localized: "Start or stop the selected task")
 
         return toolbarItem
     }

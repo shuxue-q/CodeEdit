@@ -316,7 +316,7 @@ extension LSPCompletionDelegate {
         let includeAngle = CompletionItem(
             label: "#include <insert>",
             kind: .snippet,
-            detail: "Include system header",
+            detail: String(localized: "Include system header"),
             insertText: "include <$0>",
             insertTextFormat: .snippet,
             textEdit: .optionA(TextEdit(range: editRange, newText: "include <$0>"))
@@ -324,7 +324,7 @@ extension LSPCompletionDelegate {
         let includeQuote = CompletionItem(
             label: "#include \"insert\"",
             kind: .snippet,
-            detail: "Include user header",
+            detail: String(localized: "Include user header"),
             insertText: "include \"$0\"",
             insertTextFormat: .snippet,
             textEdit: .optionA(TextEdit(range: editRange, newText: "include \"$0\""))

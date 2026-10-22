@@ -24,10 +24,10 @@ struct BookmarkNavigatorView: View {
         VStack(spacing: 0) {
             if bookmarkGroups.isEmpty {
                 CEContentUnavailableView(
-                    "No Bookmarks",
+                    String(localized: "No Bookmarks"),
                     description: bookmarkManager.bookmarks.isEmpty
-                        ? "Add a bookmark from the editor's context menu."
-                        : "No bookmarks match the current filter.",
+                        ? String(localized: "Add a bookmark from the editor's context menu.")
+                        : String(localized: "No bookmarks match the current filter."),
                     systemImage: "bookmark"
                 )
             } else {
@@ -139,7 +139,7 @@ struct BookmarkNavigatorView: View {
 
     private func rowTitle(_ bookmark: EditorBookmark) -> String {
         if let lineNumber = bookmark.lineNumber {
-            return "Line \(lineNumber)"
+            return String(localized: "Line \(lineNumber)")
         }
         return bookmark.fileName
     }

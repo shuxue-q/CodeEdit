@@ -44,7 +44,7 @@ struct ProjectFilesPane: View {
     private var fileList: some View {
         List(selection: $state.selectedConfigurationFile) {
             ForEach(state.groupedConfigurationFiles, id: \.group) { group in
-                Section(group.group) {
+                Section(group.group.localizedAtRuntime) {
                     ForEach(group.files) { file in
                         fileRow(file)
                     }
@@ -70,7 +70,7 @@ struct ProjectFilesPane: View {
                     .help("Unsaved changes")
             }
         }
-        .help(file.exists ? file.displayPath : "\(file.displayPath) (not created)")
+        .help(file.exists ? file.displayPath : String(localized: "\(file.displayPath) (not created)"))
         .tag(file.id)
     }
 }

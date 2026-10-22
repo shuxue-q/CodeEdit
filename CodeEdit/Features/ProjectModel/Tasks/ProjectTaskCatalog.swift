@@ -173,22 +173,23 @@ enum ProjectTaskCatalog {
         let flutter = tool("flutter", in: inputs.sdkBinDirectory) + " --no-wrap"
         let dart = tool("dart", in: inputs.sdkBinDirectory)
         let factory = FlutterTaskFactory(
-            group: "Flutter · \(project.name)",
+            group: String(localized: "Flutter · \(project.name)"),
             path: inventory.relativePath(of: project.rootDirectory)
         )
         var tasks = flutterAppTasks(project, inputs: inputs, flutter: flutter, factory: factory)
-        tasks.append(factory.task("Test \(project.name)", .test, "\(flutter) test"))
-        tasks.append(factory.task("Analyze \(project.name)", .analyze, "\(flutter) analyze"))
-        tasks.append(factory.task("Pub Get", .dependencies, "\(flutter) pub get"))
-        tasks.append(factory.task("Pub Upgrade", .dependencies, "\(flutter) pub upgrade"))
+        tasks.append(factory.task(String(localized: "Test \(project.name)"), .test, "\(flutter) test"))
+        tasks.append(factory.task(String(localized: "Analyze \(project.name)"), .analyze, "\(flutter) analyze"))
+        tasks.append(factory.task(String(localized: "Pub Get"), .dependencies, "\(flutter) pub get"))
+        tasks.append(factory.task(String(localized: "Pub Upgrade"), .dependencies, "\(flutter) pub upgrade"))
         if project.pubspec.hasDependency(named: "build_runner") {
             let command = "\(dart) run build_runner build --delete-conflicting-outputs"
-            tasks.append(factory.task("Build Runner", .generate, command))
+            tasks.append(factory.task(String(localized: "Build Runner"), .generate, command))
         }
         if project.hasFFIgenConfig || project.pubspec.hasDependency(named: "ffigen") {
-            tasks.append(factory.task("Generate FFI Bindings", .generate, "\(dart) run ffigen --config ffigen.yaml"))
+            let command = "\(dart) run ffigen --config ffigen.yaml"
+            tasks.append(factory.task(String(localized: "Generate FFI Bindings"), .generate, command))
         }
-        tasks.append(factory.task("Clean \(project.name)", .clean, "\(flutter) clean"))
+        tasks.append(factory.task(String(localized: "Clean \(project.name)"), .clean, "\(flutter) clean"))
         return tasks
     }
 
@@ -207,14 +208,14 @@ enum ProjectTaskCatalog {
             + modeArguments
             + CommandLineArguments.split(settings.runArguments).map { $0.escapedShellArgument() }
         var tasks = [factory.task(
-            "Run \(project.name)",
+            String(localized: "Run \(project.name)"),
             .run,
             run.joined(separator: " "),
             hotReload: settings.buildMode.supportsHotReload
         )]
         if let platform = buildPlatform(project: project, settings: settings, device: inputs.device) {
             let build = [flutter, "build", platform.buildCommand] + modeArguments
-            let name = "Build \(project.name) (\(platform.title))"
+            let name = String(localized: "Build \(project.name) (\(platform.title))")
             tasks.append(factory.task(name, .build, build.joined(separator: " ")))
         }
         return tasks
@@ -244,7 +245,7 @@ enum ProjectTaskCatalog {
         settings: CargoProjectSettings.Root,
         multipleRoots: Bool
     ) -> [GeneratedTask] {
-        let group = "Rust · \(root.name)"
+        let group = String(localized: "Rust · \(root.name)")
         let suffix = multipleRoots ? " \(root.name)" : ""
         let shared = settings.buildArguments(profiles: root.profiles).map { $0.escapedShellArgument() }
         let environment = Dictionary(
@@ -274,11 +275,11 @@ enum ProjectTaskCatalog {
         }
 
         var tasks = [
-            task("Cargo Build\(suffix)", .build, ["build"] + shared),
-            task("Cargo Check\(suffix)", .check, ["check", "--all-targets"] + shared),
-            task("Cargo Test\(suffix)", .test, ["test"] + shared, environment: environment),
-            task("Cargo Clippy\(suffix)", .analyze, ["clippy", "--all-targets"] + shared),
-            task("Cargo Doc\(suffix)", .docs, ["doc", "--no-deps"] + shared)
+            task(String(localized: "Cargo Build") + suffix, .build, ["build"] + shared),
+            task(String(localized: "Cargo Check") + suffix, .check, ["check", "--all-targets"] + shared),
+            task(String(localized: "Cargo Test") + suffix, .test, ["test"] + shared, environment: environment),
+            task(String(localized: "Cargo Clippy") + suffix, .analyze, ["clippy", "--all-targets"] + shared),
+            task(String(localized: "Cargo Doc") + suffix, .docs, ["doc", "--no-deps"] + shared)
         ]
         let runnable = root.runnableTargets
         let selected = settings.runTarget.flatMap { target in runnable.first { $0 == target } } ?? runnable.first
@@ -290,7 +291,7 @@ enum ProjectTaskCatalog {
                     arguments += ["--"] + programArguments.map { $0.escapedShellArgument() }
                 }
             }
-            tasks.append(task("Run \(target.title)", .run, arguments, environment: environment))
+            tasks.append(task(String(localized: "Run \(target.title)"), .run, arguments, environment: environment))
         }
         return tasks
     }
@@ -298,14 +299,14 @@ enum ProjectTaskCatalog {
     // MARK: - CMake
 
     private static func cmakeTasks(_ cmake: CMakeInputs, inventory: ProjectInventory) -> [GeneratedTask] {
-        let group = "C++ · \(cmake.projectName)"
+        let group = String(localized: "C++ · \(cmake.projectName)")
         var ctest = ["ctest", "--test-dir", cmake.buildDirectory.path.escapedShellArgument(), "--output-on-failure"]
         if let configuration = cmake.configuration {
             ctest += ["-C", configuration.escapedShellArgument()]
         }
         return [
             GeneratedTask(
-                name: "Build \(cmake.projectName) (CMake)",
+                name: String(localized: "Build \(cmake.projectName) (CMake)"),
                 command: "",
                 workingDirectory: ".",
                 info: GeneratedTaskInfo(
@@ -318,7 +319,7 @@ enum ProjectTaskCatalog {
                 )
             ),
             GeneratedTask(
-                name: "Test \(cmake.projectName) (CTest)",
+                name: String(localized: "Test \(cmake.projectName) (CTest)"),
                 command: ctest.joined(separator: " "),
                 workingDirectory: ".",
                 info: GeneratedTaskInfo(

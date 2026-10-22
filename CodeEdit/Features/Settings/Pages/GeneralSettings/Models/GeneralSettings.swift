@@ -326,9 +326,9 @@ extension SettingsData {
         var label: String {
             switch self {
             case .upTo1:
-                return "One Line"
+                return String(localized: "One Line")
             default:
-                return "Up to \(self.rawValue) lines"
+                return String(localized: "Up to \(self.rawValue) lines")
             }
         }
     }

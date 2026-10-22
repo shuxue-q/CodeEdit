@@ -131,7 +131,7 @@ struct CommitListItemView: View {
                     }
                 }
 
-                Text("\(commit.message) \(commit.body)")
+                Text(verbatim: "\(commit.message) \(commit.body)")
                     .font(.system(size: 11))
                     .lineLimit(2)
             }

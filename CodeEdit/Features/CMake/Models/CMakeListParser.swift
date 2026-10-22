@@ -84,7 +84,7 @@ enum CMakeListParser {
 
         mutating func arguments() throws -> [String] {
             guard let opening = try next(), opening.delimiter, opening.value == "(" else {
-                throw CMakeParseError("Expected '(' after command name.")
+                throw CMakeParseError(localized: "Expected '(' after command name.")
             }
             var result: [String] = []
             var depth = 1
@@ -93,7 +93,7 @@ enum CMakeListParser {
                 if depth == 0 { return result }
                 result.append(token.value)
             }
-            throw CMakeParseError("Unclosed command.")
+            throw CMakeParseError(localized: "Unclosed command.")
         }
 
         mutating func skipComments() throws {
@@ -134,7 +134,7 @@ enum CMakeListParser {
                     value.append(character)
                 }
             }
-            if quoted { throw CMakeParseError("Unclosed quoted argument.") }
+            if quoted { throw CMakeParseError(localized: "Unclosed quoted argument.") }
             return Token(value: value)
         }
 
@@ -155,7 +155,7 @@ enum CMakeListParser {
                 }
                 index += 1
             }
-            throw CMakeParseError("Unclosed bracket argument or comment.")
+            throw CMakeParseError(localized: "Unclosed bracket argument or comment.")
         }
     }
 }

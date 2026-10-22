@@ -261,7 +261,7 @@ struct CargoRunTarget: Equatable, Hashable, Sendable, Identifiable, Codable {
 
     /// A label such as `omniexam_typst_cli` or `render_demo (example)`.
     var title: String {
-        kind == .example ? "\(name) (example)" : name
+        kind == .example ? String(localized: "\(name) (example)") : name
     }
 }
 

@@ -20,6 +20,8 @@ struct GeneralSettingsView: View {
     var settings
 
     @State private var openInCodeEdit: Bool = true
+    @State private var language: AppLanguage = .current
+    @State private var showRelaunchAlert = false
 
     init() {
         guard let defaults = UserDefaults.init(
@@ -35,6 +37,7 @@ struct GeneralSettingsView: View {
     var body: some View {
         SettingsForm {
             Section {
+                languagePicker
                 appearance
                 fileIconStyle
                 showEditorJumpBar
@@ -76,6 +79,27 @@ struct GeneralSettingsView: View {
 
 /// The extension of the view with all the preferences
 private extension GeneralSettingsView {
+    var languagePicker: some View {
+        Picker("Language", selection: $language) {
+            ForEach(AppLanguage.allCases) { language in
+                Text(verbatim: language.displayName)
+                    .tag(language)
+            }
+        }
+        .onChange(of: language) { _, newValue in
+            newValue.apply()
+            showRelaunchAlert = true
+        }
+        .alert("Restart CodeEdit to change the language?", isPresented: $showRelaunchAlert) {
+            Button("Restart Now") {
+                AppLanguage.relaunch()
+            }
+            Button("Later", role: .cancel) {}
+        } message: {
+            Text("The new language is used the next time CodeEdit starts.")
+        }
+    }
+
     var appearance: some View {
         Picker("Appearance", selection: $settings.appAppearance) {
             Text("System")
@@ -313,7 +337,7 @@ private extension GeneralSettingsView {
         if let lastUpdatedDate = updater.lastUpdateCheckDate {
             return Self.formatter.string(from: lastUpdatedDate)
         } else {
-            return "Never"
+            return String(localized: "Never")
         }
     }
 

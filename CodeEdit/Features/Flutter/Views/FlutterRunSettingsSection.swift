@@ -36,7 +36,7 @@ struct FlutterSDKOverrideField: View {
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
-        panel.message = "Choose a Flutter SDK folder (the one containing bin/flutter)"
+        panel.message = String(localized: "Choose a Flutter SDK folder (the one containing bin/flutter)")
         guard panel.runModal() == .OK, let url = panel.url else { return }
         path = url.path
         flutterWorkspace.setSDKOverride(path)
@@ -89,8 +89,10 @@ struct FlutterRunSettingsSection: View {
         } header: {
             Text("Run")
         } footer: {
-            Text("Used by the generated Run and Build tasks. Hot reload works in debug mode. "
-                 + "Saved in .codeedit/\(FlutterProjectSettings.fileName).")
+            Text("""
+                Used by the generated Run and Build tasks. Hot reload works in debug mode. \
+                Saved in .codeedit/\(FlutterProjectSettings.fileName).
+                """)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

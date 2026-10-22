@@ -29,11 +29,11 @@ enum DebugServiceError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .lldbDapNotFound:
-            return "Could not find the lldb-dap executable. Install Xcode or the LLVM toolchain."
+            return String(localized: "Could not find the lldb-dap executable. Install Xcode or the LLVM toolchain.")
         case .noActiveSession:
-            return "There is no active debug session."
+            return String(localized: "There is no active debug session.")
         case .invalidResponse:
-            return "The debug adapter returned an unexpected response."
+            return String(localized: "The debug adapter returned an unexpected response.")
         }
     }
 }
@@ -149,7 +149,7 @@ final class DebugService: ObservableObject {
             _ = capabilities
             appendConsole(
                 category: "console",
-                text: "Connected to lldb-dap (\(lldbDapURL.path(percentEncoded: false)))."
+                text: String(localized: "Connected to lldb-dap (\(lldbDapURL.path(percentEncoded: false))).")
             )
             try await client.send(
                 "launch",
@@ -161,7 +161,7 @@ final class DebugService: ObservableObject {
                 )
             )
         } catch {
-            recordError("Failed to start debugging", error)
+            recordError(String(localized: "Failed to start debugging"), error)
             await cleanupSession(status: .failed)
             throw error
         }
@@ -178,7 +178,7 @@ final class DebugService: ObservableObject {
                 arguments: DisconnectArguments(terminateDebuggee: true)
             )
         } catch {
-            recordError("Disconnect failed", error)
+            recordError(String(localized: "Disconnect failed"), error)
         }
         await client.stop()
         await cleanupSession(status: .cancelled)
@@ -197,7 +197,7 @@ final class DebugService: ObservableObject {
             sessionState = .running
             clearStoppedLocation()
         } catch {
-            recordError("Continue failed", error)
+            recordError(String(localized: "Continue failed"), error)
         }
     }
 
@@ -216,7 +216,10 @@ final class DebugService: ObservableObject {
                 let response: ThreadsResponse? = try await client.send("threads")
                 guard generation == sessionGeneration, sessionState == .running else { return }
                 guard let resolved = response?.threads.first?.id else {
-                    appendConsole(category: "error", text: "Pause failed: the debuggee has no thread to pause.")
+                    appendConsole(
+                        category: "error",
+                        text: String(localized: "Pause failed: the debuggee has no thread to pause.")
+                    )
                     return
                 }
                 currentThreadID = resolved
@@ -226,7 +229,7 @@ final class DebugService: ObservableObject {
             try await client.send("pause", arguments: ThreadIdArguments(threadId: threadID))
         } catch {
             guard generation == sessionGeneration else { return }
-            recordError("Pause failed", error)
+            recordError(String(localized: "Pause failed"), error)
         }
     }
 
@@ -252,7 +255,7 @@ final class DebugService: ObservableObject {
             sessionState = .running
             clearStoppedLocation()
         } catch {
-            recordError("Step failed", error)
+            recordError(String(localized: "Step failed"), error)
         }
     }
 
@@ -316,9 +319,9 @@ final class DebugService: ObservableObject {
                     "evaluate",
                     arguments: EvaluateArguments(expression: expression, frameId: frameID)
                 )
-                results[expression] = response?.result ?? "<no result>"
+                results[expression] = response?.result ?? String(localized: "<no result>")
             } catch {
-                results[expression] = "error: \(describe(error))"
+                results[expression] = String(localized: "error: \(describe(error))")
             }
         }
         guard generation == sessionGeneration, sessionState == .paused else { return }
@@ -358,11 +361,11 @@ final class DebugService: ObservableObject {
             if let message = failed.compactMap(\.message).first {
                 appendConsole(
                     category: "error",
-                    text: "Breakpoint in \(filePath) not verified: \(message)"
+                    text: String(localized: "Breakpoint in \(filePath) not verified: \(message)")
                 )
             }
         } catch {
-            recordError("Failed to set breakpoints in \(filePath)", error)
+            recordError(String(localized: "Failed to set breakpoints in \(filePath)"), error)
         }
     }
 }

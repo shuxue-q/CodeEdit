@@ -43,7 +43,7 @@ struct HistoryPopoverView: View {
 
     private struct ActionButton: View {
 
-        private var title: String
+        private var title: LocalizedStringKey
         private var image: String
         private var action: () -> Void
 
@@ -52,7 +52,7 @@ struct HistoryPopoverView: View {
         @Environment(\.isEnabled)
         private var isEnabled
 
-        init(_ title: String, systemImage: String, action: @escaping () -> Void) {
+        init(_ title: LocalizedStringKey, systemImage: String, action: @escaping () -> Void) {
             self.title = title
             self.image = systemImage
             self.action = action

@@ -15,7 +15,7 @@ struct NewFileButton: View {
     var body: some View {
         WelcomeButton(
             iconName: "plus.square",
-            title: "Create New File...",
+            title: String(localized: "Create New File..."),
             action: {
                 guard let documentController = CodeEditDocumentController.shared as? CodeEditDocumentController
                 else { return }

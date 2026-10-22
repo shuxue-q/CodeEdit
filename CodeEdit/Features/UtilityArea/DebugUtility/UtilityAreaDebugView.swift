@@ -89,7 +89,7 @@ struct UtilityAreaDebugView: View {
                         : themeModel.selectedTheme?.appearance == .dark ? .dark : .light
                     )
                 } else {
-                    CEContentUnavailableView("No Task Selected")
+                    CEContentUnavailableView(String(localized: "No Task Selected"))
                 }
             }
         } leadingSidebar: { _ in

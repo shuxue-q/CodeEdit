@@ -83,7 +83,7 @@ struct SourceControlPushView: View {
                 dismiss()
             } catch {
                 self.loading = false
-                await sourceControlManager.showAlertForError(title: "Failed to push", error: error)
+                await sourceControlManager.showAlertForError(title: String(localized: "Failed to push"), error: error)
             }
         }
     }

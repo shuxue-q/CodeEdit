@@ -61,8 +61,10 @@ struct ProjectOverviewPane: View {
                     .accessibilityIdentifier("ProjectOverviewRescan")
             }
         } footer: {
-            Text("Found from pubspec.yaml, CMakeLists.txt and Cargo.toml files. Third-party and generated "
-                 + "projects are listed but not built.")
+            Text(LocalizedStringKey(
+                "Found from pubspec.yaml, CMakeLists.txt and Cargo.toml files. Third-party and generated "
+                + "projects are listed but not built."
+            ))
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -106,7 +108,9 @@ struct ProjectOverviewPane: View {
         let source = inventory.component(link.source)
         let target = inventory.component(link.target)
         let kind = target?.kind.title ?? ""
-        return "\(source?.name ?? link.source) \(link.summary) \(target?.name ?? link.target) (\(kind))"
+        let sourceName = source?.name ?? link.source
+        let targetName = target?.name ?? link.target
+        return String(localized: "\(sourceName) \(link.summary) \(targetName) (\(kind))")
     }
 
     // MARK: - Toolchains
@@ -119,7 +123,7 @@ struct ProjectOverviewPane: View {
                     if let sdk = flutterWorkspace?.sdk {
                         Text(flutterVersion(sdk)).textSelection(.enabled)
                     } else if flutterWorkspace?.hasLocatedSDK == true {
-                        missing("Not found on PATH")
+                        missing(String(localized: "Not found on PATH"))
                     } else {
                         Text("Detecting…").foregroundStyle(.secondary)
                     }
@@ -135,7 +139,7 @@ struct ProjectOverviewPane: View {
                     if let version = model.toolchainStatus?.cmakeVersion {
                         Text(version)
                     } else if model.toolchainStatus?.checkedCMake == true {
-                        missing("Not found on PATH")
+                        missing(String(localized: "Not found on PATH"))
                     } else {
                         Text("Detecting…").foregroundStyle(.secondary)
                     }
@@ -168,7 +172,7 @@ struct ProjectOverviewPane: View {
                 missing(problem)
             } else {
                 VStack(alignment: .trailing, spacing: 2) {
-                    Text(status.activeToolchain ?? status.rustcVersion ?? "Unknown")
+                    Text(status.activeToolchain ?? status.rustcVersion ?? String(localized: "Unknown"))
                         .textSelection(.enabled)
                     if let file = root.toolchainFile {
                         Text("Pinned by \(file.url.lastPathComponent)")
@@ -183,7 +187,7 @@ struct ProjectOverviewPane: View {
     }
 
     private func flutterVersion(_ sdk: FlutterSDK) -> String {
-        var parts = [sdk.version ?? "Unknown"]
+        var parts = [sdk.version ?? String(localized: "Unknown")]
         if let channel = sdk.channel { parts.append(channel) }
         if let dart = sdk.dartVersion { parts.append("Dart \(dart)") }
         return parts.joined(separator: " · ")
@@ -201,7 +205,7 @@ private struct ComponentRow: View {
     let component: ProjectComponent
 
     private var location: String {
-        component.relativePath == "." ? "Workspace root" : component.relativePath
+        component.relativePath == "." ? String(localized: "Workspace root") : component.relativePath
     }
 
     var body: some View {
@@ -247,7 +251,7 @@ enum ProjectToolchainSymbol {
 private struct LanguageServerStatusSection: View {
     @ObservedObject var lspService: LSPService
 
-    private let servers: [(title: String, languageId: String)] = [
+    private let servers: [(title: LocalizedStringKey, languageId: String)] = [
         ("Dart analysis server", "dart"),
         ("clangd", "cpp"),
         ("rust-analyzer", "rust"),

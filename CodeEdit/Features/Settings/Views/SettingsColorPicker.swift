@@ -16,17 +16,17 @@ struct SettingsColorPicker<Content>: View where Content: View {
     /// UI changes
     @State private var selectedColor: Color
 
-    private let label: String
+    private let label: LocalizedStringKey
     private let content: Content?
 
-    init(_ label: String, color: Binding<Color>, @ViewBuilder content: @escaping () -> Content) {
+    init(_ label: LocalizedStringKey, color: Binding<Color>, @ViewBuilder content: @escaping () -> Content) {
         self._color = color
         self.label = label
         self._selectedColor = State(initialValue: color.wrappedValue)
         self.content = content()
     }
 
-    init(_ label: String, color: Binding<Color>) where Content == EmptyView {
+    init(_ label: LocalizedStringKey, color: Binding<Color>) where Content == EmptyView {
         self.init(label, color: color) {
             EmptyView()
         }

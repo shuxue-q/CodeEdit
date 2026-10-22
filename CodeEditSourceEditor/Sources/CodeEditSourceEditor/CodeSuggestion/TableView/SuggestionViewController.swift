@@ -13,7 +13,9 @@ class SuggestionViewController: NSViewController {
     var tintView: NSView = NSView()
     var tableView: NSTableView = NSTableView()
     var scrollView: NSScrollView = NSScrollView()
-    var noItemsLabel: NSTextField = NSTextField(labelWithString: "No Completions")
+    var noItemsLabel: NSTextField = NSTextField(
+        labelWithString: String(localized: "No Completions", bundle: .module)
+    )
     var previewView: CodeSuggestionPreviewView = CodeSuggestionPreviewView()
 
     var viewHeightConstraint: NSLayoutConstraint?

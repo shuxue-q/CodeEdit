@@ -24,7 +24,7 @@ struct TasksCommands: Commands {
             let selectedTaskName: String = if let selectedTask = taskManager?.selectedTask {
                 "\"" + selectedTask.name + "\""
             } else {
-                "(No Selected Task)"
+                String(localized: "(No Selected Task)")
             }
 
             Button("Run \(selectedTaskName)", systemImage: "play.fill") {

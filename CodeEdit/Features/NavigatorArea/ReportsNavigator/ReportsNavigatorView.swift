@@ -19,7 +19,7 @@ struct ReportsNavigatorView: View {
         VStack(spacing: 0) {
             SegmentedControl(
                 $selectedSection,
-                options: ["Local", "Cloud"],
+                options: [String(localized: "Local"), String(localized: "Cloud")],
                 prominent: true
             )
             .frame(maxWidth: .infinity)
@@ -30,8 +30,8 @@ struct ReportsNavigatorView: View {
                 localContent
             } else {
                 CEContentUnavailableView(
-                    "No Cloud Reports",
-                    description: "Xcode Cloud reports are not available in CodeEdit.",
+                    String(localized: "No Cloud Reports"),
+                    description: String(localized: "Xcode Cloud reports are not available in CodeEdit."),
                     systemImage: "cloud"
                 )
             }
@@ -62,8 +62,8 @@ struct ReportsNavigatorView: View {
             ReportsNavigatorListView(reportStore: reportStore, filter: filter)
         } else {
             CEContentUnavailableView(
-                "No Reports",
-                description: "Builds, debug sessions, and tasks will appear here.",
+                String(localized: "No Reports"),
+                description: String(localized: "Builds, debug sessions, and tasks will appear here."),
                 systemImage: "doc.text.magnifyingglass"
             )
         }
@@ -85,8 +85,8 @@ private struct ReportsNavigatorListView: View {
     var body: some View {
         if filteredRecords.isEmpty {
             CEContentUnavailableView(
-                "No Reports",
-                description: "Builds, debug sessions, and tasks will appear here.",
+                String(localized: "No Reports"),
+                description: String(localized: "Builds, debug sessions, and tasks will appear here."),
                 systemImage: "doc.text.magnifyingglass"
             )
         } else {
@@ -122,7 +122,7 @@ private struct ReportsNavigatorListView: View {
             Image(systemName: icon(for: record.kind))
                 .foregroundStyle(record.status == .failed ? Color.red : Color.secondary)
             VStack(alignment: .leading, spacing: 2) {
-                Text(record.title)
+                Text(record.title.localizedAtRuntime)
                     .lineLimit(1)
                 Text(formattedDate(record.date))
                     .font(.caption)
@@ -203,19 +203,19 @@ private struct ReportsNavigatorListView: View {
     private func formattedDate(_ date: Date) -> String {
         let time = date.formatted(date: .omitted, time: .shortened)
         if Calendar.current.isDateInToday(date) {
-            return "Today, \(time)"
+            return String(localized: "Today, \(time)")
         } else if Calendar.current.isDateInYesterday(date) {
-            return "Yesterday, \(time)"
+            return String(localized: "Yesterday, \(time)")
         }
         return date.formatted(date: .abbreviated, time: .shortened)
     }
 
     private func formattedDuration(_ duration: TimeInterval) -> String {
         if duration < 60 {
-            return String(format: "%.1f s", duration)
+            return String(format: String(localized: "%.1f s"), duration)
         }
         let minutes = Int(duration) / 60
         let seconds = Int(duration) % 60
-        return String(format: "%d min %d s", minutes, seconds)
+        return String(format: String(localized: "%d min %d s"), minutes, seconds)
     }
 }

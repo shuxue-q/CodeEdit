@@ -34,7 +34,11 @@ struct StartTaskToolbarButton: View {
                 .opacity(activeState == .inactive ? 0.5 : 1.0)
         }
         .buttonStyle(.plain)
-        .help(taskManager.isCMakeBuildTarget ? "Build and then run the current target" : "Start selected task")
+        .help(
+            taskManager.isCMakeBuildTarget
+                ? String(localized: "Build and then run the current target")
+                : String(localized: "Start selected task")
+        )
         .accessibilityLabel("Run")
     }
 }

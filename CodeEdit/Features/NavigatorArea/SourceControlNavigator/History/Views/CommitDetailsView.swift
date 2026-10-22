@@ -56,7 +56,7 @@ struct CommitDetailsView: View {
                     }
                     .environment(\.defaultMinListRowHeight, 22)
                 } else {
-                    CEContentUnavailableView("No Changes")
+                    CEContentUnavailableView(String(localized: "No Changes"))
                 }
             } else {
                 Spacer()

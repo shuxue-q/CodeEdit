@@ -19,15 +19,15 @@ enum UtilityAreaTab: WorkspacePanelTab, CaseIterable {
     var title: String {
         switch self {
         case .terminal:
-            return "Terminal"
+            return String(localized: "Terminal")
         case .debugConsole:
-            return "Debug Console"
+            return String(localized: "Debug Console")
         case .debugger:
-            return "Debugger"
+            return String(localized: "Debugger")
         case .output:
-            return "Output"
+            return String(localized: "Output")
         case .problems:
-            return "Problems"
+            return String(localized: "Problems")
         }
     }
 

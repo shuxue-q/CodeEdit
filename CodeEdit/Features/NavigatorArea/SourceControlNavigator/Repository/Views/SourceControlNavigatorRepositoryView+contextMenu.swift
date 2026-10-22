@@ -32,8 +32,8 @@ extension SourceControlNavigatorRepositoryView {
         Divider()
         Button(
             item.branch == nil && item.id != "BranchesGroup"
-            ? "New Branch..."
-            : "New Branch from \"\(branch.name)\"..."
+            ? String(localized: "New Branch...")
+            : String(localized: "New Branch from \"\(branch.name)\"...")
         ) {
             showNewBranch = true
             fromBranch =  item.branch
@@ -41,8 +41,8 @@ extension SourceControlNavigatorRepositoryView {
         .disabled(item.branch == nil && item.id != "BranchesGroup")
         Button(
             item.branch == nil
-            ? "Rename Branch..."
-            : "Rename \"\(branch.name)\"..."
+            ? String(localized: "Rename Branch...")
+            : String(localized: "Rename \"\(branch.name)\"...")
         ) {
             showRenameBranch = true
             fromBranch = item.branch

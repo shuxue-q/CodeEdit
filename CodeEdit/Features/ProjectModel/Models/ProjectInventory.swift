@@ -43,14 +43,14 @@ struct ProjectComponent: Equatable, Sendable, Identifiable {
         /// The display name.
         var title: String {
             switch self {
-            case .flutterApp: "Flutter app"
-            case .flutterPlugin: "Flutter plugin"
-            case .flutterPackage: "Flutter package"
-            case .dartPackage: "Dart package"
-            case .cmakeProject: "CMake project"
-            case .platformRunner: "Platform runner"
-            case .cargoWorkspace: "Cargo workspace"
-            case .cargoPackage: "Cargo package"
+            case .flutterApp: String(localized: "Flutter app")
+            case .flutterPlugin: String(localized: "Flutter plugin")
+            case .flutterPackage: String(localized: "Flutter package")
+            case .dartPackage: String(localized: "Dart package")
+            case .cmakeProject: String(localized: "CMake project")
+            case .platformRunner: String(localized: "Platform runner")
+            case .cargoWorkspace: String(localized: "Cargo workspace")
+            case .cargoPackage: String(localized: "Cargo package")
             }
         }
     }
@@ -69,10 +69,10 @@ struct ProjectComponent: Equatable, Sendable, Identifiable {
         /// The display name.
         var title: String {
             switch self {
-            case .primary: "Primary"
-            case .member: "Member"
-            case .thirdParty: "Third party"
-            case .generated: "Generated"
+            case .primary: String(localized: "Primary")
+            case .member: String(localized: "Member")
+            case .thirdParty: String(localized: "Third party")
+            case .generated: String(localized: "Generated")
             }
         }
     }

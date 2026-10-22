@@ -23,7 +23,7 @@ struct ToolbarIconButton<Icon: View>: View {
                 .toolbarCircleFeedback(isSelected: isSelected)
         }
         .buttonStyle(.plain)
-        .help(help)
+        .help(help.localizedAtRuntime)
     }
 }
 
@@ -57,7 +57,7 @@ struct ToolbarIconMenu<MenuContent: View>: View {
             .menuIndicator(.hidden)
             .toolbarCircleFeedback()
             .buttonStyle(.plain)
-            .help(help)
+            .help(help.localizedAtRuntime)
     }
 
     @ViewBuilder private var menu: some View {

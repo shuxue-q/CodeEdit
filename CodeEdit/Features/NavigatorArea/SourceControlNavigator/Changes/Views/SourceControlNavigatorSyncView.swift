@@ -62,7 +62,7 @@ struct SourceControlNavigatorSyncView: View {
             do {
                 try await sourceControlManager.pull()
             } catch {
-                await sourceControlManager.showAlertForError(title: "Failed to pull", error: error)
+                await sourceControlManager.showAlertForError(title: String(localized: "Failed to pull"), error: error)
             }
             self.isLoading = false
         }
@@ -74,7 +74,7 @@ struct SourceControlNavigatorSyncView: View {
             do {
                 try await sourceControlManager.push()
             } catch {
-                await sourceControlManager.showAlertForError(title: "Failed to push", error: error)
+                await sourceControlManager.showAlertForError(title: String(localized: "Failed to push"), error: error)
             }
             self.isLoading = false
         }
@@ -84,11 +84,11 @@ struct SourceControlNavigatorSyncView: View {
         var parts: [String] = []
 
         if let ahead = ahead, ahead > 0 {
-            parts.append("\(ahead) ahead")
+            parts.append(String(localized: "\(ahead) ahead"))
         }
 
         if let behind = behind, behind > 0 {
-            parts.append("\(behind) behind")
+            parts.append(String(localized: "\(behind) behind"))
         }
 
         return parts.joined(separator: ", ")

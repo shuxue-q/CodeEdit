@@ -179,12 +179,12 @@ struct CargoTarget: Equatable, Hashable, Sendable, Identifiable {
         /// A short label for display.
         var title: String {
             switch self {
-            case .library: "Library"
-            case .binary: "Binary"
-            case .example: "Example"
-            case .test: "Test"
-            case .bench: "Bench"
-            case .buildScript: "Build Script"
+            case .library: String(localized: "Library")
+            case .binary: String(localized: "Binary")
+            case .example: String(localized: "Example")
+            case .test: String(localized: "Test")
+            case .bench: String(localized: "Bench")
+            case .buildScript: String(localized: "Build Script")
             }
         }
     }

@@ -14,10 +14,10 @@ struct SearchSettingsView: View {
                 ExcludedGlobPatternList()
             } header: {
                 Text("Exclude")
-                Text(
-                    "Add glob patterns to exclude matching files and folders from searches and open quickly. " +
-                    "This will inherit glob patterns from the Exclude from Project setting."
-                )
+                Text("""
+                Add glob patterns to exclude matching files and folders from searches and open quickly. \
+                This will inherit glob patterns from the Exclude from Project setting.
+                """)
             }
         }
     }

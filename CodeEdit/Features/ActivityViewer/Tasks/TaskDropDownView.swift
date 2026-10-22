@@ -33,7 +33,7 @@ struct TaskDropDownView: View {
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isButton)
         .accessibilityIdentifier("TaskDropdown")
-        .accessibilityValue(taskManager.selectedTask?.name ?? "Create Tasks")
+        .accessibilityValue(taskManager.selectedTask?.name ?? String(localized: "Create Tasks"))
         .accessibilityLabel("Active Task")
         .accessibilityHint("Open the active task menu")
         .accessibilityAction {

@@ -104,7 +104,9 @@ extension ProjectInventory {
                 role: role,
                 name: root.name,
                 detail: root.isWorkspace
-                    ? (root.packages.count == 1 ? "1 package" : "\(root.packages.count) packages")
+                    ? (root.packages.count == 1
+                        ? String(localized: "1 package")
+                        : String(localized: "\(root.packages.count) packages"))
                     : root.packages.first?.manifest.version,
                 directory: root.directory,
                 relativePath: relativePath(of: root.directory)

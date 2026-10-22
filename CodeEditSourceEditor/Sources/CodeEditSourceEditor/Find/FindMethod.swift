@@ -15,15 +15,15 @@ enum FindMethod: CaseIterable {
     var displayName: String {
         switch self {
         case .contains:
-            return "Contains"
+            return String(localized: "Contains", bundle: .module)
         case .matchesWord:
-            return "Matches Word"
+            return String(localized: "Matches Word", bundle: .module)
         case .startsWith:
-            return "Starts With"
+            return String(localized: "Starts With", bundle: .module)
         case .endsWith:
-            return "Ends With"
+            return String(localized: "Ends With", bundle: .module)
         case .regularExpression:
-            return "Regular Expression"
+            return String(localized: "Regular Expression", bundle: .module)
         }
     }
 }

@@ -65,7 +65,13 @@ enum FlutterBuildMode: String, Codable, CaseIterable, Identifiable, Sendable {
     var id: String { rawValue }
 
     /// The display name.
-    var title: String { rawValue.capitalized }
+    var title: String {
+        switch self {
+        case .debug: String(localized: "Debug")
+        case .profile: String(localized: "Profile")
+        case .release: String(localized: "Release")
+        }
+    }
 
     /// Whether the mode supports hot reload (only debug builds keep the JIT compiler).
     var supportsHotReload: Bool { self == .debug }

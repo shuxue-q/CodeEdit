@@ -58,7 +58,7 @@ extension TextViewController {
             backing: .buffered,
             defer: false
         )
-        panel.title = "Create Code Snippet"
+        panel.title = String(localized: "Create Code Snippet", bundle: .module)
         panel.isFloatingPanel = true
 
         let snippetView = CreateCodeSnippetView(
@@ -85,10 +85,10 @@ extension TextViewController {
     func renameSymbolAtCursor() {
         guard let word = currentWordUnderCursor(), !word.isEmpty else { return }
         let alert = NSAlert()
-        alert.messageText = "Rename Symbol"
-        alert.informativeText = "Enter a new name for '\(word)':"
-        alert.addButton(withTitle: "Rename")
-        alert.addButton(withTitle: "Cancel")
+        alert.messageText = String(localized: "Rename Symbol", bundle: .module)
+        alert.informativeText = String(localized: "Enter a new name for '\(word)':", bundle: .module)
+        alert.addButton(withTitle: String(localized: "Rename", bundle: .module))
+        alert.addButton(withTitle: String(localized: "Cancel", bundle: .module))
 
         let input = NSTextField(frame: NSRect(x: 0, y: 0, width: 220, height: 24))
         input.stringValue = word

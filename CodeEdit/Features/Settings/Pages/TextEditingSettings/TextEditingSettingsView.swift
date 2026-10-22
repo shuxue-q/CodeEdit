@@ -293,10 +293,10 @@ private extension TextEditingSettingsView {
             Text("Code Format")
             Text("Custom reads the project's .clang-format file.")
         }
-        .help(
-            "Built-in styles are passed to clang-format. " +
-            "Custom walks up from the open file and uses the nearest .clang-format or _clang-format file."
-        )
+        .help("""
+        Built-in styles are passed to clang-format. \
+        Custom walks up from the open file and uses the nearest .clang-format or _clang-format file.
+        """)
     }
 
     @ViewBuilder private var invisibles: some View {

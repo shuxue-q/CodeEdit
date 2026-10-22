@@ -80,7 +80,7 @@ struct PubDependency: Equatable, Hashable, Sendable, Identifiable {
     /// A short description of the source for display.
     var sourceDescription: String {
         switch source {
-        case .hosted(let constraint): constraint ?? "any"
+        case .hosted(let constraint): constraint ?? String(localized: "any")
         case .sdk(let sdk): "sdk: \(sdk)"
         case .path(let path): "path: \(path)"
         case let .git(url, ref, _): ref.map { "git: \(url) @ \($0)" } ?? "git: \(url)"

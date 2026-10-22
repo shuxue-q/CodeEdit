@@ -55,7 +55,7 @@ struct VersionControlPane: View {
     @ViewBuilder private var repositoryInfo: some View {
         LabeledContent("Branch") {
             HStack(spacing: 6) {
-                Text(sourceControlManager.currentBranch?.name ?? "Detached HEAD")
+                Text(sourceControlManager.currentBranch?.name ?? String(localized: "Detached HEAD"))
                     .textSelection(.enabled)
                 let unsynced = sourceControlManager.numberOfUnsyncedCommits
                 if unsynced.ahead > 0 || unsynced.behind > 0 {
@@ -66,10 +66,14 @@ struct VersionControlPane: View {
             }
         }
         if sourceControlManager.remotes.isEmpty {
-            LabeledContent("Remote", value: "None")
+            LabeledContent("Remote", value: String(localized: "None"))
         } else {
             ForEach(sourceControlManager.remotes, id: \.name) { remote in
-                LabeledContent(sourceControlManager.remotes.count == 1 ? "Remote" : "Remote “\(remote.name)”") {
+                LabeledContent(
+                    sourceControlManager.remotes.count == 1
+                        ? LocalizedStringKey("Remote")
+                        : LocalizedStringKey("Remote “\(remote.name)”")
+                ) {
                     Text(remote.fetchLocation)
                         .font(.system(.body, design: .monospaced))
                         .lineLimit(1)
@@ -84,7 +88,7 @@ struct VersionControlPane: View {
 
     private var statusSummary: String {
         let files = sourceControlManager.changedFiles
-        guard !files.isEmpty else { return "No changes" }
+        guard !files.isEmpty else { return String(localized: "No changes") }
         var counts: [String: Int] = [:]
         for file in files {
             counts[Self.statusName(file.anyStatus()), default: 0] += 1
@@ -92,20 +96,20 @@ struct VersionControlPane: View {
         let staged = files.filter(\.isStaged).count
         var parts = counts.sorted { $0.value > $1.value || ($0.value == $1.value && $0.key < $1.key) }
             .map { "\($0.value) \($0.key)" }
-        if staged > 0 { parts.append("\(staged) staged") }
+        if staged > 0 { parts.append(String(localized: "\(staged) staged")) }
         return parts.joined(separator: ", ")
     }
 
     private static func statusName(_ status: GitStatus) -> String {
         switch status {
-        case .modified, .fileTypeChange: "modified"
-        case .untracked: "untracked"
-        case .added: "added"
-        case .deleted: "deleted"
-        case .renamed: "renamed"
-        case .copied: "copied"
-        case .unmerged: "unmerged"
-        case .none: "unchanged"
+        case .modified, .fileTypeChange: String(localized: "modified")
+        case .untracked: String(localized: "untracked")
+        case .added: String(localized: "added")
+        case .deleted: String(localized: "deleted")
+        case .renamed: String(localized: "renamed")
+        case .copied: String(localized: "copied")
+        case .unmerged: String(localized: "unmerged")
+        case .none: String(localized: "unchanged")
         }
     }
 

@@ -68,7 +68,7 @@ enum DartCompletionTables {
             body: "class ${1:MyWidget} extends StatelessWidget {\n  const ${1:MyWidget}({super.key});\n\n"
                 + "  @override\n  Widget build(BuildContext context) {\n    return ${2:const Placeholder()};\n"
                 + "  }\n}",
-            detail: "StatelessWidget subclass",
+            detail: String(localized: "StatelessWidget subclass"),
             intents: fileScope
         ),
         Snippet(
@@ -77,7 +77,7 @@ enum DartCompletionTables {
                 + "  @override\n  State<${1:MyWidget}> createState() => _${1:MyWidget}State();\n}\n\n"
                 + "class _${1:MyWidget}State extends State<${1:MyWidget}> {\n  @override\n"
                 + "  Widget build(BuildContext context) {\n    return ${2:const Placeholder()};\n  }\n}",
-            detail: "StatefulWidget subclass and its State",
+            detail: String(localized: "StatefulWidget subclass and its State"),
             intents: fileScope
         ),
         Snippet(

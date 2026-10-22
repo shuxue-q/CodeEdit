@@ -17,11 +17,11 @@ struct UtilityAreaOutputView: View {
         var title: String {
             switch self {
             case .extensions(let source):
-                "Extension - \(source.extensionInfo.name)"
+                String(localized: "Extension - \(source.extensionInfo.name)")
             case .languageServer(let source):
-                "Language Server - \(source.id)"
+                String(localized: "Language Server - \(source.id)")
             case .devOutput:
-                "Internal Development Output"
+                String(localized: "Internal Development Output")
             }
         }
 
@@ -86,7 +86,7 @@ struct UtilityAreaOutputView: View {
                         .paneToolbar {
                             UtilityAreaOutputSourcePicker(selectedSource: $selectedSource)
                             Spacer()
-                            UtilityAreaFilterTextField(title: "Filter", text: $filterText)
+                            UtilityAreaFilterTextField(title: String(localized: "Filter"), text: $filterText)
                                 .frame(maxWidth: 175)
                             Button { } label: {
                                 Image(systemName: "trash")

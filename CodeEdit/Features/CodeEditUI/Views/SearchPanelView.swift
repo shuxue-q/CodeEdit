@@ -60,7 +60,7 @@ struct SearchPanelView<RowView: View, PreviewView: View, Option: Identifiable & 
                         .foregroundColor(.secondary)
                         .padding(.leading, 1)
                         .padding(.trailing, 10)
-                    TextField(title, text: $text)
+                    TextField(title.localizedAtRuntime, text: $text)
                         .font(.system(size: 20, weight: .light, design: .default))
                         .textFieldStyle(.plain)
                         .onSubmit {

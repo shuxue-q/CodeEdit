@@ -106,13 +106,13 @@ private struct JumpBarPathCrumb: View {
     private var help: String {
         switch segment.role {
         case .function:
-            return "Functions"
+            return String(localized: "Functions")
         case .variable:
-            return "Variables"
+            return String(localized: "Variables")
         case .scope:
-            return "Symbols"
+            return String(localized: "Symbols")
         case .placeholder:
-            return "No Selection"
+            return String(localized: "No Selection")
         }
     }
 }

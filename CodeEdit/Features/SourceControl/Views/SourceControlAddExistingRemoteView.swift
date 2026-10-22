@@ -80,7 +80,10 @@ struct SourceControlAddExistingRemoteView: View {
                 location = ""
                 dismiss()
             } catch {
-                await sourceControlManager.showAlertForError(title: "Failed to add remote", error: error)
+                await sourceControlManager.showAlertForError(
+                    title: String(localized: "Failed to add remote"),
+                    error: error
+                )
             }
         }
     }

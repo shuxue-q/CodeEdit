@@ -50,12 +50,12 @@ struct OpenAIChatBackend: AICompletionBackend {
         if let configured = configuration.baseURL {
             baseURL = configured
         } else if kind == .openAICompatible {
-            throw AIBackendError.invalidConfiguration("A base URL is required.")
+            throw AIBackendError.invalidConfiguration(String(localized: "A base URL is required."))
         } else {
             baseURL = Self.defaultBaseURL
         }
         guard !configuration.apiKey.isEmpty || Self.isLoopback(baseURL) else {
-            throw AIBackendError.invalidConfiguration("An API key is required.")
+            throw AIBackendError.invalidConfiguration(String(localized: "An API key is required."))
         }
 
         var urlRequest = URLRequest(url: baseURL.appendingPathComponent("chat/completions"))

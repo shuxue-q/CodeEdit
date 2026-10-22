@@ -17,7 +17,7 @@ struct AnthropicMessagesBackend: AICompletionBackend {
 
     func makeRequest(_ request: AICompletionRequest, configuration: AIBackendConfiguration) throws -> URLRequest {
         guard !configuration.apiKey.isEmpty else {
-            throw AIBackendError.invalidConfiguration("An API key is required.")
+            throw AIBackendError.invalidConfiguration(String(localized: "An API key is required."))
         }
         var urlRequest = URLRequest(url: configuration.baseURL ?? Self.endpoint)
         urlRequest.httpMethod = "POST"
