@@ -13,7 +13,7 @@ extension AIBackendKind {
         switch self {
         case .anthropic: return "Anthropic"
         case .openAI: return "OpenAI"
-        case .openAICompatible: return "OpenAI-compatible"
+        case .openAICompatible: return String(localized: "OpenAI-compatible")
         }
     }
 

@@ -185,7 +185,7 @@ private extension ThemeSettingsView {
             )
         ) {
             ForEach(themes) { theme in
-                Text(theme.displayName).tag(Optional(theme))
+                Text(verbatim: theme.localizedDisplayName).tag(Optional(theme))
             }
         }
         .disabled(!settings.matchAppearance)

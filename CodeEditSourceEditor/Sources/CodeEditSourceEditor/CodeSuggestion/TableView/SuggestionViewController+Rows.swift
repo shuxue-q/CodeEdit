@@ -141,7 +141,7 @@ extension SuggestionViewController {
 
     private func originText(header: String, font: NSFont) -> NSAttributedString {
         let text = NSMutableAttributedString(
-            string: "From ",
+            string: String(localized: "From ", bundle: .module),
             attributes: [
                 .font: font,
                 .foregroundColor: NSColor.labelColor

@@ -18,11 +18,11 @@ public struct CreateCodeSnippetView: View {
 
     public init(
         initialCode: String = "",
-        initialTitle: String = "My Snippet",
+        initialTitle: String? = nil,
         onSave: @escaping (CodeSnippet) -> Void,
         onCancel: @escaping () -> Void
     ) {
-        self._title = State(initialValue: initialTitle)
+        self._title = State(initialValue: initialTitle ?? String(localized: "My Snippet", bundle: .module))
         self._summary = State(initialValue: "")
         self._shortcut = State(initialValue: "")
         self._code = State(initialValue: initialCode)
@@ -32,31 +32,31 @@ public struct CreateCodeSnippetView: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Create Code Snippet")
+            Text("Create Code Snippet", bundle: .module)
                 .font(.headline)
 
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text("Title:")
+                    Text("Title:", bundle: .module)
                         .frame(width: 120, alignment: .trailing)
-                    TextField("Title", text: $title)
+                    TextField(String(localized: "Title", bundle: .module), text: $title)
                 }
 
                 HStack {
-                    Text("Completion Shortcut:")
+                    Text("Completion Shortcut:", bundle: .module)
                         .frame(width: 120, alignment: .trailing)
-                    TextField("Shortcut", text: $shortcut)
+                    TextField(String(localized: "Shortcut", bundle: .module), text: $shortcut)
                 }
 
                 HStack {
-                    Text("Summary:")
+                    Text("Summary:", bundle: .module)
                         .frame(width: 120, alignment: .trailing)
-                    TextField("Description", text: $summary)
+                    TextField(String(localized: "Description", bundle: .module), text: $summary)
                 }
             }
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("Snippet Code:")
+                Text("Snippet Code:", bundle: .module)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                 TextEditor(text: $code)
@@ -70,19 +70,23 @@ public struct CreateCodeSnippetView: View {
 
             HStack {
                 Spacer()
-                Button("Cancel", role: .cancel) {
+                Button(role: .cancel) {
                     onCancel()
+                } label: {
+                    Text("Cancel", bundle: .module)
                 }
                 .keyboardShortcut(.cancelAction)
 
-                Button("Save") {
+                Button {
                     let snippet = CodeSnippet(
-                        title: title.isEmpty ? "Snippet" : title,
+                        title: title.isEmpty ? String(localized: "Snippet", bundle: .module) : title,
                         summary: summary,
                         shortcut: shortcut,
                         code: code
                     )
                     onSave(snippet)
+                } label: {
+                    Text("Save", bundle: .module)
                 }
                 .keyboardShortcut(.defaultAction)
                 .buttonStyle(.borderedProminent)

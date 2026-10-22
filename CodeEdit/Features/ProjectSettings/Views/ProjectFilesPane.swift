@@ -70,7 +70,7 @@ struct ProjectFilesPane: View {
                     .help("Unsaved changes")
             }
         }
-        .help(file.exists ? file.displayPath : "\(file.displayPath) (not created)")
+        .help(file.exists ? file.displayPath : String(localized: "\(file.displayPath) (not created)"))
         .tag(file.id)
     }
 }

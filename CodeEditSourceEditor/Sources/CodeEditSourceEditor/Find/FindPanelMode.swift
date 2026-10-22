@@ -12,9 +12,9 @@ enum FindPanelMode: CaseIterable {
     var displayName: String {
         switch self {
         case .find:
-            return "Find"
+            return String(localized: "Find", bundle: .module)
         case .replace:
-            return "Replace"
+            return String(localized: "Replace", bundle: .module)
         }
     }
 }

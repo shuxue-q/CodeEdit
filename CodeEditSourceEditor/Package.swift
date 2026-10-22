@@ -5,6 +5,7 @@ import PackageDescription
 
 let package = Package(
     name: "CodeEditSourceEditor",
+    defaultLocalization: "en",
     platforms: [.macOS(.v13)],
     products: [
         // A source editor with useful features for code editing.
@@ -44,6 +45,9 @@ let package = Package(
                 "CodeEditLanguages",
                 "TextFormation",
                 "CodeEditSymbols"
+            ],
+            resources: [
+                .process("Resources")
             ],
             plugins: [
                 .plugin(name: "SwiftLint", package: "SwiftLintPlugin")

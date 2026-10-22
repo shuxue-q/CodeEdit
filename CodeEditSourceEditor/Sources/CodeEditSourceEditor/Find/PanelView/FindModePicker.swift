@@ -69,7 +69,7 @@ struct FindModePicker: NSViewRepresentable {
 
         // Add wrap around item
         let wrapItem = NSMenuItem(
-            title: "Wrap Around",
+            title: String(localized: "Wrap Around", bundle: .module),
             action: #selector(Coordinator.toggleWrapAround(_:)),
             keyEquivalent: ""
         )

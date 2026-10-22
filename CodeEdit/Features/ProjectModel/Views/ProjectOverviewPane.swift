@@ -108,7 +108,9 @@ struct ProjectOverviewPane: View {
         let source = inventory.component(link.source)
         let target = inventory.component(link.target)
         let kind = target?.kind.title ?? ""
-        return "\(source?.name ?? link.source) \(link.summary) \(target?.name ?? link.target) (\(kind))"
+        let sourceName = source?.name ?? link.source
+        let targetName = target?.name ?? link.target
+        return String(localized: "\(sourceName) \(link.summary) \(targetName) (\(kind))")
     }
 
     // MARK: - Toolchains

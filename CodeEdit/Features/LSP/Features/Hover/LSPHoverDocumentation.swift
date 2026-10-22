@@ -129,7 +129,25 @@ struct LSPHoverDeclaration: Equatable {
             }
         }
 
-        var title: String { rawValue }
+        /// Localized name of the kind shown in the hover card header.
+        var title: String {
+            switch self {
+            case .function: return String(localized: "Function")
+            case .method: return String(localized: "Method")
+            case .variable: return String(localized: "Variable")
+            case .constant: return String(localized: "Constant")
+            case .property: return String(localized: "Property")
+            case .struct: return String(localized: "Structure")
+            case .class: return String(localized: "Class")
+            case .enum: return String(localized: "Enumeration")
+            case .protocol: return String(localized: "Protocol")
+            case .typeAlias: return String(localized: "Type Alias")
+            case .initializer: return String(localized: "Initializer")
+            case .subscriptSymbol: return String(localized: "Subscript")
+            case .macro: return String(localized: "Macro")
+            case .namespace: return String(localized: "Namespace")
+            }
+        }
     }
 
     /// The formatted code string ready for display.

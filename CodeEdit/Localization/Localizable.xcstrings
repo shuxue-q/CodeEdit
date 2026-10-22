@@ -31,6 +31,16 @@
         }
       }
     },
+    "%@ %@ %@ (%@)" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ %2$@ %3$@（%4$@）"
+          }
+        }
+      }
+    },
     "%@ (%@ not found)" : {
       "localizations" : {
         "zh-Hans" : {
@@ -331,6 +341,16 @@
         }
       }
     },
+    "%lld packages" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 个软件包"
+          }
+        }
+      }
+    },
     "%lld paths" : {
       "localizations" : {
         "zh-Hans" : {
@@ -526,7 +546,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "“include”需要路径数组以及 4 或更高版本的架构。"
+            "value" : "“include”需要路径数组以及 4 或更高版本的 schema。"
           }
         }
       }
@@ -581,6 +601,16 @@
         }
       }
     },
+    "1 package" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 个软件包"
+          }
+        }
+      }
+    },
     "1 pattern" : {
       "localizations" : {
         "zh-Hans" : {
@@ -627,6 +657,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "<无>"
+          }
+        }
+      }
+    },
+    "<no result>" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "<无结果>"
           }
         }
       }
@@ -786,7 +826,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "启用断点"
+            "value" : "激活断点"
           }
         }
       }
@@ -796,7 +836,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "活动根目录"
+            "value" : "当前根目录"
           }
         }
       }
@@ -826,7 +866,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "活动工具链"
+            "value" : "当前工具链"
           }
         }
       }
@@ -1236,7 +1276,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "应用"
+            "value" : "App"
           }
         }
       }
@@ -1246,7 +1286,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "应用或软件包"
+            "value" : "App 或软件包"
           }
         }
       }
@@ -1266,7 +1306,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "应用程序崩溃"
+            "value" : "App 崩溃"
           }
         }
       }
@@ -1276,7 +1316,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "应用程序缓慢或无响应"
+            "value" : "App 缓慢或无响应"
           }
         }
       }
@@ -1631,6 +1671,16 @@
         }
       }
     },
+    "Basic" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "基础"
+          }
+        }
+      }
+    },
     "Basic Information" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1676,7 +1726,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "黑体"
+            "value" : "极粗"
           }
         }
       }
@@ -1726,7 +1776,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "边框"
+            "value" : "带边框"
           }
         }
       }
@@ -1987,6 +2037,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "构建目录"
+          }
+        }
+      }
+    },
+    "Build failed (exit code %@)." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "构建失败（退出码 %@）。"
           }
         }
       }
@@ -2746,7 +2806,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "挑选 %@…"
+            "value" : "拣选 %@…"
           }
         }
       }
@@ -2776,7 +2836,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "选择 %@"
+            "value" : "选取 %@"
           }
         }
       }
@@ -2786,7 +2846,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "选择可执行文件…"
+            "value" : "选取可执行文件…"
           }
         }
       }
@@ -2796,7 +2856,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "选择目标"
+            "value" : "选取目标"
           }
         }
       }
@@ -2816,7 +2876,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "选择工作区主题…"
+            "value" : "选取工作区主题…"
           }
         }
       }
@@ -2826,7 +2886,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "选择 Flutter SDK 文件夹（包含 bin/flutter 的文件夹）"
+            "value" : "选取 Flutter SDK 文件夹（包含 bin/flutter 的文件夹）"
           }
         }
       }
@@ -2846,7 +2906,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "选择要调试的可执行文件"
+            "value" : "选取要调试的可执行文件"
           }
         }
       }
@@ -2867,6 +2927,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "选取…"
+          }
+        }
+      }
+    },
+    "Class" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "类"
+          }
+        }
+      }
+    },
+    "Classic (Dark)" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "经典（深色）"
+          }
+        }
+      }
+    },
+    "Classic (Light)" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "经典（浅色）"
           }
         }
       }
@@ -3137,6 +3227,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "云端"
+          }
+        }
+      }
+    },
+    "Co-authored by: %1$@\n<%2$@>" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共同作者：%1$@\n<%2$@>"
           }
         }
       }
@@ -3521,6 +3621,16 @@
         }
       }
     },
+    "Constant" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "常量"
+          }
+        }
+      }
+    },
     "Containing" : {
       "localizations" : {
         "zh-Hans" : {
@@ -3607,6 +3717,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "将系统信息拷贝到剪贴板"
+          }
+        }
+      }
+    },
+    "Copy path%@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拷贝路径"
           }
         }
       }
@@ -4001,6 +4121,26 @@
         }
       }
     },
+    "Default (Dark)" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "默认（深色）"
+          }
+        }
+      }
+    },
+    "Default (Light)" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "默认（浅色）"
+          }
+        }
+      }
+    },
     "Default - Detected" : {
       "localizations" : {
         "zh-Hans" : {
@@ -4037,6 +4177,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "默认：%@"
+          }
+        }
+      }
+    },
+    "Definition" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "定义"
           }
         }
       }
@@ -4326,7 +4476,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "调暗未聚焦的编辑器"
+            "value" : "使无焦点的编辑器变暗"
           }
         }
       }
@@ -4611,6 +4761,16 @@
         }
       }
     },
+    "Dusk" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "黄昏"
+          }
+        }
+      }
+    },
     "Each enabled row is passed as `-DNAME=VALUE` after the toolchain settings, so it wins over them and over preset cache variables. Entering `-DNAME=VALUE` as a name fills both columns." : {
       "localizations" : {
         "zh-Hans" : {
@@ -4807,6 +4967,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "输入 Git 仓库 URL："
+          }
+        }
+      }
+    },
+    "Enumeration" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "枚举"
           }
         }
       }
@@ -5236,7 +5406,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "无法检出"
+            "value" : "检出失败"
           }
         }
       }
@@ -5486,7 +5656,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "特性"
+            "value" : "功能"
           }
         }
       }
@@ -5756,7 +5926,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "风味"
+            "value" : "Flavor"
           }
         }
       }
@@ -5806,7 +5976,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Flutter 应用"
+            "value" : "Flutter App"
           }
         }
       }
@@ -5981,6 +6151,26 @@
         }
       }
     },
+    "From `%@`" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "来自 `%@`"
+          }
+        }
+      }
+    },
+    "Function" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "函数"
+          }
+        }
+      }
+    },
     "Functions" : {
       "localizations" : {
         "zh-Hans" : {
@@ -6081,6 +6271,26 @@
         }
       }
     },
+    "GitHub (Dark)" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GitHub（深色）"
+          }
+        }
+      }
+    },
+    "GitHub (Light)" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GitHub（浅色）"
+          }
+        }
+      }
+    },
     "GitHub Dark" : {
       "localizations" : {
         "zh-Hans" : {
@@ -6097,6 +6307,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "GitHub Light"
+          }
+        }
+      }
+    },
+    "GitLab Self-hosted" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GitLab 自托管"
           }
         }
       }
@@ -6301,6 +6521,26 @@
         }
       }
     },
+    "High Contrast (Dark)" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "高对比度（深色）"
+          }
+        }
+      }
+    },
+    "High Contrast (Light)" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "高对比度（浅色）"
+          }
+        }
+      }
+    },
     "History" : {
       "localizations" : {
         "zh-Hans" : {
@@ -6326,7 +6566,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "历史检查器"
+            "value" : "历史记录检查器"
           }
         }
       }
@@ -6566,7 +6806,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "包含宏需要 7 或更高版本的架构。"
+            "value" : "包含宏需要 7 或更高版本的 schema。"
           }
         }
       }
@@ -6731,6 +6971,16 @@
         }
       }
     },
+    "Initializer" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "初始化器"
+          }
+        }
+      }
+    },
     "Insert Parentheses for Functions" : {
       "localizations" : {
         "zh-Hans" : {
@@ -6756,7 +7006,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "检查器标签栏位置"
+            "value" : "检查器标签页栏位置"
           }
         }
       }
@@ -7186,7 +7436,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "跳到所选内容"
+            "value" : "跳转到所选内容"
           }
         }
       }
@@ -7611,12 +7861,32 @@
         }
       }
     },
+    "Low Key" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "低调"
+          }
+        }
+      }
+    },
     "MIT License" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "MIT 许可证"
+          }
+        }
+      }
+    },
+    "Macro" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "宏"
           }
         }
       }
@@ -7751,12 +8021,22 @@
         }
       }
     },
+    "Method" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "方法"
+          }
+        }
+      }
+    },
     "Midnight" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Midnight"
+            "value" : "午夜"
           }
         }
       }
@@ -7931,6 +8211,16 @@
         }
       }
     },
+    "Namespace" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "命名空间"
+          }
+        }
+      }
+    },
     "Namespaces" : {
       "localizations" : {
         "zh-Hans" : {
@@ -8036,7 +8326,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "导航器标签栏位置"
+            "value" : "导航器标签页栏位置"
           }
         }
       }
@@ -8526,7 +8816,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "无选择"
+            "value" : "未选择"
           }
         }
       }
@@ -9301,6 +9591,16 @@
         }
       }
     },
+    "OpenAI-compatible" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "兼容 OpenAI"
+          }
+        }
+      }
+    },
     "Opening %@..." : {
       "localizations" : {
         "zh-Hans" : {
@@ -9406,7 +9706,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "输出工具"
+            "value" : "输出实用工具"
           }
         }
       }
@@ -9576,7 +9876,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "固定于"
+            "value" : "固定者"
           }
         }
       }
@@ -9707,6 +10007,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "预处理器"
+          }
+        }
+      }
+    },
+    "Presentation (Dark)" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "演示（深色）"
+          }
+        }
+      }
+    },
+    "Presentation (Light)" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "演示（浅色）"
           }
         }
       }
@@ -9921,12 +10241,32 @@
         }
       }
     },
+    "Property" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "属性"
+          }
+        }
+      }
+    },
     "Property List" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "属性列表"
+          }
+        }
+      }
+    },
+    "Protocol" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "协议"
           }
         }
       }
@@ -10047,6 +10387,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在推送更改…"
+          }
+        }
+      }
+    },
+    "Qt Creator Light" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Qt Creator 浅色"
           }
         }
       }
@@ -10322,6 +10672,16 @@
       }
     },
     "Remove from Recent Projects" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从最近项目中移除"
+          }
+        }
+      }
+    },
+    "Remove from Recents" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -11306,7 +11666,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "同时显示 Markdown 源码和预览"
+            "value" : "显示 Markdown 源码和预览"
           }
         }
       }
@@ -11677,6 +12037,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "代码片段"
+          }
+        }
+      }
+    },
+    "Solarized (Dark)" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Solarized（深色）"
+          }
+        }
+      }
+    },
+    "Solarized (Light)" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Solarized（浅色）"
           }
         }
       }
@@ -12071,6 +12451,26 @@
         }
       }
     },
+    "StatefulWidget subclass and its State" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "StatefulWidget 子类及其 State"
+          }
+        }
+      }
+    },
+    "StatelessWidget subclass" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "StatelessWidget 子类"
+          }
+        }
+      }
+    },
     "Status" : {
       "localizations" : {
         "zh-Hans" : {
@@ -12261,6 +12661,16 @@
         }
       }
     },
+    "Subscript" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下标"
+          }
+        }
+      }
+    },
     "Successfully replaced terms across %lld files" : {
       "localizations" : {
         "zh-Hans" : {
@@ -12291,12 +12701,22 @@
         }
       }
     },
+    "Sunset" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "日落"
+          }
+        }
+      }
+    },
     "Supported preset schema versions are 1–10." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "支持的预设架构版本为 1–10。"
+            "value" : "支持的预设 schema 版本为 1–10。"
           }
         }
       }
@@ -12416,7 +12836,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "标签栏样式"
+            "value" : "标签页栏样式"
           }
         }
       }
@@ -12746,7 +13166,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "参考线建议换行的列。它不会自动折行。"
+            "value" : "参考线建议换行的列。它不会自动换行。"
           }
         }
       }
@@ -12776,7 +13196,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在工作区根目录、src、cpp、native、linux、windows、macos 和 packages/*/src 中，第一个包含 CMakeLists.txt 的文件夹为活动根目录，除非你另选其他文件夹。C++ 部分和 clangd 会使用活动根目录的预设和编译数据库。"
+            "value" : "在工作区根目录、src、cpp、native、linux、windows、macos 和 packages/*/src 中，第一个包含 CMakeLists.txt 的文件夹为当前根目录，除非您另选其他文件夹。C++ 部分和 clangd 会使用当前根目录的预设和编译数据库。"
           }
         }
       }
@@ -13257,6 +13677,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "类型"
+          }
+        }
+      }
+    },
+    "Type Alias" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "类型别名"
           }
         }
       }
@@ -13821,6 +14251,16 @@
         }
       }
     },
+    "Variable" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "变量"
+          }
+        }
+      }
+    },
     "Variables" : {
       "localizations" : {
         "zh-Hans" : {
@@ -13856,7 +14296,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "版本 %1$@ (%2$@)"
+            "value" : "版本 %1$@（%2$@）"
           }
         }
       }
@@ -13966,7 +14406,17 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "欢迎屏幕"
+            "value" : "欢迎界面"
+          }
+        }
+      }
+    },
+    "Welcome To %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "欢迎使用 %@"
           }
         }
       }
@@ -14186,7 +14636,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "按编辑器宽度折行"
+            "value" : "按编辑器宽度换行"
           }
         }
       }
@@ -14361,6 +14811,16 @@
         }
       }
     },
+    "configurationDone failed" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "configurationDone 失败"
+          }
+        }
+      }
+    },
     "copied" : {
       "localizations" : {
         "zh-Hans" : {
@@ -14387,6 +14847,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "依赖于"
+          }
+        }
+      }
+    },
+    "error: %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "错误：%@"
           }
         }
       }
@@ -14451,6 +14921,16 @@
         }
       }
     },
+    "terminal" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "终端"
+          }
+        }
+      }
+    },
     "unchanged" : {
       "localizations" : {
         "zh-Hans" : {
@@ -14487,6 +14967,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在工作"
+          }
+        }
+      }
+    },
+    "workspace" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "工作区"
           }
         }
       }

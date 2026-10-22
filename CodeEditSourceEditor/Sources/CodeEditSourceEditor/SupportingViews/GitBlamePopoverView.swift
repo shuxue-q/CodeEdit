@@ -81,9 +81,9 @@ public struct GitBlamePopoverView: View {
                     )
                     .buttonStyle(.bordered)
                     .controlSize(.small)
-                    .help("Copy commit hash")
+                    .help(Text("Copy commit hash", bundle: .module))
                 } else {
-                    Text("Uncommitted")
+                    Text("Uncommitted", bundle: .module)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 6)

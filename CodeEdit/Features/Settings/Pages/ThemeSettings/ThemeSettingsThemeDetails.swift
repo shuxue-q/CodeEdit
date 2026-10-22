@@ -38,7 +38,13 @@ struct ThemeSettingsThemeDetails: View {
             Form {
                 Group {
                     Section {
-                        TextField("Name", text: $theme.displayName)
+                        if theme.isBundled {
+                            LabeledContent("Name") {
+                                Text(verbatim: theme.localizedDisplayName)
+                            }
+                        } else {
+                            TextField("Name", text: $theme.displayName)
+                        }
                         TextField("Author", text: $theme.author)
                         Picker("Type", selection: $theme.appearance) {
                             Text("Light")
@@ -181,7 +187,7 @@ struct ThemeSettingsThemeDetails: View {
         }
         .constrainHeightToWindow()
         .alert(
-            Text("Are you sure you want to delete the theme “\(theme.displayName)”?"),
+            Text("Are you sure you want to delete the theme “\(theme.localizedDisplayName)”?"),
             isPresented: $deleteConfirmationIsPresented
         ) {
             Button("Delete Theme") {

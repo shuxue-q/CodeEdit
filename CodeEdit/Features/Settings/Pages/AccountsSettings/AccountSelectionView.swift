@@ -22,7 +22,7 @@ struct AccountSelectionView: View {
                     VStack(alignment: .leading, spacing: 0) {
                         ForEach(gitProviders, id: \.self) { provider in
                             AccountsSettingsProviderRow(
-                                name: provider.name,
+                                name: provider.localizedName,
                                 iconResource: provider.iconResource,
                                 action: {
                                     selectedProvider = provider

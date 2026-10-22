@@ -22,7 +22,7 @@ extension TextViewController {
         let lineInfo = textView.layoutManager.textLineForOffset(offset)
         let lineNumber = lineInfo.map { $0.index + 1 } ?? currentCursorLine()
         let lineIndex = max(0, lineNumber - 1)
-        let fileName = fileURL?.lastPathComponent ?? "Untitled"
+        let fileName = fileURL?.lastPathComponent ?? String(localized: "Untitled", bundle: .module)
 
         let fold = gutterView.foldingRibbon.model?.getCachedFoldAt(lineNumber: lineIndex)
         let isFolded = fold?.isCollapsed ?? false
@@ -45,7 +45,7 @@ extension TextViewController {
 
     private func addSnippetAndCodingTools(to menu: NSMenu, lineNumber: Int) {
         let createSnippetItem = NSMenuItem(
-            title: "Create Code Snippet...",
+            title: String(localized: "Create Code Snippet...", bundle: .module),
             action: #selector(contextMenuCreateSnippet(_:)),
             keyEquivalent: ""
         )
@@ -68,7 +68,9 @@ extension TextViewController {
         menu.addItem(createFindMenuItem())
         menu.addItem(createNavigateMenuItem())
 
-        let foldTitle = isFolded ? "Unfold" : "Fold"
+        let foldTitle = isFolded
+            ? String(localized: "Unfold", bundle: .module)
+            : String(localized: "Fold", bundle: .module)
         let foldItem = NSMenuItem(
             title: foldTitle,
             action: #selector(contextMenuFoldToggle(_:)),
@@ -80,7 +82,7 @@ extension TextViewController {
         menu.addItem(foldItem)
 
         let addDocItem = NSMenuItem(
-            title: "Add Documentation",
+            title: String(localized: "Add Documentation", bundle: .module),
             action: #selector(contextMenuAddDocumentation(_:)),
             keyEquivalent: "/"
         )
@@ -91,7 +93,7 @@ extension TextViewController {
         menu.addItem(addDocItem)
 
         let formatItem = NSMenuItem(
-            title: "Format Code",
+            title: String(localized: "Format Code", bundle: .module),
             action: #selector(formatCode(_:)),
             keyEquivalent: "i"
         )
@@ -105,7 +107,7 @@ extension TextViewController {
 
     private func addGitAndBookmarkItems(to menu: NSMenu, lineNumber: Int, fileName: String) {
         let lastChangeItem = NSMenuItem(
-            title: "Show Last Change for Line",
+            title: String(localized: "Show Last Change for Line", bundle: .module),
             action: #selector(contextMenuShowLastChange(_:)),
             keyEquivalent: ""
         )
@@ -116,7 +118,7 @@ extension TextViewController {
         menu.addItem(.separator())
 
         let bookmarkLineItem = NSMenuItem(
-            title: "Bookmark “\(fileName)” Line \(lineNumber)",
+            title: String(localized: "Bookmark “\(fileName)” Line \(lineNumber)", bundle: .module),
             action: #selector(contextMenuBookmarkLine(_:)),
             keyEquivalent: ""
         )
@@ -125,7 +127,7 @@ extension TextViewController {
         menu.addItem(bookmarkLineItem)
 
         let bookmarkFileItem = NSMenuItem(
-            title: "Bookmark “\(fileName)”",
+            title: String(localized: "Bookmark “\(fileName)”", bundle: .module),
             action: #selector(contextMenuBookmarkFile(_:)),
             keyEquivalent: ""
         )
@@ -138,17 +140,29 @@ extension TextViewController {
     private func addClipboardAndAutoFillItems(to menu: NSMenu) {
         let hasSelection = textView.selectionManager.textSelections.contains { $0.range.length > 0 }
 
-        let cutItem = NSMenuItem(title: "Cut", action: #selector(TextView.cut(_:)), keyEquivalent: "")
+        let cutItem = NSMenuItem(
+            title: String(localized: "Cut", bundle: .module),
+            action: #selector(TextView.cut(_:)),
+            keyEquivalent: ""
+        )
         cutItem.target = textView
         cutItem.isEnabled = isEditable && hasSelection
         menu.addItem(cutItem)
 
-        let copyItem = NSMenuItem(title: "Copy", action: #selector(TextView.copy(_:)), keyEquivalent: "")
+        let copyItem = NSMenuItem(
+            title: String(localized: "Copy", bundle: .module),
+            action: #selector(TextView.copy(_:)),
+            keyEquivalent: ""
+        )
         copyItem.target = textView
         copyItem.isEnabled = hasSelection
         menu.addItem(copyItem)
 
-        let pasteItem = NSMenuItem(title: "Paste", action: #selector(TextView.paste(_:)), keyEquivalent: "")
+        let pasteItem = NSMenuItem(
+            title: String(localized: "Paste", bundle: .module),
+            action: #selector(TextView.paste(_:)),
+            keyEquivalent: ""
+        )
         pasteItem.target = textView
         let hasPasteboardText = NSPasteboard.general.string(forType: .string) != nil
         pasteItem.isEnabled = isEditable && hasPasteboardText

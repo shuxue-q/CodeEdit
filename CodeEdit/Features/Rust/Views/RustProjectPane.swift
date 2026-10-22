@@ -59,7 +59,7 @@ struct RustProjectPane: View {
     }
 
     private func versionLabel(_ manifest: CargoManifest) -> String {
-        manifest.version ?? (manifest.inheritedKeys.contains("version") ? "workspace" : "")
+        manifest.version ?? (manifest.inheritedKeys.contains("version") ? String(localized: "workspace") : "")
     }
 
     // MARK: - Manifest

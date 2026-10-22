@@ -73,7 +73,7 @@ extension DebugService {
             try await client.send("configurationDone", arguments: ConfigurationDoneArguments())
         } catch {
             guard generation == sessionGeneration else { return }
-            recordError("configurationDone failed", error)
+            recordError(String(localized: "configurationDone failed"), error)
         }
     }
 

@@ -52,6 +52,12 @@ struct Theme: Identifiable, Codable, Equatable, Hashable, Loopable {
     /// The `display name` of the theme
     var displayName: String
 
+    /// The name shown in the UI. Themes that ship with CodeEdit are translated; user-created and imported
+    /// themes keep their own name. Selection and persistence still use ``name`` and ``displayName``.
+    var localizedDisplayName: String {
+        isBundled ? displayName.localizedAtRuntime : displayName
+    }
+
     /// The `version` of the theme
     var version: String
 

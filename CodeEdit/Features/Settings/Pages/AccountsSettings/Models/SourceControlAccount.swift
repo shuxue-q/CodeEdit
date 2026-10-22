@@ -67,6 +67,9 @@ struct SourceControlAccount: Codable, Identifiable, Hashable {
             }
         }
 
+        /// The provider name translated for display; ``name`` stays the stable, persisted value.
+        var localizedName: String { name.localizedAtRuntime }
+
         var baseURL: URL? {
             switch self {
             case .bitbucketCloud:

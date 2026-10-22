@@ -319,9 +319,9 @@ final class DebugService: ObservableObject {
                     "evaluate",
                     arguments: EvaluateArguments(expression: expression, frameId: frameID)
                 )
-                results[expression] = response?.result ?? "<no result>"
+                results[expression] = response?.result ?? String(localized: "<no result>")
             } catch {
-                results[expression] = "error: \(describe(error))"
+                results[expression] = String(localized: "error: \(describe(error))")
             }
         }
         guard generation == sessionGeneration, sessionState == .paused else { return }

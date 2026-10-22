@@ -74,7 +74,7 @@ struct AccountsSettingsDetailsView: View {
                 } label: {
                     Text("Clone Using")
                     Text("""
-                    New repositories will be cloned from \(currentAccount.provider.name) \
+                    New repositories will be cloned from \(currentAccount.provider.localizedName) \
                     using \(currentAccount.urlProtocol.rawValue).
                     """)
                 }
@@ -154,7 +154,7 @@ struct AccountsSettingsDetailsView: View {
         .onChange(of: currentAccount) { _, newValue in
             account = newValue
         }
-        .navigationTitle(currentAccount.description)
+        .navigationTitle(currentAccount.description.localizedAtRuntime)
         .navigationBarBackButtonVisible()
     }
 

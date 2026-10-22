@@ -5,6 +5,7 @@ import PackageDescription
 
 let package = Package(
     name: "CodeEditTextView",
+    defaultLocalization: "en",
     platforms: [.macOS(.v13)],
     products: [
         // A Fast, Efficient text view for code.
@@ -38,6 +39,9 @@ let package = Package(
                 "TextStory",
                 .product(name: "Collections", package: "swift-collections"),
                 "CodeEditTextViewObjC"
+            ],
+            resources: [
+                .process("Resources")
             ],
             plugins: [
                 .plugin(name: "SwiftLint", package: "SwiftLintPlugin")

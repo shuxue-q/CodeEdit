@@ -147,7 +147,7 @@ enum LSPCompletionOrigin {
 extension LSPCompletionEntry {
     /// Appends a `From \`header\`` line so the suggestion window can show where the symbol is declared.
     func withOriginHeader(_ header: String) -> LSPCompletionEntry {
-        let line = "From `\(header)`"
+        let line = String(localized: "From `\(header)`")
         let documentation: TwoTypeOption<String, MarkupContent>
         switch item.documentation {
         case .optionA(let string):

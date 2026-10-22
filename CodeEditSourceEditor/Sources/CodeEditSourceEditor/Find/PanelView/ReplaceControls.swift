@@ -40,12 +40,12 @@ struct ReplaceControls: View {
                         if condensed {
                             Image(systemName: "arrow.turn.up.right")
                         } else {
-                            Text("Replace")
+                            Text("Replace", bundle: .module)
                         }
                     }
                     .opacity(shouldDisableSingle ? 0.33 : 1)
                 }
-                .help(condensed ? "Replace" : "")
+                .help(condensed ? Text("Replace", bundle: .module) : Text(verbatim: ""))
                 .disabled(shouldDisableSingle)
                 .frame(maxWidth: .infinity)
 
@@ -58,12 +58,12 @@ struct ReplaceControls: View {
                         if condensed {
                             Image(systemName: "text.insert")
                         } else {
-                            Text("All")
+                            Text("All", bundle: .module)
                         }
                     }
                     .opacity(shouldDisableAll ? 0.33 : 1)
                 }
-                .help(condensed ? "Replace All" : "")
+                .help(condensed ? Text("Replace All", bundle: .module) : Text(verbatim: ""))
                 .disabled(shouldDisableAll)
                 .frame(maxWidth: .infinity)
             }

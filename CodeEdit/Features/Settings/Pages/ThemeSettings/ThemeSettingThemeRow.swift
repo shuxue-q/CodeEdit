@@ -23,7 +23,7 @@ struct ThemeSettingsThemeRow: View {
                 .opacity(active ? 1 : 0)
                 .font(.system(size: 10.5, weight: .bold))
             VStack(alignment: .leading) {
-                Text(theme.displayName)
+                Text(verbatim: theme.localizedDisplayName)
                 Text(theme.author)
                     .foregroundColor(.secondary)
                     .font(.footnote)
@@ -69,7 +69,7 @@ struct ThemeSettingsThemeRow: View {
             isHovering = hovering
         }
         .alert(
-            Text("Are you sure you want to delete the theme “\(theme.displayName)”?"),
+            Text("Are you sure you want to delete the theme “\(theme.localizedDisplayName)”?"),
             isPresented: $deleteConfirmationIsPresented
         ) {
             Button("Delete Theme") {
