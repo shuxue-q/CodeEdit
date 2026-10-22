@@ -33,9 +33,9 @@ struct InvisibleCharacterWarningList: View {
                     }
                 }
             ),
-            keyColumnName: "Unicode Character Code",
-            valueColumnName: "Notes",
-            newItemInstruction: "Add A Character As A Hexidecimal Unicode Value",
+            keyColumnName: String(localized: "Unicode Character Code"),
+            valueColumnName: String(localized: "Notes"),
+            newItemInstruction: String(localized: "Add A Character As A Hexidecimal Unicode Value"),
             actionBarTrailing: {
                 Button {
                     // Add defaults without removing user's data. We do still override notes here.

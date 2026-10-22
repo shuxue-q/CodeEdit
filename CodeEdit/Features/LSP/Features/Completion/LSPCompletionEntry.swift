@@ -60,9 +60,9 @@ struct LSPCompletionEntry: CodeSuggestionEntry {
         let trimmed = item.label.trimmingCharacters(in: .whitespaces)
         if trimmed == "include" || trimmed.hasPrefix("#include") {
             if isAngleInclude {
-                return "Include system header"
+                return String(localized: "Include system header")
             } else if isQuoteInclude {
-                return "Include user header"
+                return String(localized: "Include user header")
             }
         }
         return item.detail

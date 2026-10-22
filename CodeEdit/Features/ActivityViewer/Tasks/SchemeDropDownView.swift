@@ -27,7 +27,7 @@ struct SchemeDropDownView: View {
     /// Resolves the name one step further than `workspaceName`.
     var workspaceDisplayName: String {
         workspaceName.isEmpty
-        ? (workspaceFileManager?.workspaceItem.fileName() ?? "No Project found")
+        ? (workspaceFileManager?.workspaceItem.fileName() ?? String(localized: "No Project found"))
         : workspaceName
     }
 

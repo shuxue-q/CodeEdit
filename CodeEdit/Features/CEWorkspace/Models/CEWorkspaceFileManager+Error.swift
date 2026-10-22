@@ -20,28 +20,28 @@ extension CEWorkspaceFileManager {
         var errorDescription: String? {
             switch self {
             case .fileNotFound:
-                return "File not found"
+                return String(localized: "File not found")
             case .fileNotIndexed:
-                return "File not found in CodeEdit"
+                return String(localized: "File not found in CodeEdit")
             case .originFileNotFound:
-                return "Failed to find origin file"
+                return String(localized: "Failed to find origin file")
             case .destinationFileExists:
-                return "Destination already exists"
+                return String(localized: "Destination already exists")
             case .invalidFileName:
-                return "Invalid file name"
+                return String(localized: "Invalid file name")
             }
         }
 
         var recoverySuggestion: String? {
             switch self {
             case .fileNotIndexed:
-                return "Reopen the workspace to reindex the file system."
+                return String(localized: "Reopen the workspace to reindex the file system.")
             case .fileNotFound, .originFileNotFound:
-                return "The file may have moved during the operation, try again."
+                return String(localized: "The file may have moved during the operation, try again.")
             case .destinationFileExists:
-                return "Use a different file name or remove the conflicting file."
+                return String(localized: "Use a different file name or remove the conflicting file.")
             case .invalidFileName:
-                return "File names must not contain the : character and be less than 256 characters."
+                return String(localized: "File names must not contain the : character and be less than 256 characters.")
             }
         }
     }

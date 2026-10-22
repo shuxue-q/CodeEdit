@@ -10,7 +10,7 @@ import Foundation
 extension WorkspaceDocument.SearchState {
     /// Adds the contents of the current workspace URL to the search index.
     /// That means that the contents of the workspace will be indexed and searchable.
-    func addProjectToIndex() {
+    func addProjectToIndex() { // swiftlint:disable:this function_body_length
         guard let indexer = indexer else { return }
         guard let url = workspace.fileURL else { return }
 
@@ -19,8 +19,10 @@ extension WorkspaceDocument.SearchState {
         let createInfo: [String: Any] = [
             "id": uuidString,
             "action": "create",
-            "title": "Indexing | Processing files",
-            "message": "Creating an index to enable fast and accurate searches within your codebase.",
+            "title": String(localized: "Indexing | Processing files"),
+            "message": String(
+                localized: "Creating an index to enable fast and accurate searches within your codebase."
+            ),
             "isLoading": true
         ]
         NotificationCenter.default.post(name: .taskNotification, object: nil, userInfo: createInfo)
@@ -57,7 +59,7 @@ extension WorkspaceDocument.SearchState {
             let updateInfo: [String: Any] = [
                 "id": uuidString,
                 "action": "update",
-                "title": "Finished indexing",
+                "title": String(localized: "Finished indexing"),
                 "isLoading": false
             ]
             NotificationCenter.default.post(name: .taskNotification, object: nil, userInfo: updateInfo)

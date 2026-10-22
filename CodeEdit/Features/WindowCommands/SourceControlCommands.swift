@@ -49,7 +49,7 @@ struct SourceControlCommands: Commands {
                                 try await sourceControlManager.add(sourceControlManager.changedFiles.map { $0.fileURL })
                             } catch {
                                 await sourceControlManager.showAlertForError(
-                                    title: "Failed To Stage Changes",
+                                    title: String(localized: "Failed To Stage Changes"),
                                     error: error
                                 )
                             }
@@ -69,7 +69,7 @@ struct SourceControlCommands: Commands {
                                 )
                             } catch {
                                 await sourceControlManager.showAlertForError(
-                                    title: "Failed To Unstage Changes",
+                                    title: String(localized: "Failed To Unstage Changes"),
                                     error: error
                                 )
                             }

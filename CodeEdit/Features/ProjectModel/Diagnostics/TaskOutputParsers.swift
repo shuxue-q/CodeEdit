@@ -133,7 +133,7 @@ struct CargoOutputParser: TaskOutputParser {
         if var panic = pendingPanic {
             pendingPanic = nil
             let message = line.trimmingCharacters(in: .whitespaces)
-            if !message.isEmpty { panic.message = "Test panicked: \(message)" }
+            if !message.isEmpty { panic.message = String(localized: "Test panicked: \(message)") }
             completed.append(panic)
             return completed
         }
@@ -161,7 +161,7 @@ struct CargoOutputParser: TaskOutputParser {
         if let panic = line.firstMatch(of: #/^thread '(.+?)' panicked at (.+?):(\d+):(\d+):?\s*$/#) {
             pendingPanic = CMakeBuildDiagnostic(
                 severity: .error,
-                message: "Test '\(panic.1)' panicked",
+                message: String(localized: "Test '\(String(panic.1))' panicked"),
                 filePath: TaskOutputText.resolve(String(panic.2), against: baseDirectory),
                 line: Int(panic.3),
                 column: Int(panic.4)

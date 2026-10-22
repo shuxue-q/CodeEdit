@@ -45,15 +45,19 @@ enum ClangFormatError: Error, Equatable {
     var message: String {
         switch self {
         case .formatterNotFound:
-            return "clang-format was not found. Install LLVM or the Xcode Command Line Tools, then try again."
+            return String(
+                localized: "clang-format was not found. Install LLVM or the Xcode Command Line Tools, then try again."
+            )
         case .missingConfig:
-            return "No .clang-format file was found for this file. " +
-                "Add one to the project, or choose a built-in style in Settings → Text Editing."
+            return String(localized: """
+                No .clang-format file was found for this file. \
+                Add one to the project, or choose a built-in style in Settings → Text Editing.
+                """)
         case .failed(let detail):
             let trimmed = detail.trimmingCharacters(in: .whitespacesAndNewlines)
-            return trimmed.isEmpty ? "clang-format failed." : trimmed
+            return trimmed.isEmpty ? String(localized: "clang-format failed.") : trimmed
         case .timedOut:
-            return "clang-format took too long and was stopped."
+            return String(localized: "clang-format took too long and was stopped.")
         }
     }
 }
@@ -251,7 +255,7 @@ enum ClangFormatRunner {
             throw ClangFormatError.failed(String(detail.prefix(400)))
         }
         guard let text = String(data: captured.output, encoding: .utf8) else {
-            throw ClangFormatError.failed("clang-format returned text that was not valid UTF-8.")
+            throw ClangFormatError.failed(String(localized: "clang-format returned text that was not valid UTF-8."))
         }
         return text
     }

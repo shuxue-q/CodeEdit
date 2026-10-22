@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ThemeSettingsThemeToken: View {
-    var label: String
+    var label: LocalizedStringKey
 
     @Binding var color: Color
     @Binding var bold: Bool
@@ -17,7 +17,7 @@ struct ThemeSettingsThemeToken: View {
     @State private var selectedColor: Color
     @State private var isHovering = false
 
-    init(_ label: String, color: Binding<Color>, bold: Binding<Bool>, italic: Binding<Bool>) {
+    init(_ label: LocalizedStringKey, color: Binding<Color>, bold: Binding<Bool>, italic: Binding<Bool>) {
         self.label = label
         self._color = color
         self._bold = bold

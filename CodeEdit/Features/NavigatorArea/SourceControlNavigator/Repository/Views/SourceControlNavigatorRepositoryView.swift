@@ -80,8 +80,8 @@ struct SourceControlNavigatorRepositoryView: View {
         }
         .alert(
             sourceControlManager.changedFiles.isEmpty
-            ? "Do you want to apply stashed changes?"
-            : "The local repository has uncommitted changes.",
+            ? String(localized: "Do you want to apply stashed changes?")
+            : String(localized: "The local repository has uncommitted changes."),
             isPresented: $applyStashedChangesIsPresented
         ) {
             if sourceControlManager.changedFiles.isEmpty {
@@ -124,7 +124,7 @@ struct SourceControlNavigatorRepositoryView: View {
                             try await sourceControlManager.deleteBranch(branch: branch)
                         } catch {
                             await sourceControlManager.showAlertForError(
-                                title: "Failed to delete",
+                                title: String(localized: "Failed to delete"),
                                 error: error
                             )
                         }
@@ -146,7 +146,7 @@ struct SourceControlNavigatorRepositoryView: View {
                             try await sourceControlManager.deleteStashEntry(stashEntry: stashEntry)
                         } catch {
                             await sourceControlManager.showAlertForError(
-                                title: "Failed to delete",
+                                title: String(localized: "Failed to delete"),
                                 error: error
                             )
                         }
@@ -168,7 +168,7 @@ struct SourceControlNavigatorRepositoryView: View {
                             try await sourceControlManager.deleteRemote(remote: remote)
                         } catch {
                             await sourceControlManager.showAlertForError(
-                                title: "Failed to delete",
+                                title: String(localized: "Failed to delete"),
                                 error: error
                             )
                         }

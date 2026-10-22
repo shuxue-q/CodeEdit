@@ -12,7 +12,7 @@ struct GlobPatternList: View {
     @Binding var selection: Set<UUID>
     let addPattern: () -> Void
     let removePatterns: (_ selection: Set<UUID>?) -> Void
-    let emptyMessage: String
+    let emptyMessage: LocalizedStringKey
 
     @FocusState private var focusedField: String?
 

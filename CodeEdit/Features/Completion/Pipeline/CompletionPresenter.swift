@@ -24,37 +24,37 @@ enum CompletionPresenter {
             return CodeSuggestionBadge(
                 image: CompletionIconImage.template("LSP-provider"),
                 color: .secondary,
-                accessibilityLabel: "Language server"
+                accessibilityLabel: String(localized: "Language server")
             )
         case .snippet:
             return CodeSuggestionBadge(
                 image: CompletionIconImage.template("tree-sitter-ast-provider"),
                 color: .teal,
-                accessibilityLabel: "Snippet"
+                accessibilityLabel: String(localized: "Snippet")
             )
         case .keyword:
             return CodeSuggestionBadge(
                 image: CompletionIconImage.template("tree-sitter-ast-provider"),
                 color: .pink,
-                accessibilityLabel: "Keyword"
+                accessibilityLabel: String(localized: "Keyword")
             )
         case .ai:
             return CodeSuggestionBadge(
                 image: CompletionIconImage.original("AI-provider"),
                 color: .purple,
-                accessibilityLabel: "AI suggestion"
+                accessibilityLabel: String(localized: "AI suggestion")
             )
         case .postfix:
             return CodeSuggestionBadge(
                 image: CompletionIconImage.template("tree-sitter-ast-provider"),
                 color: .mint,
-                accessibilityLabel: "Postfix"
+                accessibilityLabel: String(localized: "Postfix")
             )
         case .word:
             return CodeSuggestionBadge(
                 image: Image(systemName: "textformat.abc"),
                 color: .gray,
-                accessibilityLabel: "Word"
+                accessibilityLabel: String(localized: "Word")
             )
         }
     }

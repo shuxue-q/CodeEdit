@@ -23,7 +23,7 @@ extension TOMLParser {
                 result.append(char)
             }
         }
-        throw TOMLParseError(message: "Unterminated string")
+        throw TOMLParseError(localized: "Unterminated string")
     }
 
     mutating func parseLiteralString() throws -> String {
@@ -38,7 +38,7 @@ extension TOMLParser {
             if char.isNewline { break }
             index += 1
         }
-        throw TOMLParseError(message: "Unterminated string")
+        throw TOMLParseError(localized: "Unterminated string")
     }
 
     mutating func parseMultilineBasicString() throws -> String {
@@ -72,7 +72,7 @@ extension TOMLParser {
                 result.append(char)
             }
         }
-        throw TOMLParseError(message: "Unterminated multi-line string")
+        throw TOMLParseError(localized: "Unterminated multi-line string")
     }
 
     mutating func parseMultilineLiteralString() throws -> String {
@@ -92,7 +92,7 @@ extension TOMLParser {
             result.append(chars[index])
             index += 1
         }
-        throw TOMLParseError(message: "Unterminated multi-line string")
+        throw TOMLParseError(localized: "Unterminated multi-line string")
     }
 
     /// The characters a backslash escape stands for, other than Unicode escapes.
@@ -101,15 +101,15 @@ extension TOMLParser {
     ]
 
     private mutating func parseEscape() throws -> Character {
-        guard let char = peek() else { throw TOMLParseError(message: "Invalid escape") }
+        guard let char = peek() else { throw TOMLParseError(localized: "Invalid escape") }
         index += 1
         if let escaped = Self.simpleEscapes[char] { return escaped }
-        guard char == "u" || char == "U" else { throw TOMLParseError(message: "Invalid escape '\\\(char)'") }
+        guard char == "u" || char == "U" else { throw TOMLParseError(localized: "Invalid escape '\\\(String(char))'") }
         let length = char == "u" ? 4 : 8
         guard index + length <= chars.count,
               let code = UInt32(String(chars[index..<index + length]), radix: 16),
               let scalar = Unicode.Scalar(code) else {
-            throw TOMLParseError(message: "Invalid Unicode escape")
+            throw TOMLParseError(localized: "Invalid Unicode escape")
         }
         index += length
         return Character(scalar)

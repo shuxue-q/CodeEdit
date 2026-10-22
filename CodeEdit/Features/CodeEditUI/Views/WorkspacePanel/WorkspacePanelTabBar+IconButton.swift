@@ -34,7 +34,7 @@ extension WorkspacePanelTabBar {
             }
             .buttonStyle(buttonStyle)
             .focusable(false)
-            .accessibilityIdentifier("WorkspacePanelTab-\(tab.title)")
+            .accessibilityIdentifier("WorkspacePanelTab-\(tab.id)")
             .accessibilityLabel(tab.title)
         }
 

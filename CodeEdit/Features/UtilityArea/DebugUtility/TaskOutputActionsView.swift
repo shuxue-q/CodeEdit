@@ -56,7 +56,7 @@ struct TaskOutputActionsView: View {
             .buttonStyle(.icon)
             .disabled(!(activeTask.status == .running || activeTask.status == .stopped))
             .opacity(activeTask.status == .running || activeTask.status == .stopped ? 1 : 0.5)
-            .help(activeTask.status == .stopped ? "Resume Task" : "Suspend Task")
+            .help(activeTask.status == .stopped ? String(localized: "Resume Task") : String(localized: "Suspend Task"))
 
             Divider()
 

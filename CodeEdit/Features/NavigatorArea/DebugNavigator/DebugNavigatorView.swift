@@ -16,8 +16,8 @@ struct DebugNavigatorView: View {
         Group {
             if debugService.sessionState == .inactive {
                 CEContentUnavailableView(
-                    "Not Debugging",
-                    description: "Start a debug session to inspect threads and the call stack."
+                    String(localized: "Not Debugging"),
+                    description: String(localized: "Start a debug session to inspect threads and the call stack.")
                 )
             } else {
                 VStack(spacing: 0) {
@@ -74,10 +74,10 @@ struct DebugNavigatorView: View {
 
     private var stateLabel: String {
         switch debugService.sessionState {
-        case .inactive: return "Not Debugging"
-        case .launching: return "Launching…"
-        case .running: return "Running"
-        case .paused: return "Paused"
+        case .inactive: return String(localized: "Not Debugging")
+        case .launching: return String(localized: "Launching…")
+        case .running: return String(localized: "Running")
+        case .paused: return String(localized: "Paused")
         }
     }
 

@@ -160,7 +160,7 @@ struct RustProjectPane: View {
                 LabeledContent(kind.rawValue) {
                     Text(dependencies.map { dependency in
                         var text = "\(dependency.name) \(dependency.sourceDescription)"
-                        if dependency.isOptional { text += " (optional)" }
+                        if dependency.isOptional { text += String(localized: " (optional)") }
                         if let platform = dependency.platform { text += " [\(platform)]" }
                         return text
                     }.joined(separator: "\n"))
@@ -184,7 +184,8 @@ struct RustProjectPane: View {
             let targets = package.targets(of: kind)
             guard !targets.isEmpty else { return nil }
             let count = targets.count
-            return count == 1 ? kind.title.lowercased() : "\(count) \(kind.title.lowercased())s"
+            let name = kind.title.lowercased()
+            return count == 1 ? name : String(localized: "\(count) \(name)s")
         }.joined(separator: " · ")
     }
 }
@@ -200,7 +201,7 @@ private struct RustToolchainSection: View {
             if let file = root.toolchainFile {
                 LabeledContent("Pinned By", value: file.url.lastPathComponent)
                     .help(file.url.path)
-                LabeledContent("Channel", value: file.channel ?? file.path ?? "Not set")
+                LabeledContent("Channel", value: file.channel ?? file.path ?? String(localized: "Not set"))
                 if !file.targets.isEmpty {
                     LabeledContent("Targets") {
                         VStack(alignment: .trailing, spacing: 2) {
@@ -220,7 +221,7 @@ private struct RustToolchainSection: View {
                     }
                 }
             } else {
-                LabeledContent("Pinned By", value: "Nothing (rustup default)")
+                LabeledContent("Pinned By", value: String(localized: "Nothing (rustup default)"))
             }
             LabeledContent("Active Toolchain") {
                 activeToolchain
@@ -238,8 +239,10 @@ private struct RustToolchainSection: View {
                     .disabled(model.isProbing)
             }
         } footer: {
-            Text("Install missing pieces with rustup, for example `rustup target add <target>` or "
-                 + "`rustup component add rust-src`, run in the Cargo folder.")
+            Text(LocalizedStringKey(
+                "Install missing pieces with rustup, for example `rustup target add <target>` or "
+                + "`rustup component add rust-src`, run in the Cargo folder."
+            ))
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -253,7 +256,7 @@ private struct RustToolchainSection: View {
                     .lineLimit(3)
             } else {
                 VStack(alignment: .trailing, spacing: 2) {
-                    Text(status.activeToolchain ?? "Unknown").textSelection(.enabled)
+                    Text(status.activeToolchain ?? String(localized: "Unknown")).textSelection(.enabled)
                     if let rustc = status.rustcVersion {
                         Text(rustc).font(.caption).foregroundStyle(.secondary)
                     }

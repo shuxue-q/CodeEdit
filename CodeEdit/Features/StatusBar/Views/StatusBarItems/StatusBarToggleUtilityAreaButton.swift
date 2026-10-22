@@ -21,13 +21,17 @@ internal struct StatusBarToggleUtilityAreaButton: View {
         }
         .buttonStyle(.icon)
         .keyboardShortcut("Y", modifiers: [.command, .shift])
-        .help(utilityAreaViewModel.isCollapsed ? "Show the Utility area" : "Hide the Utility area")
+        .help(
+            utilityAreaViewModel.isCollapsed
+            ? String(localized: "Show the Utility area")
+            : String(localized: "Hide the Utility area")
+        )
         .onHover { isHovering($0) }
         .onChange(of: controlActiveState) { _, newValue in
             if newValue == .key {
                 CommandManager.shared.addCommand(
                     name: "Toggle Utility Area",
-                    title: "Toggle Utility Area",
+                    title: String(localized: "Toggle Utility Area"),
                     id: "open.drawer",
                     command: { utilityAreaViewModel.togglePanel() }
                 )
@@ -36,7 +40,7 @@ internal struct StatusBarToggleUtilityAreaButton: View {
         .onAppear {
             CommandManager.shared.addCommand(
                 name: "Toggle Utility Area",
-                title: "Toggle Utility Area",
+                title: String(localized: "Toggle Utility Area"),
                 id: "open.drawer",
                 command: { utilityAreaViewModel.togglePanel() }
             )

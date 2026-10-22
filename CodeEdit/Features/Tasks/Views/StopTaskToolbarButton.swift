@@ -78,7 +78,11 @@ private struct StopTaskButtonContent: View {
         .buttonStyle(.plain)
         .disabled(!isEnabled)
         .opacity(isEnabled ? 1.0 : 0.35)
-        .help(taskManager.isCMakeBuildTarget ? "Stop the running build" : "Stop the running task")
+        .help(
+            taskManager.isCMakeBuildTarget
+                ? String(localized: "Stop the running build")
+                : String(localized: "Stop the running task")
+        )
         .accessibilityLabel("Stop")
     }
 }

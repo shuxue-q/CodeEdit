@@ -125,7 +125,8 @@ struct DiagnosticsListView: View {
     }
 
     private func displayPath(_ path: String) -> String {
-        guard path != "(other)", let root = workspace.workspaceFileManager?.folderUrl.path else {
+        if path == "(other)" { return String(localized: "(other)") }
+        guard let root = workspace.workspaceFileManager?.folderUrl.path else {
             return path
         }
         if path.hasPrefix(root + "/") {
@@ -184,9 +185,21 @@ struct DiagnosticsListView: View {
 enum DiagnosticGroupSummary {
     static func text(errors: Int, warnings: Int, notes: Int) -> String {
         [
-            label(errors, singular: "error", plural: "errors"),
-            label(warnings, singular: "warning", plural: "warnings"),
-            label(notes, singular: "note", plural: "notes")
+            label(
+                errors,
+                singular: String(localized: "1 error"),
+                plural: String(localized: "\(errors) errors")
+            ),
+            label(
+                warnings,
+                singular: String(localized: "1 warning"),
+                plural: String(localized: "\(warnings) warnings")
+            ),
+            label(
+                notes,
+                singular: String(localized: "1 note"),
+                plural: String(localized: "\(notes) notes")
+            )
         ]
         .compactMap { $0 }
         .joined(separator: ", ")
@@ -197,9 +210,9 @@ enum DiagnosticGroupSummary {
         case 0:
             return nil
         case 1:
-            return "1 \(singular)"
+            return singular
         default:
-            return "\(count) \(plural)"
+            return plural
         }
     }
 }

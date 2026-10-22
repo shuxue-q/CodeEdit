@@ -169,7 +169,7 @@ extension NSDocumentController {
     final func openDocument(onCompletion: @escaping (NSDocument?, Bool) -> Void, onCancel: @escaping () -> Void) {
         let dialog = NSOpenPanel()
 
-        dialog.title = "Open Workspace or File"
+        dialog.title = String(localized: "Open Workspace or File")
         dialog.showsResizeIndicator = true
         dialog.showsHiddenFiles = false
         dialog.canChooseFiles = true

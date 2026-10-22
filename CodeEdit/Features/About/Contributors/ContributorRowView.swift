@@ -55,7 +55,7 @@ struct ContributorRowView: View {
     }
 
     private func tag(_ item: Contributor.Contribution) -> some View {
-        Text(item.rawValue.capitalized)
+        Text(item.displayName)
             .font(.caption)
             .padding(.horizontal, 6)
             .padding(.vertical, 1)

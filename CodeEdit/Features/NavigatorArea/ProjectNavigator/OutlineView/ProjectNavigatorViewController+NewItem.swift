@@ -43,7 +43,7 @@ extension ProjectNavigatorViewController {
             beginRenaming(newItem)
         } catch {
             let alert = NSAlert(error: error)
-            alert.addButton(withTitle: "Dismiss")
+            alert.addButton(withTitle: String(localized: "Dismiss"))
             alert.runModal()
         }
     }

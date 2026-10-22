@@ -178,7 +178,7 @@ struct AccountsSettingsSigninView: View {
             }
         ) {
             // Show alert when adding a duplicated account
-            signinErrorDetail = "Account with the same username and provider already exists!"
+            signinErrorDetail = String(localized: "Account with the same username and provider already exists!")
             signinErrorAlertIsPresented.toggle()
         } else {
             let configURL = provider.apiURL?.absoluteString ?? server
@@ -239,11 +239,11 @@ struct AccountsSettingsSigninView: View {
         case -1009:
             signinErrorDetail = error.localizedDescription
         case 401:
-            signinErrorDetail = "Authentication Failed"
+            signinErrorDetail = String(localized: "Authentication Failed")
         case 403:
-            signinErrorDetail = "API Access Forbidden"
+            signinErrorDetail = String(localized: "API Access Forbidden")
         default:
-            signinErrorDetail = "Unknown Error"
+            signinErrorDetail = String(localized: "Unknown Error")
         }
         signinErrorAlertIsPresented.toggle()
     }

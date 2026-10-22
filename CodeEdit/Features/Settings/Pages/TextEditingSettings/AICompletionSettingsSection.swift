@@ -35,10 +35,10 @@ struct AICompletionSettingsSection: View {
             modelField
             apiKeyField
             testConnection
-            Text(
-                "When enabled, the code surrounding your cursor is sent to \(settings.backend.displayName) "
-                + "to generate suggestions."
-            )
+            Text("""
+            When enabled, the code surrounding your cursor is sent to \(settings.backend.displayName) \
+            to generate suggestions.
+            """)
             .foregroundColor(.secondary)
         }
         .onAppear { apiKey = keychain.get(AISettings.keychainKey(for: settings.backend)) ?? "" }
@@ -141,11 +141,13 @@ struct AICompletionSettingsSection: View {
     }
 
     private var modelPlaceholder: String {
-        settings.backend.defaultModel.isEmpty ? "Model name" : settings.backend.defaultModel
+        settings.backend.defaultModel.isEmpty ? String(localized: "Model name") : settings.backend.defaultModel
     }
 
     private var keyPlaceholder: String {
-        settings.backend == .openAICompatible ? "Optional for local servers" : "Required"
+        settings.backend == .openAICompatible
+            ? String(localized: "Optional for local servers")
+            : String(localized: "Required")
     }
 
     // MARK: - Actions

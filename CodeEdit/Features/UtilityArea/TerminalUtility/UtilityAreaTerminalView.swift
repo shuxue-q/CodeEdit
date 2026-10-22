@@ -121,7 +121,7 @@ struct UtilityAreaTerminalView: View {
                         }
                     }
                 } else {
-                    CEContentUnavailableView("No Selection")
+                    CEContentUnavailableView(String(localized: "No Selection"))
                 }
             }
             .padding(.horizontal, 10)

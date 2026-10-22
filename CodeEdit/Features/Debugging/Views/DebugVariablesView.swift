@@ -71,8 +71,8 @@ struct DebugVariablesView: View {
         Group {
             if debugService.sessionState == .inactive {
                 CEContentUnavailableView(
-                    "Not Debugging",
-                    description: "Start a debug session to inspect variables."
+                    String(localized: "Not Debugging"),
+                    description: String(localized: "Start a debug session to inspect variables.")
                 )
             } else {
                 debugContent
@@ -100,7 +100,11 @@ struct DebugVariablesView: View {
     private var variablesList: some View {
         Group {
             if viewModel.roots.isEmpty {
-                Text(debugService.sessionState == .paused ? "No variables." : "Running.")
+                Text(
+                    debugService.sessionState == .paused
+                    ? String(localized: "No variables.")
+                    : String(localized: "Running.")
+                )
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {

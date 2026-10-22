@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct OptionMenuItemView: View {
-    var label: String
+    var label: LocalizedStringKey
     var action: () -> Void
 
     var body: some View {

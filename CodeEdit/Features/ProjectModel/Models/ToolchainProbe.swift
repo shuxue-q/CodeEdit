@@ -86,7 +86,8 @@ enum ToolchainProbe {
                 if result.succeeded {
                     (status.activeToolchain, status.activeReason) = parseActiveToolchain(result.output)
                 } else {
-                    status.problem = firstLine(result.errorOutput) ?? "rustup could not select a toolchain."
+                    status.problem = firstLine(result.errorOutput)
+                        ?? String(localized: "rustup could not select a toolchain.")
                 }
             }
             if let toolchain = status.activeToolchain {

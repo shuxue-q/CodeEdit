@@ -19,7 +19,7 @@ struct XcodeWarningsCapsule: View {
             store: lspService.diagnosticsStore,
             severity: .warning,
             color: Color(nsColor: .systemYellow),
-            help: "Show Warnings (Problems)"
+            help: String(localized: "Show Warnings (Problems)")
         )
     }
 }
@@ -36,7 +36,7 @@ struct XcodeErrorsCapsule: View {
             store: lspService.diagnosticsStore,
             severity: .error,
             color: Color(nsColor: .systemRed),
-            help: "Show Errors (Problems)"
+            help: String(localized: "Show Errors (Problems)")
         )
     }
 }

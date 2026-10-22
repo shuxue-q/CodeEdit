@@ -32,7 +32,7 @@ struct CMakeBuildSettingsPane: View {
                 .accessibilityIdentifier("CMakeBuildConfiguration")
 
                 ProjectPathField(
-                    title: "Build Directory",
+                    title: String(localized: "Build Directory"),
                     path: $store.settings.build.buildDirectory,
                     prompt: CMakeProjectSettings.Build.defaultBuildDirectory,
                     choosesDirectories: true,

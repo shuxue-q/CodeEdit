@@ -38,7 +38,7 @@ struct NavigatorFilterView<
             HStack(spacing: 5) {
                 menu
                 PaneTextField(
-                    "Filter",
+                    String(localized: "Filter"),
                     text: $text,
                     leadingAccessories: { leadingAccessories },
                     trailingAccessories: { trailingAccessories },

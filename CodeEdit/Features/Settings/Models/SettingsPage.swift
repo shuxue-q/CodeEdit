@@ -34,6 +34,27 @@ struct SettingsPage: Hashable, Equatable, Identifiable {
         case languageServers = "Language Servers"
         case advanced = "Advanced"
         case developer = "Developer"
+
+        /// The localized, user-visible title of the page. The `rawValue` is kept as the stable identifier.
+        var localizedName: String {
+            switch self {
+            case .general: return String(localized: "General")
+            case .accounts: return String(localized: "Accounts")
+            case .behavior: return String(localized: "Behaviors")
+            case .navigation: return String(localized: "Navigation")
+            case .theme: return String(localized: "Themes")
+            case .textEditing: return String(localized: "Text Editing")
+            case .terminal: return String(localized: "Terminal")
+            case .search: return String(localized: "Search")
+            case .keybindings: return String(localized: "Key Bindings")
+            case .sourceControl: return String(localized: "Source Control")
+            case .components: return String(localized: "Components")
+            case .location: return String(localized: "Locations")
+            case .languageServers: return String(localized: "Language Servers")
+            case .advanced: return String(localized: "Advanced")
+            case .developer: return String(localized: "Developer")
+            }
+        }
     }
 
     let id: UUID = UUID()

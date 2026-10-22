@@ -27,22 +27,22 @@ public class FeedbackModel: ObservableObject {
     @Published var feedbackTypeListSelection: FeedbackType.ID = "none"
 
     @Published var feedbackTypeList = [
-        FeedbackType(name: "Choose...", id: "none"),
-        FeedbackType(name: "Incorrect/Unexpected Behaviour", id: "behaviour"),
-        FeedbackType(name: "Application Crash", id: "crash"),
-        FeedbackType(name: "Application Slow/Unresponsive", id: "unresponsive"),
-        FeedbackType(name: "Suggestion", id: "suggestions"),
-        FeedbackType(name: "Other", id: "other")
+        FeedbackType(name: String(localized: "Choose..."), id: "none"),
+        FeedbackType(name: String(localized: "Incorrect/Unexpected Behaviour"), id: "behaviour"),
+        FeedbackType(name: String(localized: "Application Crash"), id: "crash"),
+        FeedbackType(name: String(localized: "Application Slow/Unresponsive"), id: "unresponsive"),
+        FeedbackType(name: String(localized: "Suggestion"), id: "suggestions"),
+        FeedbackType(name: String(localized: "Other"), id: "other")
     ]
 
     @Published var issueAreaList = [
-        FeedbackIssueArea(name: "Please select the problem area", id: "none"),
-        FeedbackIssueArea(name: "Project Navigator", id: "projectNavigator"),
-        FeedbackIssueArea(name: "Extensions", id: "extensions"),
-        FeedbackIssueArea(name: "Git", id: "git"),
-        FeedbackIssueArea(name: "Debugger", id: "debugger"),
-        FeedbackIssueArea(name: "Editor", id: "editor"),
-        FeedbackIssueArea(name: "Other", id: "other")
+        FeedbackIssueArea(name: String(localized: "Please select the problem area"), id: "none"),
+        FeedbackIssueArea(name: String(localized: "Project Navigator"), id: "projectNavigator"),
+        FeedbackIssueArea(name: String(localized: "Extensions"), id: "extensions"),
+        FeedbackIssueArea(name: String(localized: "Git"), id: "git"),
+        FeedbackIssueArea(name: String(localized: "Debugger"), id: "debugger"),
+        FeedbackIssueArea(name: String(localized: "Editor"), id: "editor"),
+        FeedbackIssueArea(name: String(localized: "Other"), id: "other")
     ]
 
     /// Gets the ID of the selected issue type and then

@@ -42,11 +42,11 @@ extension DebugService {
                 appendConsole(category: body.category ?? "console", text: body.output)
             }
         case "terminated":
-            appendConsole(category: "console", text: "Debug session terminated.")
+            appendConsole(category: "console", text: String(localized: "Debug session terminated."))
             await cleanupSession()
         case "exited":
             if let exitCode = event.typedBody(ExitedEventBody.self)?.exitCode {
-                appendConsole(category: "console", text: "Process exited with code \(exitCode).")
+                appendConsole(category: "console", text: String(localized: "Process exited with code \(exitCode)."))
                 if exitCode != 0 {
                     sessionReportStatus = .failed
                 }
@@ -113,7 +113,7 @@ extension DebugService {
             await evaluateWatches()
         } catch {
             guard generation == sessionGeneration else { return }
-            recordError("Failed to inspect stopped state", error)
+            recordError(String(localized: "Failed to inspect stopped state"), error)
         }
     }
 
@@ -207,7 +207,7 @@ extension DebugService {
             if let message, !message.isEmpty {
                 return "\(command): \(message)"
             }
-            return "\(command) failed"
+            return String(localized: "\(command) failed")
         }
         return error.localizedDescription
     }

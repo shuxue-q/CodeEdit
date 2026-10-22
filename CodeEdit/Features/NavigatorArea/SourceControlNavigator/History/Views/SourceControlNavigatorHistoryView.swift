@@ -61,7 +61,7 @@ struct SourceControlNavigatorHistoryView: View {
                 }
             case .ready:
                 if commitHistory.isEmpty {
-                    CEContentUnavailableView("No History")
+                    CEContentUnavailableView(String(localized: "No History"))
                 } else {
                     GeometryReader { geometry in
                         ZStack {
@@ -89,7 +89,7 @@ struct SourceControlNavigatorHistoryView: View {
                 VStack {
                     Spacer()
                     CEContentUnavailableView(
-                        "Error Loading History",
+                        String(localized: "Error Loading History"),
                         description: error.localizedDescription,
                         systemImage: "exclamationmark.triangle"
                     ) {

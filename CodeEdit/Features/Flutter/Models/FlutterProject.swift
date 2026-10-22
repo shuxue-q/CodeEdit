@@ -64,13 +64,15 @@ struct FlutterProject: Equatable, Sendable {
     /// A short label for the project type: the `.metadata` type, else what the pubspec implies.
     var typeTitle: String {
         switch metadata?.projectType {
-        case "app": return "App"
-        case "plugin": return "Plugin"
-        case "plugin_ffi": return "FFI Plugin"
-        case "package": return "Package"
-        case "module": return "Module"
+        case "app": return String(localized: "App")
+        case "plugin": return String(localized: "Plugin")
+        case "plugin_ffi": return String(localized: "FFI Plugin")
+        case "package": return String(localized: "Package")
+        case "module": return String(localized: "Module")
         case let other?: return other
-        case nil: return isFFIPlugin ? "FFI Plugin" : (pubspec.pluginPlatforms.isEmpty ? "App or Package" : "Plugin")
+        case nil:
+            if isFFIPlugin { return String(localized: "FFI Plugin") }
+            return pubspec.pluginPlatforms.isEmpty ? String(localized: "App or Package") : String(localized: "Plugin")
         }
     }
 

@@ -73,8 +73,10 @@ struct AccountsSettingsDetailsView: View {
                         .tag(SourceControlAccount.URLProtocol.ssh)
                 } label: {
                     Text("Clone Using")
-                    Text("New repositories will be cloned from \(currentAccount.provider.name)"
-                         + " using \(currentAccount.urlProtocol.rawValue).")
+                    Text("""
+                    New repositories will be cloned from \(currentAccount.provider.name) \
+                    using \(currentAccount.urlProtocol.rawValue).
+                    """)
                 }
                 .pickerStyle(.radioGroup)
                 if currentAccount.urlProtocol == .ssh {

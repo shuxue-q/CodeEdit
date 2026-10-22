@@ -13,52 +13,60 @@ struct SearchModeModel: Hashable {
     let children: [SearchModeModel]
     let needSelectionHighlight: Bool
 
-    static let Containing = SearchModeModel(title: "Containing", children: [], needSelectionHighlight: false)
+    static let Containing = SearchModeModel(
+        title: String(localized: "Containing"),
+        children: [],
+        needSelectionHighlight: false
+    )
     static let MatchingWord = SearchModeModel(
-        title: "Matching Word",
+        title: String(localized: "Matching Word"),
         children: [],
         needSelectionHighlight: true
     )
     static let StartingWith = SearchModeModel(
-        title: "Starting With",
+        title: String(localized: "Starting With"),
         children: [],
         needSelectionHighlight: true
     )
-    static let EndingWith = SearchModeModel(title: "Ending With", children: [], needSelectionHighlight: true)
+    static let EndingWith = SearchModeModel(
+        title: String(localized: "Ending With"),
+        children: [],
+        needSelectionHighlight: true
+    )
 
     static let Text = SearchModeModel(
-        title: "Text",
+        title: String(localized: "Text"),
         children: [.Containing, .MatchingWord, .StartingWith, .EndingWith],
         needSelectionHighlight: false
     )
     static let References = SearchModeModel(
-        title: "References",
+        title: String(localized: "References"),
         children: [.Containing, .MatchingWord, .StartingWith, .EndingWith],
         needSelectionHighlight: true
     )
     static let Definitions = SearchModeModel(
-        title: "Definitions",
+        title: String(localized: "Definitions"),
         children: [.Containing, .MatchingWord, .StartingWith, .EndingWith],
         needSelectionHighlight: true
     )
     static let RegularExpression = SearchModeModel(
-        title: "Regular Expression",
+        title: String(localized: "Regular Expression"),
         children: [],
         needSelectionHighlight: true
     )
     static let CallHierarchy = SearchModeModel(
-        title: "Call Hierarchy",
+        title: String(localized: "Call Hierarchy"),
         children: [],
         needSelectionHighlight: true
     )
 
     static let Find = SearchModeModel(
-        title: "Find",
+        title: String(localized: "Find"),
         children: [.Text, .References, .Definitions, .RegularExpression, .CallHierarchy],
         needSelectionHighlight: false
     )
     static let Replace = SearchModeModel(
-        title: "Replace",
+        title: String(localized: "Replace"),
         children: [.Text, .RegularExpression],
         needSelectionHighlight: true
     )

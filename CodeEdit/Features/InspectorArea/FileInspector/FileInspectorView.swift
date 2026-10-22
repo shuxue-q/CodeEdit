@@ -104,7 +104,7 @@ struct FileInspectorView: View {
                                 }
                             } catch {
                                 let alert = NSAlert(error: error)
-                                alert.addButton(withTitle: "Dismiss")
+                                alert.addButton(withTitle: String(localized: "Dismiss"))
                                 alert.runModal()
                             }
                         }
@@ -151,7 +151,7 @@ struct FileInspectorView: View {
                                 editorManager.openTab(item: newItem)
                             } catch {
                                 let alert = NSAlert(error: error)
-                                alert.addButton(withTitle: "Dismiss")
+                                alert.addButton(withTitle: String(localized: "Dismiss"))
                                 alert.runModal()
                             }
                         }
@@ -230,7 +230,7 @@ struct FileInspectorView: View {
     private func chooseNewFileLocation() -> URL? {
         guard let file else { return nil }
         let dialogue = NSSavePanel()
-        dialogue.title = "Save File"
+        dialogue.title = String(localized: "Save File")
         dialogue.directoryURL = file.url.deletingLastPathComponent()
         dialogue.nameFieldStringValue = file.name
         if dialogue.runModal() == .OK {

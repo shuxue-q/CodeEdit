@@ -66,16 +66,19 @@ struct CMakeWorkspaceSettingsView: View {
 
     @ViewBuilder private var presetDetails: some View {
         if let preset = model.configurePreset {
-            detail("Generator", preset.generator ?? "CMake default")
-            detail("C compiler", preset.cCompiler ?? "Resolved by CMake")
-            detail("C++ compiler", preset.cxxCompiler ?? "Resolved by CMake")
-            detail(preset.isMultiConfig ? "Build configuration" : "Build type", model.buildType ?? "Not specified")
+            detail("Generator", preset.generator ?? String(localized: "CMake default"))
+            detail("C compiler", preset.cCompiler ?? String(localized: "Resolved by CMake"))
+            detail("C++ compiler", preset.cxxCompiler ?? String(localized: "Resolved by CMake"))
+            detail(
+                preset.isMultiConfig ? "Build configuration" : "Build type",
+                model.buildType ?? String(localized: "Not specified")
+            )
             if let directory = preset.binaryDirectory { detail("Build directory", directory) }
             if let toolchain = preset.toolchainFile { detail("Toolchain", toolchain) }
         }
     }
 
-    private func detail(_ label: String, _ value: String) -> some View {
+    private func detail(_ label: LocalizedStringKey, _ value: String) -> some View {
         LabeledContent(label) {
             Text(value)
                 .textSelection(.enabled)

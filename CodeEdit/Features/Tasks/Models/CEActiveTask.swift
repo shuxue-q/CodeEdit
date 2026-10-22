@@ -103,36 +103,36 @@ class CEActiveTask: ObservableObject, Identifiable, Hashable {
             reportStatus = nil
         } else if cancellationRequested || terminatingSignal == SIGINT || terminatingSignal == SIGTERM {
             output?.newline()
-            output?.sendOutputMessage("\(task.name) cancelled.")
+            output?.sendOutputMessage(String(localized: "\(task.name) cancelled."))
             output?.newline()
 
             updateTaskStatus(to: .notRunning)
             updateTaskNotification(
-                title: "\(task.name) cancelled",
+                title: String(localized: "\(task.name) cancelled"),
                 message: "",
                 isLoading: false
             )
             reportStatus = "cancelled"
         } else if terminatingSignal == 0 && exitCode == 0 {
             output?.newline()
-            output?.sendOutputMessage("Finished running \(task.name).")
+            output?.sendOutputMessage(String(localized: "Finished running \(task.name)."))
             output?.newline()
 
             updateTaskStatus(to: .finished)
             updateTaskNotification(
-                title: "Finished Running \(task.name)",
+                title: String(localized: "Finished Running \(task.name)"),
                 message: "",
                 isLoading: false
             )
             reportStatus = "finished"
         } else {
             output?.newline()
-            output?.sendOutputMessage("Failed to run \(task.name)")
+            output?.sendOutputMessage(String(localized: "Failed to run \(task.name)"))
             output?.newline()
 
             updateTaskStatus(to: .failed)
             updateTaskNotification(
-                title: "Failed Running \(task.name)",
+                title: String(localized: "Failed Running \(task.name)"),
                 message: "",
                 isLoading: false
             )
@@ -248,8 +248,8 @@ class CEActiveTask: ObservableObject, Identifiable, Hashable {
         let userInfo: [String: Any] = [
             "id": taskId,
             "action": "createWithPriority",
-            "title": "Running \(self.task.name)",
-            "message": "Running your task: \(self.task.name).",
+            "title": String(localized: "Running \(self.task.name)"),
+            "message": String(localized: "Running your task: \(self.task.name)."),
             "isLoading": true,
             "workspace": workspaceURL as Any
         ]

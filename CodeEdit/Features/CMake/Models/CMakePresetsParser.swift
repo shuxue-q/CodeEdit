@@ -42,25 +42,26 @@ struct CMakePresetsParser {
 
     private mutating func read(_ url: URL, visiting: Set<URL> = [], implicitInclude: URL? = nil) throws {
         let url = url.standardizedFileURL.resolvingSymlinksInPath()
-        guard !visiting.contains(url) else { throw CMakeParseError("Preset include cycle: \(url.path)") }
+        guard !visiting.contains(url) else { throw CMakeParseError(localized: "Preset include cycle: \(url.path)") }
         guard files[url] == nil else { return }
         do {
             let document = try JSONDecoder().decode(CMakeJSON.self, from: Data(contentsOf: url))
             guard let version = document["version"]?.integer, (1...10).contains(version) else {
-                throw CMakeParseError("Supported preset schema versions are 1–10.")
+                throw CMakeParseError(localized: "Supported preset schema versions are 1–10.")
             }
             var included: Set<URL> = []
             if let implicitInclude { included.insert(implicitInclude.resolvingSymlinksInPath()) }
             if let includes = document["include"] {
                 guard version >= 4, let paths = includes.strings else {
-                    throw CMakeParseError("'include' requires an array of paths and schema version 4 or newer.")
+                    // swiftlint:disable:next line_length
+                    throw CMakeParseError(localized: "'include' requires an array of paths and schema version 4 or newer.")
                 }
                 for path in paths {
                     let expander = CMakePresetExpansion(
                         sourceDirectory: sourceDirectory, file: url, parent: environment
                     )
                     if path.contains("$"), version < 7 {
-                        throw CMakeParseError("Include macros require schema version 7 or newer.")
+                        throw CMakeParseError(localized: "Include macros require schema version 7 or newer.")
                     }
                     let expanded = try expander.expand(path, includeVersion: version)
                     let child = URL(fileURLWithPath: expanded, relativeTo: url.deletingLastPathComponent())
@@ -80,19 +81,21 @@ struct CMakePresetsParser {
 
     private mutating func add(_ value: CMakeJSON?, file: URL, isBuild: Bool) throws {
         guard let value else { return }
-        guard let presets = value.array else { throw CMakeParseError("Expected a preset array.") }
+        guard let presets = value.array else { throw CMakeParseError(localized: "Expected a preset array.") }
         for preset in presets {
             guard let fields = preset.object, let name = preset["name"]?.string, !name.isEmpty else {
-                throw CMakeParseError("Each preset needs a nonempty name.")
+                throw CMakeParseError(localized: "Each preset needs a nonempty name.")
             }
             for key in ["cacheVariables", "environment"] where fields[key] != nil {
-                guard fields[key]?.object != nil else { throw CMakeParseError("'\(key)' must be an object.") }
+                guard fields[key]?.object != nil else {
+                    throw CMakeParseError(localized: "'\(key)' must be an object.")
+                }
             }
             for key in ["hidden", "inheritConfigureEnvironment"] where fields[key] != nil {
-                guard fields[key]?.bool != nil else { throw CMakeParseError("'\(key)' must be a boolean.") }
+                guard fields[key]?.bool != nil else { throw CMakeParseError(localized: "'\(key)' must be a boolean.") }
             }
             guard (isBuild ? build[name] : configure[name]) == nil else {
-                throw CMakeParseError("Duplicate preset '\(name)'.")
+                throw CMakeParseError(localized: "Duplicate preset '\(name)'.")
             }
             let definition = Definition(fields: fields, file: file)
             if isBuild {
@@ -110,18 +113,20 @@ struct CMakePresetsParser {
         definitions: [String: Definition],
         visiting: Set<String> = []
     ) throws -> Definition {
-        guard !visiting.contains(name) else { throw CMakeParseError("Preset inheritance cycle at '\(name)'.") }
-        guard let definition = definitions[name] else { throw CMakeParseError("Unknown preset '\(name)'.") }
+        guard !visiting.contains(name) else {
+            throw CMakeParseError(localized: "Preset inheritance cycle at '\(name)'.")
+        }
+        guard let definition = definitions[name] else { throw CMakeParseError(localized: "Unknown preset '\(name)'.") }
         var fields: [String: CMakeJSON] = [:]
         if let inherits = definition.fields["inherits"] {
             guard let parents = inherits.string.map({ [$0] }) ?? inherits.strings else {
-                throw CMakeParseError("Invalid inherits in '\(name)'.")
+                throw CMakeParseError(localized: "Invalid inherits in '\(name)'.")
             }
             // Earlier parents have precedence. Expand macros only after merging into the child.
             for parent in parents.reversed() {
                 let resolved = try resolve(parent, definitions: definitions, visiting: visiting.union([name]))
                 guard resolved.file == definition.file || files[definition.file]?.contains(resolved.file) == true else {
-                    throw CMakeParseError("Preset '\(name)' must include the file defining '\(parent)'.")
+                    throw CMakeParseError(localized: "Preset '\(name)' must include the file defining '\(parent)'.")
                 }
                 var inherited = resolved.fields
                 for key in ["name", "hidden", "inherits", "description", "displayName"] { inherited[key] = nil }
@@ -154,11 +159,11 @@ struct CMakePresetsParser {
         var presetEnvironment = fields["environment"]?.object ?? [:]
         if isBuild {
             guard let configureName = fields["configurePreset"]?.string else {
-                throw CMakeParseError("Build preset '\(name)' has no configurePreset.")
+                throw CMakeParseError(localized: "Build preset '\(name)' has no configurePreset.")
             }
             let configured = try resolve(configureName, definitions: configure)
             guard configured.file == definition.file || files[definition.file]?.contains(configured.file) == true else {
-                throw CMakeParseError("Build preset '\(name)' must include its configure preset file.")
+                throw CMakeParseError(localized: "Build preset '\(name)' must include its configure preset file.")
             }
             guard try preset(configureName, definitions: configure) != nil else { return nil }
             if fields["inheritConfigureEnvironment"]?.bool != false {
@@ -173,7 +178,9 @@ struct CMakePresetsParser {
         guard try expansion.enabled(fields["condition"]) else { return nil }
         func expanded(_ key: String) throws -> String? {
             guard let value = fields[key] else { return nil }
-            guard let string = value.string else { throw CMakeParseError("'\(key)' must be a string in '\(name)'.") }
+            guard let string = value.string else {
+                throw CMakeParseError(localized: "'\(key)' must be a string in '\(name)'.")
+            }
             return try expansion.expand(string)
         }
         var cache: [String: String] = [:]
@@ -181,7 +188,7 @@ struct CMakePresetsParser {
             if case .null = value { continue }
             let value = value.object?["value"] ?? value
             guard let string = value.string ?? value.bool.map({ $0 ? "TRUE" : "FALSE" }) else {
-                throw CMakeParseError("Invalid cache variable '\(key)' in '\(name)'.")
+                throw CMakeParseError(localized: "Invalid cache variable '\(key)' in '\(name)'.")
             }
             cache[key] = try expansion.expand(string)
         }

@@ -34,9 +34,9 @@ struct DeveloperSettingsView: View {
                 KeyValueTable(
                     items: $lspBinaries,
                     validKeys: validLanguageIds,
-                    keyColumnName: "Language",
-                    valueColumnName: "Language Server Path",
-                    newItemInstruction: "Add a language server"
+                    keyColumnName: String(localized: "Language"),
+                    valueColumnName: String(localized: "Language Server Path"),
+                    newItemInstruction: String(localized: "Add a language server")
                 ) {
                     Text("Add a language server")
                     Text(

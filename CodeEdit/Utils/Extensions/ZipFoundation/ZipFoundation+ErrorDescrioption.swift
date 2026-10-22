@@ -12,47 +12,47 @@ extension Archive.ArchiveError: @retroactive LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .unreadableArchive:
-            "Unreadable archive."
+            String(localized: "Unreadable archive.")
         case .unwritableArchive:
-            "Unwritable archive."
+            String(localized: "Unwritable archive.")
         case .invalidEntryPath:
-            "Invalid entry path."
+            String(localized: "Invalid entry path.")
         case .invalidCompressionMethod:
-            "Invalid compression method."
+            String(localized: "Invalid compression method.")
         case .invalidCRC32:
-            "Invalid checksum."
+            String(localized: "Invalid checksum.")
         case .cancelledOperation:
-            "Operation cancelled."
+            String(localized: "Operation cancelled.")
         case .invalidBufferSize:
-            "Invalid buffer size."
+            String(localized: "Invalid buffer size.")
         case .invalidEntrySize:
-            "Invalid entry size."
+            String(localized: "Invalid entry size.")
         case .invalidLocalHeaderDataOffset,
                 .invalidLocalHeaderSize,
                 .invalidCentralDirectoryOffset,
                 .invalidCentralDirectorySize,
                 .invalidCentralDirectoryEntryCount,
                 .missingEndOfCentralDirectoryRecord:
-            "Invalid file detected."
+            String(localized: "Invalid file detected.")
         case .uncontainedSymlink:
-            "Uncontained symlink detected."
+            String(localized: "Uncontained symlink detected.")
         }
     }
 
     public var failureReason: String? {
         return switch self {
         case .invalidLocalHeaderDataOffset:
-            "Invalid local header data offset."
+            String(localized: "Invalid local header data offset.")
         case .invalidLocalHeaderSize:
-            "Invalid local header size."
+            String(localized: "Invalid local header size.")
         case .invalidCentralDirectoryOffset:
-            "Invalid central directory offset."
+            String(localized: "Invalid central directory offset.")
         case .invalidCentralDirectorySize:
-            "Invalid central directory size."
+            String(localized: "Invalid central directory size.")
         case .invalidCentralDirectoryEntryCount:
-            "Invalid central directory entry count."
+            String(localized: "Invalid central directory entry count.")
         case .missingEndOfCentralDirectoryRecord:
-            "Missing end of central directory record."
+            String(localized: "Missing end of central directory record.")
         default:
             nil
         }

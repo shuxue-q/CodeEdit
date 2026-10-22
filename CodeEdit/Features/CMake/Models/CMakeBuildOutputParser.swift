@@ -187,7 +187,7 @@ struct CMakeBuildOutputParser: Sendable {
     private mutating func matchFailed(_ line: String) -> Bool {
         guard let groups = Self.match(Self.failed, in: line) else { return false }
         let command = groups[1].trimmingCharacters(in: .whitespaces)
-        append(CMakeBuildDiagnostic(severity: .error, message: "Build command failed: \(command)"))
+        append(CMakeBuildDiagnostic(severity: .error, message: String(localized: "Build command failed: \(command)")))
         return true
     }
 

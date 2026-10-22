@@ -90,32 +90,36 @@ struct StatusBarCursorPositionLabel: View {
 
             // More than one selection, display the number of selections.
             if cursorPositions.count > 1 {
-                return "\(cursorPositions.count) selected ranges"
+                return String(localized: "\(cursorPositions.count) selected ranges")
             }
 
             // If the selection is more than just a cursor, return the length.
             if cursorPositions[0].range.length > 0 {
                 // When the option key is pressed display the character range.
                 if modifierKeys.contains(.option) {
-                    return "Char: \(cursorPositions[0].range.location) Len: \(cursorPositions[0].range.length)"
+                    return String(
+                        localized: "Char: \(cursorPositions[0].range.location) Len: \(cursorPositions[0].range.length)"
+                    )
                 }
 
                 let lineCount = getLines(cursorPositions[0].range)
 
                 if lineCount > 1 {
-                    return "\(lineCount) lines"
+                    return String(localized: "\(lineCount) lines")
                 }
 
-                return "\(cursorPositions[0].range.length) characters"
+                return String(localized: "\(cursorPositions[0].range.length) characters")
             }
 
             // When the option key is pressed display the character offset.
             if modifierKeys.contains(.option) {
-                return "Char: \(cursorPositions[0].range.location) Len: 0"
+                return String(localized: "Char: \(cursorPositions[0].range.location) Len: 0")
             }
 
             // When there's a single cursor, display the line and column.
-            return "Line: \(cursorPositions[0].start.line)  Col: \(cursorPositions[0].start.column)"
+            return String(
+                localized: "Line: \(cursorPositions[0].start.line)  Col: \(cursorPositions[0].start.column)"
+            )
         }
     }
 }

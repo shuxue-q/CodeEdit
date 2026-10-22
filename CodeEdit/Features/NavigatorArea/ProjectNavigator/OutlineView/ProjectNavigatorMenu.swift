@@ -27,7 +27,7 @@ final class ProjectNavigatorMenu: NSMenu {
 
     init(_ sender: ProjectNavigatorViewController) {
         self.sender = sender
-        super.init(title: "Options")
+        super.init(title: String(localized: "Options"))
     }
 
     @available(*, unavailable)
@@ -41,8 +41,8 @@ final class ProjectNavigatorMenu: NSMenu {
     ///   - action: A `Selector` or `nil` of the action to perform.
     ///   - key: A `keyEquivalent` of the menu item. Defaults to an empty `String`
     /// - Returns: A `NSMenuItem` which has the target `self`
-    private func menuItem(_ title: String, action: Selector?, key: String = "") -> NSMenuItem {
-        let mItem = NSMenuItem(title: title, action: action, keyEquivalent: key)
+    private func menuItem(_ title: LocalizedStringResource, action: Selector?, key: String = "") -> NSMenuItem {
+        let mItem = NSMenuItem(title: String(localized: title), action: action, keyEquivalent: key)
         mItem.target = self
 
         return mItem
@@ -86,7 +86,10 @@ final class ProjectNavigatorMenu: NSMenu {
         delete.keyEquivalentModifierMask = .option
         delete.isAlternate = true
 
-        let duplicate = menuItem("Duplicate \(item.isFolder ? "Folder" : "File")", action: #selector(duplicate))
+        let duplicate = menuItem(
+            item.isFolder ? "Duplicate Folder" : "Duplicate File",
+            action: #selector(duplicate)
+        )
 
         let sortByName = menuItem("Sort by Name", action: nil)
         sortByName.isEnabled = item.isFolder
@@ -140,8 +143,8 @@ final class ProjectNavigatorMenu: NSMenu {
     }
 
     /// Submenu for **Open As** menu item.
-    private func openAsMenu(item: CEWorkspaceFile) -> NSMenu {
-        let openAsMenu = NSMenu(title: "Open As")
+    private func openAsMenu(item: CEWorkspaceFile) -> NSMenu { // swiftlint:disable:this function_body_length
+        let openAsMenu = NSMenu(title: String(localized: "Open As"))
         func getMenusItems() -> ([NSMenuItem], [NSMenuItem]) {
             // Use UTType to distinguish between bundle file and user-browsable directory
             // The isDirectory property is not accurate on this.
@@ -157,13 +160,23 @@ final class ProjectNavigatorMenu: NSMenu {
                 primaryItems.append(.propertyList())
             }
             if type.conforms(to: UTType(filenameExtension: "xcassets")!) {
-                primaryItems.append(NSMenuItem(title: "Asset Catalog Document", action: nil, keyEquivalent: ""))
+                primaryItems.append(
+                    NSMenuItem(title: String(localized: "Asset Catalog Document"), action: nil, keyEquivalent: "")
+                )
             }
             if type.conforms(to: UTType(filenameExtension: "xib")!) {
-                primaryItems.append(NSMenuItem(title: "Interface Builder XIB Document", action: nil, keyEquivalent: ""))
+                primaryItems.append(
+                    NSMenuItem(
+                        title: String(localized: "Interface Builder XIB Document"),
+                        action: nil,
+                        keyEquivalent: ""
+                    )
+                )
             }
             if type.conforms(to: UTType(filenameExtension: "xcodeproj")!) {
-                primaryItems.append(NSMenuItem(title: "Xcode Project", action: nil, keyEquivalent: ""))
+                primaryItems.append(
+                    NSMenuItem(title: String(localized: "Xcode Project"), action: nil, keyEquivalent: "")
+                )
             }
             var secondaryItems = [NSMenuItem]()
             if type.conforms(to: .text) {
@@ -193,17 +206,21 @@ final class ProjectNavigatorMenu: NSMenu {
 
     /// Submenu for **Source Control** menu item.
     private func sourceControlMenu(item: CEWorkspaceFile) -> NSMenu {
-        let sourceControlMenu = NSMenu(title: "Source Control")
+        let sourceControlMenu = NSMenu(title: String(localized: "Source Control"))
         sourceControlMenu.addItem(
-            withTitle: "Commit \"\(String(describing: item.fileName()))\"...",
+            withTitle: String(localized: "Commit \"\(item.fileName())\"..."),
             action: nil,
             keyEquivalent: ""
         )
         sourceControlMenu.addItem(.separator())
-        sourceControlMenu.addItem(withTitle: "Discard Changes...", action: nil, keyEquivalent: "")
+        sourceControlMenu.addItem(withTitle: String(localized: "Discard Changes..."), action: nil, keyEquivalent: "")
         sourceControlMenu.addItem(.separator())
-        sourceControlMenu.addItem(withTitle: "Add Selected Files", action: nil, keyEquivalent: "")
-        sourceControlMenu.addItem(withTitle: "Mark Selected Files as Resolved", action: nil, keyEquivalent: "")
+        sourceControlMenu.addItem(withTitle: String(localized: "Add Selected Files"), action: nil, keyEquivalent: "")
+        sourceControlMenu.addItem(
+            withTitle: String(localized: "Mark Selected Files as Resolved"),
+            action: nil,
+            keyEquivalent: ""
+        )
 
         return sourceControlMenu
     }
@@ -217,28 +234,28 @@ final class ProjectNavigatorMenu: NSMenu {
 
 extension NSMenuItem {
     fileprivate static func none() -> NSMenuItem {
-        let item = NSMenuItem(title: "<None>", action: nil, keyEquivalent: "")
+        let item = NSMenuItem(title: String(localized: "<None>"), action: nil, keyEquivalent: "")
         item.isEnabled = false
         return item
     }
 
     fileprivate static func sourceCode() -> NSMenuItem {
-        NSMenuItem(title: "Source Code", action: nil, keyEquivalent: "")
+        NSMenuItem(title: String(localized: "Source Code"), action: nil, keyEquivalent: "")
     }
 
     fileprivate static func propertyList() -> NSMenuItem {
-        NSMenuItem(title: "Property List", action: nil, keyEquivalent: "")
+        NSMenuItem(title: String(localized: "Property List"), action: nil, keyEquivalent: "")
     }
 
     fileprivate static func asciiPropertyList() -> NSMenuItem {
-        NSMenuItem(title: "ASCII Property List", action: nil, keyEquivalent: "")
+        NSMenuItem(title: String(localized: "ASCII Property List"), action: nil, keyEquivalent: "")
     }
 
     fileprivate static func hex() -> NSMenuItem {
-        NSMenuItem(title: "Hex", action: nil, keyEquivalent: "")
+        NSMenuItem(title: String(localized: "Hex"), action: nil, keyEquivalent: "")
     }
 
     fileprivate static func quickLook() -> NSMenuItem {
-        NSMenuItem(title: "Quick Look", action: nil, keyEquivalent: "")
+        NSMenuItem(title: String(localized: "Quick Look"), action: nil, keyEquivalent: "")
     }
 }

@@ -123,13 +123,13 @@ struct TOMLTable: Equatable, Sendable {
             child = .table(table)
         case .array(var array):
             guard case .table(var table)? = array.last else {
-                throw TOMLParseError(message: "'\(first)' is not a table")
+                throw TOMLParseError(localized: "'\(first)' is not a table")
             }
             try table.withTable(at: path.dropFirst(), body)
             array[array.count - 1] = .table(table)
             child = .array(array)
         default:
-            throw TOMLParseError(message: "'\(first)' is already defined as a value")
+            throw TOMLParseError(localized: "'\(first)' is already defined as a value")
         }
         self[first] = child
     }
@@ -141,6 +141,18 @@ struct TOMLParseError: Error, Equatable, Sendable {
     var message: String
     /// The 1-based line the problem was found on.
     var line: Int = 0
+
+    /// Creates an error with a localized message.
+    init(localized message: String.LocalizationValue, line: Int = 0) {
+        self.message = String(localized: message)
+        self.line = line
+    }
+
+    /// Creates an error with a message that is already final.
+    init(message: String, line: Int = 0) {
+        self.message = message
+        self.line = line
+    }
 }
 
 /// A parsed TOML document.

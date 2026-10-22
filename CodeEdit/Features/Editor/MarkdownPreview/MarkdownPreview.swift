@@ -19,22 +19,22 @@ enum MarkdownPreviewMode: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .source:
-            return "Source"
+            return String(localized: "Source")
         case .preview:
-            return "Preview"
+            return String(localized: "Preview")
         case .split:
-            return "Split"
+            return String(localized: "Split")
         }
     }
 
     var help: String {
         switch self {
         case .source:
-            return "Show Markdown Source"
+            return String(localized: "Show Markdown Source")
         case .preview:
-            return "Render Markdown"
+            return String(localized: "Render Markdown")
         case .split:
-            return "Show Markdown Source and Preview"
+            return String(localized: "Show Markdown Source and Preview")
         }
     }
 }

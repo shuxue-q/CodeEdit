@@ -45,8 +45,8 @@ final class LSPSettingsViewModel: ObservableObject {
     /// - Parameter server: The supported server to configure.
     func chooseBinary(for server: LanguageServerDetector.SupportedServer) {
         let openPanel = NSOpenPanel()
-        openPanel.prompt = "Choose"
-        openPanel.message = "Choose the \(server.executable) executable"
+        openPanel.prompt = String(localized: "Choose")
+        openPanel.message = String(localized: "Choose the \(server.executable) executable")
         openPanel.canChooseFiles = true
         openPanel.canChooseDirectories = false
         openPanel.allowsMultipleSelection = false

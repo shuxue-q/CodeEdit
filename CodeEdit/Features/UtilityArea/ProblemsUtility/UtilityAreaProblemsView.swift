@@ -57,9 +57,11 @@ struct UtilityAreaProblemsView: View {
                     DiagnosticsListView(diagnostics: lspDiagnostics)
                 } else {
                     CEContentUnavailableView(
-                        "No Problems Detected",
-                        description: "Problems are collected when a CMake project is built, when a Flutter"
-                            + " or Cargo task runs, or when a language server publishes them."
+                        String(localized: "No Problems Detected"),
+                        description: String(localized: """
+                            Problems are collected when a CMake project is built, when a Flutter \
+                            or Cargo task runs, or when a language server publishes them.
+                            """)
                     )
                 }
             }
@@ -106,20 +108,22 @@ struct UtilityAreaProblemsView: View {
         switch buildController.outcome {
         case .success:
             CEContentUnavailableView(
-                "No Problems Found",
+                String(localized: "No Problems Found"),
                 systemImage: "checkmark.circle"
             )
         case .failed:
             CEContentUnavailableView(
-                "Build Failed",
-                description: "No compiler diagnostics were captured; see the build output for details."
+                String(localized: "Build Failed"),
+                description: String(
+                    localized: "No compiler diagnostics were captured; see the build output for details."
+                )
             )
         case .cancelled:
-            CEContentUnavailableView("Build Stopped")
+            CEContentUnavailableView(String(localized: "Build Stopped"))
         case .none:
             CEContentUnavailableView(
-                "No Problems Detected",
-                description: "Build the project to collect compiler diagnostics."
+                String(localized: "No Problems Detected"),
+                description: String(localized: "Build the project to collect compiler diagnostics.")
             )
         }
     }

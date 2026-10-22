@@ -18,7 +18,7 @@ struct OpenFileOrFolderButton: View {
     var body: some View {
         WelcomeButton(
             iconName: "folder",
-            title: "Open File or Folder...",
+            title: String(localized: "Open File or Folder..."),
             action: {
                 CodeEditDocumentController.shared.openDocumentWithDialog(
                     configuration: .init(canChooseFiles: true, canChooseDirectories: true),

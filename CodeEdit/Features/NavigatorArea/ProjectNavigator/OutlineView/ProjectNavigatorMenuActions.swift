@@ -97,7 +97,7 @@ extension ProjectNavigatorMenu {
             }
         } catch {
             let alert = NSAlert(error: error)
-            alert.addButton(withTitle: "Dismiss")
+            alert.addButton(withTitle: String(localized: "Dismiss"))
             alert.runModal()
         }
     }
@@ -138,7 +138,7 @@ extension ProjectNavigatorMenu {
             }
         } catch {
             let alert = NSAlert(error: error)
-            alert.addButton(withTitle: "Dismiss")
+            alert.addButton(withTitle: String(localized: "Dismiss"))
             alert.runModal()
         }
     }
@@ -154,7 +154,7 @@ extension ProjectNavigatorMenu {
             }
         } catch {
             let alert = NSAlert(error: error)
-            alert.addButton(withTitle: "Dismiss")
+            alert.addButton(withTitle: String(localized: "Dismiss"))
             alert.runModal()
         }
     }
@@ -181,7 +181,7 @@ extension ProjectNavigatorMenu {
             }
         } catch {
             let alert = NSAlert(error: error)
-            alert.addButton(withTitle: "Dismiss")
+            alert.addButton(withTitle: String(localized: "Dismiss"))
             alert.runModal()
         }
 
@@ -205,7 +205,7 @@ extension ProjectNavigatorMenu {
             reloadData()
         } catch {
             let alert = NSAlert(error: error)
-            alert.addButton(withTitle: "Dismiss")
+            alert.addButton(withTitle: String(localized: "Dismiss"))
             alert.runModal()
         }
     }
@@ -232,7 +232,7 @@ extension ProjectNavigatorMenu {
             reloadData()
         } catch {
             let alert = NSAlert(error: error)
-            alert.addButton(withTitle: "Dismiss")
+            alert.addButton(withTitle: String(localized: "Dismiss"))
             alert.runModal()
         }
     }
@@ -247,7 +247,7 @@ extension ProjectNavigatorMenu {
             reloadData()
         } catch {
             let alert = NSAlert(error: error)
-            alert.addButton(withTitle: "Dismiss")
+            alert.addButton(withTitle: String(localized: "Dismiss"))
             alert.runModal()
         }
     }

@@ -19,14 +19,14 @@ struct CMakeToolchainPane: View {
 
             Section {
                 CompilerPicker(
-                    title: "C Compiler",
+                    title: String(localized: "C Compiler"),
                     path: $store.settings.toolchain.cCompiler,
                     detected: store.toolchain?.cCompilers ?? [],
                     baseDirectory: store.sourceDirectory
                 )
                 .accessibilityIdentifier("CMakeCCompiler")
                 CompilerPicker(
-                    title: "C++ Compiler",
+                    title: String(localized: "C++ Compiler"),
                     path: $store.settings.toolchain.cxxCompiler,
                     detected: store.toolchain?.cxxCompilers ?? [],
                     baseDirectory: store.sourceDirectory
@@ -35,9 +35,11 @@ struct CMakeToolchainPane: View {
             } header: {
                 Text("Compilers")
             } footer: {
-                Text("Found in your login shell PATH and "
-                     + CMakeToolchainDetector.standardDirectories.joined(separator: ", ") + ". "
-                     + "Changing a compiler starts a fresh configure on the next build.")
+                let directories = CMakeToolchainDetector.standardDirectories.joined(separator: ", ")
+                Text("""
+                    Found in your login shell PATH and \(directories). \
+                    Changing a compiler starts a fresh configure on the next build.
+                    """)
             }
             .disabled(presetIsActive)
 
@@ -78,7 +80,7 @@ struct CMakeToolchainPane: View {
             LabeledContent("Executable") {
                 Text(cmake.path).textSelection(.enabled)
             }
-            LabeledContent("Version", value: cmake.version ?? "Unknown")
+            LabeledContent("Version", value: cmake.version ?? String(localized: "Unknown"))
         } else if store.isScanningToolchain || store.toolchain == nil {
             LabeledContent("Executable") { Text("Detecting…").foregroundStyle(.secondary) }
         } else {
@@ -96,7 +98,7 @@ struct CMakeToolchainPane: View {
         guard let toolchain = store.toolchain, !toolchain.availableGenerators.contains(generator) else {
             return generator.rawValue
         }
-        return "\(generator.rawValue) (\(generator.buildTool) not found)"
+        return String(localized: "\(generator.rawValue) (\(generator.buildTool) not found)")
     }
 }
 
@@ -133,7 +135,7 @@ private struct CompilerPicker: View {
             if !detected.isEmpty {
                 Divider()
                 ForEach(detected) { compiler in
-                    Text("\(compiler.title) — \(compiler.path)").tag(Choice.detected(compiler.path))
+                    Text(verbatim: "\(compiler.title) — \(compiler.path)").tag(Choice.detected(compiler.path))
                 }
             }
             Divider()
@@ -141,7 +143,7 @@ private struct CompilerPicker: View {
         }
         if choice.wrappedValue == .custom {
             ProjectPathField(
-                title: "\(title) Path",
+                title: String(localized: "\(title) Path"),
                 path: Binding { path ?? "" } set: { path = $0 },
                 prompt: "/path/to/compiler",
                 baseDirectory: baseDirectory

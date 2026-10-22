@@ -52,10 +52,10 @@ private struct NewListTableItemView<HeaderView: View>: View {
             Form {
                 Section {
                     if validKeys.isEmpty {
-                        TextField(keyColumnName, text: $key)
+                        TextField(keyColumnName.localizedAtRuntime, text: $key)
                             .textFieldStyle(.plain)
                     } else {
-                        Picker(keyColumnName, selection: $key) {
+                        Picker(keyColumnName.localizedAtRuntime, selection: $key) {
                             ForEach(validKeys, id: \.self) { key in
                                 Text(key).tag(key)
                             }
@@ -63,11 +63,11 @@ private struct NewListTableItemView<HeaderView: View>: View {
                             Text("No Selection").tag("")
                         }
                     }
-                    TextField(valueColumnName, text: $value)
+                    TextField(valueColumnName.localizedAtRuntime, text: $value)
                         .textFieldStyle(.plain)
                 } header: {
                     if HeaderView.self == EmptyView.self {
-                        Text(newItemInstruction)
+                        Text(newItemInstruction.localizedAtRuntime)
                     } else {
                         headerView
                     }
@@ -136,10 +136,10 @@ struct KeyValueTable<Header: View, ActionBarView: View>: View {
 
     var body: some View {
         Table(tableItems, selection: $selection) {
-            TableColumn(keyColumnName) { item in
+            TableColumn(keyColumnName.localizedAtRuntime) { item in
                 Text(item.key)
             }
-            TableColumn(valueColumnName) { item in
+            TableColumn(valueColumnName.localizedAtRuntime) { item in
                 Text(item.value)
             }
         }

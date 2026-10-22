@@ -27,7 +27,7 @@ struct SourceControlNavigatorChangesCommitView: View {
         VStack(spacing: 0) {
             VStack(spacing: 0) {
                 PaneTextField(
-                    "Commit message (required)",
+                    String(localized: "Commit message (required)"),
                     text: $message,
                     axis: .vertical
                 )
@@ -92,14 +92,17 @@ struct SourceControlNavigatorChangesCommitView: View {
                                     self.details = ""
                                 } catch {
                                     await sourceControlManager.showAlertForError(
-                                        title: "Failed to commit",
+                                        title: String(localized: "Failed to commit"),
                                         error: error
                                     )
                                 }
                                 do {
                                     try await sourceControlManager.push()
                                 } catch {
-                                    await sourceControlManager.showAlertForError(title: "Failed to push", error: error)
+                                    await sourceControlManager.showAlertForError(
+                                        title: String(localized: "Failed to push"),
+                                        error: error
+                                    )
                                 }
                                 self.isCommiting = false
                             }
@@ -112,7 +115,10 @@ struct SourceControlNavigatorChangesCommitView: View {
                                 self.message = ""
                                 self.details = ""
                             } catch {
-                                await sourceControlManager.showAlertForError(title: "Failed to commit", error: error)
+                                await sourceControlManager.showAlertForError(
+                                    title: String(localized: "Failed to commit"),
+                                    error: error
+                                )
                             }
                             self.isCommiting = false
                         }

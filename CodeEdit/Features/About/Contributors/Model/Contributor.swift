@@ -39,6 +39,19 @@ struct Contributor: Codable, Identifiable {
     enum Contribution: String, Codable {
         case design, code, infra, test, bug, maintenance, plugin
 
+        /// The localized name shown in the contributor's tag.
+        var displayName: String {
+            switch self {
+            case .design: return String(localized: "Design")
+            case .code: return String(localized: "Code")
+            case .infra: return String(localized: "Infra")
+            case .test: return String(localized: "Test")
+            case .bug: return String(localized: "Bug")
+            case .maintenance: return String(localized: "Maintenance")
+            case .plugin: return String(localized: "Plugin")
+            }
+        }
+
         var color: Color {
             switch self {
             case .design: return .blue

@@ -37,7 +37,7 @@ struct ProjectPathField: View {
         panel.canCreateDirectories = choosesDirectories
         panel.allowsMultipleSelection = false
         panel.directoryURL = baseDirectory
-        panel.message = "Choose \(title.lowercased())"
+        panel.message = String(localized: "Choose \(title.lowercased())")
         guard panel.runModal() == .OK, let url = panel.url else { return }
         path = displayPath(for: url)
     }
@@ -55,9 +55,9 @@ struct ProjectPathField: View {
 /// environment variables.
 struct KeyValueListEditor: View {
     @Binding var rows: [CMakeProjectSettings.KeyValue]
-    var namePlaceholder = "Name"
-    var valuePlaceholder = "Value"
-    var emptyText = "No Values"
+    var namePlaceholder: LocalizedStringKey = "Name"
+    var valuePlaceholder: LocalizedStringKey = "Value"
+    var emptyText: LocalizedStringKey = "No Values"
     /// Splits a `-DNAME=VALUE` entered as a name into name and value when it is committed.
     var splitsDefinitions = false
 
@@ -180,9 +180,11 @@ struct PresetOverrideNotice: View {
         if let preset {
             Section {
                 Label {
-                    Text("Configure preset “\(preset.title)” is selected. It controls the generator, build "
-                         + "directory, compilers, build type, and C++ standard, so those settings are "
-                         + "unavailable. CMake variables and run settings still apply.")
+                    Text("""
+                        Configure preset “\(preset.title)” is selected. It controls the generator, build \
+                        directory, compilers, build type, and C++ standard, so those settings are \
+                        unavailable. CMake variables and run settings still apply.
+                        """)
                 } icon: {
                     Image(systemName: "info.circle")
                 }

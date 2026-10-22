@@ -69,7 +69,7 @@ struct XcodeSplitOptionsCapsule: View {
     }
 
     /// A radio-style toggle for the ``SettingsData/CanvasLayout`` submenu options.
-    private func canvasLayoutToggle(_ title: String, layout: SettingsData.CanvasLayout) -> some View {
+    private func canvasLayoutToggle(_ title: LocalizedStringKey, layout: SettingsData.CanvasLayout) -> some View {
         Toggle(title, isOn: Binding(
             get: { settings.preferences.general.canvasLayout == layout },
             set: { _ in settings.preferences.general.canvasLayout = layout }

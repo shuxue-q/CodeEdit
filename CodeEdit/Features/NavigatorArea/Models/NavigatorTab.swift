@@ -50,29 +50,45 @@ enum NavigatorTab: WorkspacePanelTab {
         if case let .uiExtension(endpoint, data) = self {
             return endpoint.bundleIdentifier + data.sceneID
         }
-        return title
+        return englishTitle
+    }
+
+    /// Stable English name of the tab, used for its identity regardless of the display language.
+    private var englishTitle: String {
+        switch self {
+        case .project: return "Project"
+        case .sourceControl: return "Source Control"
+        case .bookmarks: return "Bookmarks"
+        case .search: return "Search"
+        case .issues: return "Issues"
+        case .tests: return "Tests"
+        case .debug: return "Debug"
+        case .breakpoints: return "Breakpoints"
+        case .reports: return "Reports"
+        case .uiExtension(_, let data): return data.help ?? data.sceneID
+        }
     }
 
     var title: String {
         switch self {
         case .project:
-            return "Project"
+            return String(localized: "Project")
         case .sourceControl:
-            return "Source Control"
+            return String(localized: "Source Control")
         case .bookmarks:
-            return "Bookmarks"
+            return String(localized: "Bookmarks")
         case .search:
-            return "Search"
+            return String(localized: "Search")
         case .issues:
-            return "Issues"
+            return String(localized: "Issues")
         case .tests:
-            return "Tests"
+            return String(localized: "Tests")
         case .debug:
-            return "Debug"
+            return String(localized: "Debug")
         case .breakpoints:
-            return "Breakpoints"
+            return String(localized: "Breakpoints")
         case .reports:
-            return "Reports"
+            return String(localized: "Reports")
         case .uiExtension(_, let data):
             return data.help ?? data.sceneID
         }

@@ -86,7 +86,7 @@ struct WorkspaceView: View {
                             try await sourceControlManager.refreshStashEntries()
                         } catch {
                             await sourceControlManager.showAlertForError(
-                                title: "Error refreshing Git data",
+                                title: String(localized: "Error refreshing Git data"),
                                 error: error
                             )
                         }

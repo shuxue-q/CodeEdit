@@ -39,8 +39,8 @@ struct ProjectEditorView: View {
             .padding(.bottom, StatusBarView.height)
         } else {
             CEContentUnavailableView(
-                "No Project Settings",
-                description: "Project settings are unavailable for this workspace.",
+                String(localized: "No Project Settings"),
+                description: String(localized: "Project settings are unavailable for this workspace."),
                 systemImage: "gearshape.2"
             )
             .padding(.top, edgeInsets.top)
@@ -228,28 +228,34 @@ private struct ProjectEditorContent: View {
     private var subtitle: String {
         if let inventory, inventory.isHybrid {
             var parts = [inventory.toolchains.map(\.title).joined(separator: " + ")]
-            if let version = flutterProject?.pubspec.version { parts.append("Version \(version)") }
-            parts.append("\(inventory.components.count) components")
+            if let version = flutterProject?.pubspec.version { parts.append(String(localized: "Version \(version)")) }
+            parts.append(String(localized: "\(inventory.components.count) components"))
             return parts.joined(separator: " · ")
         }
         if let flutterProject {
-            var parts = [flutterProject.isFFIPlugin ? "Flutter FFI Plugin" : "Flutter Project"]
-            if let version = flutterProject.pubspec.version { parts.append("Version \(version)") }
+            var parts = [
+                flutterProject.isFFIPlugin
+                    ? String(localized: "Flutter FFI Plugin")
+                    : String(localized: "Flutter Project")
+            ]
+            if let version = flutterProject.pubspec.version { parts.append(String(localized: "Version \(version)")) }
             if let flutterWorkspace, let root = flutterWorkspace.activeNativeRoot {
-                parts.append("Native code: \(flutterWorkspace.displayName(of: root))")
+                parts.append(String(localized: "Native code: \(flutterWorkspace.displayName(of: root))"))
             }
             return parts.joined(separator: " · ")
         }
         if cmakeWorkspace == nil, let root = inventory?.cargoRoots.first {
-            return root.isWorkspace ? "Cargo Workspace · \(root.packages.count) packages" : "Cargo Package"
+            return root.isWorkspace
+                ? String(localized: "Cargo Workspace · \(root.packages.count) packages")
+                : String(localized: "Cargo Package")
         }
-        guard let cmakeWorkspace else { return "Folder · \(state.rootURL.path)" }
-        var parts = ["CMake Project"]
-        if let version = cmakeWorkspace.project?.version { parts.append("Version \(version)") }
+        guard let cmakeWorkspace else { return String(localized: "Folder · \(state.rootURL.path)") }
+        var parts = [String(localized: "CMake Project")]
+        if let version = cmakeWorkspace.project?.version { parts.append(String(localized: "Version \(version)")) }
         if let languages = cmakeWorkspace.project?.languages, !languages.isEmpty {
             parts.append(languages.joined(separator: ", "))
         }
-        parts.append("Settings in .codeedit/\(CMakeProjectSettings.fileName)")
+        parts.append(String(localized: "Settings in .codeedit/\(CMakeProjectSettings.fileName)"))
         return parts.joined(separator: " · ")
     }
 }
@@ -292,7 +298,7 @@ private struct CPPSectionView: View {
         VStack(spacing: 0) {
             Picker("C++ Settings", selection: $state.selectedCMakePane) {
                 ForEach(CMakeProjectSettingsStore.Pane.allCases) { pane in
-                    Text(pane.rawValue).tag(pane)
+                    Text(pane.title).tag(pane)
                 }
             }
             .pickerStyle(.segmented)

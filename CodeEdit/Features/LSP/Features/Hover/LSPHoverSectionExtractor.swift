@@ -167,27 +167,27 @@ enum LSPHoverSectionExtractor {
             CalloutDef(
                 prefixes: ["- Warning:", "Warning:", "@warning", "\\warning", "- WARNING:"],
                 kind: .warning,
-                title: "Warning"
+                title: String(localized: "Warning")
             ),
             CalloutDef(
                 prefixes: ["- Deprecated:", "Deprecated:", "@deprecated", "\\deprecated"],
                 kind: .deprecated,
-                title: "Deprecated"
+                title: String(localized: "Deprecated")
             ),
             CalloutDef(
                 prefixes: ["- Important:", "Important:", "- IMPORTANT:"],
                 kind: .important,
-                title: "Important"
+                title: String(localized: "Important")
             ),
             CalloutDef(
                 prefixes: ["- Note:", "Note:", "@note", "\\note", "- NOTE:"],
                 kind: .note,
-                title: "Note"
+                title: String(localized: "Note")
             ),
             CalloutDef(
                 prefixes: ["- See Also:", "See Also:", "@see", "\\see"],
                 kind: .seeAlso,
-                title: "See Also"
+                title: String(localized: "See Also")
             )
         ]
         for def in defs {

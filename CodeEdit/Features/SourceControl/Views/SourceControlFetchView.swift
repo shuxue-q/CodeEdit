@@ -60,7 +60,10 @@ struct SourceControlFetchView: View {
                 try await sourceControlManager.fetch()
                 dismiss()
             } catch {
-                await sourceControlManager.showAlertForError(title: "Failed to fetch changes", error: error)
+                await sourceControlManager.showAlertForError(
+                    title: String(localized: "Failed to fetch changes"),
+                    error: error
+                )
             }
         }
     }

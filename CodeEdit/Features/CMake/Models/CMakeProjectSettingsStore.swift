@@ -31,6 +31,16 @@ final class CMakeProjectSettingsStore {
         case run = "Run / Debug"
 
         var id: String { rawValue }
+
+        /// The localized name shown in the project editor.
+        var title: String {
+            switch self {
+            case .toolchain: String(localized: "Toolchain")
+            case .build: String(localized: "Build Settings")
+            case .variables: String(localized: "CMake Variables")
+            case .run: String(localized: "Run / Debug")
+            }
+        }
     }
 
     var settings: CMakeProjectSettings {

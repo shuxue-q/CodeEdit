@@ -128,7 +128,9 @@ extension TaskManager {
               activeTask.sendInput(restart ? "R" : "r") else { return false }
         postHotReloadNotification(
             taskID: taskID,
-            title: restart ? "Hot Restarting…" : "Hot Reloading…",
+            title: restart
+                ? String(localized: "Hot Restarting…")
+                : String(localized: "Hot Reloading…"),
             isLoading: true,
             removeAfter: nil
         )

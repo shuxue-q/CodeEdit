@@ -67,7 +67,7 @@ struct SourceControlRenameBranchView: View {
                 }
             } catch {
                 await sourceControlManager.showAlertForError(
-                    title: "Failed to create branch",
+                    title: String(localized: "Failed to rename branch"),
                     error: error
                 )
             }

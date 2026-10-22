@@ -14,28 +14,28 @@ extension CodeEditWindowController {
     func registerCommands() {
         CommandManager.shared.addCommand(
             name: "Quick Open",
-            title: "Quick Open",
+            title: String(localized: "Quick Open"),
             id: "quick_open",
             command: { [weak self] in self?.openQuickly(nil) }
         )
 
         CommandManager.shared.addCommand(
             name: "Toggle Navigator",
-            title: "Toggle Navigator",
+            title: String(localized: "Toggle Navigator"),
             id: "toggle_left_sidebar",
             command: { [weak self] in self?.toggleFirstPanel() }
         )
 
         CommandManager.shared.addCommand(
             name: "Toggle Inspector",
-            title: "Toggle Inspector",
+            title: String(localized: "Toggle Inspector"),
             id: "toggle_right_sidebar",
             command: { [weak self] in self?.toggleLastPanel() }
         )
 
         CommandManager.shared.addCommand(
             name: "Complete Chain",
-            title: "Complete Chain",
+            title: String(localized: "Complete Chain"),
             id: "complete_chain",
             command: { [weak self] in self?.completeChain() }
         )
@@ -125,7 +125,7 @@ extension CodeEditWindowController {
             settingsWindow.contentView = NSHostingView(rootView: contentView)
             settingsWindow.titlebarAppearsTransparent = true
             settingsWindow.setContentSize(NSSize(width: 515, height: 515))
-            settingsWindow.setAccessibilityTitle("Workspace Settings")
+            settingsWindow.setAccessibilityTitle(String(localized: "Workspace Settings"))
 
             window.beginSheet(settingsWindow, completionHandler: nil)
         }

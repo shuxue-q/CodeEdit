@@ -39,7 +39,7 @@ struct FlutterProjectPane: View {
     private func projectSection(_ project: FlutterProject) -> some View {
         Section("Project") {
             LabeledContent("Name") { Text(project.name).textSelection(.enabled) }
-            LabeledContent("Version", value: project.pubspec.version ?? "Not Set")
+            LabeledContent("Version", value: project.pubspec.version ?? String(localized: "Not Set"))
             LabeledContent("Type", value: projectType(project))
             if let description = project.pubspec.description {
                 LabeledContent("Description") {
@@ -57,7 +57,8 @@ struct FlutterProjectPane: View {
 
     private func projectType(_ project: FlutterProject) -> String {
         guard project.isFFIPlugin else { return project.typeTitle }
-        return "FFI Plugin (\(project.pubspec.ffiPluginPlatforms.joined(separator: ", ")))"
+        let platforms = project.pubspec.ffiPluginPlatforms.joined(separator: ", ")
+        return String(localized: "FFI Plugin (\(platforms))")
     }
 
     private func constraints(_ pubspec: Pubspec) -> String {
@@ -84,8 +85,10 @@ struct FlutterProjectPane: View {
                     .accessibilityIdentifier("FlutterRescanSDK")
             }
         } footer: {
-            Text("The `flutter` command found in your login shell PATH, unless an SDK folder is chosen for this "
-                 + "workspace. The choice is kept on this Mac only and also selects the Dart analysis server.")
+            Text(LocalizedStringKey(
+                "The `flutter` command found in your login shell PATH, unless an SDK folder is chosen for this "
+                + "workspace. The choice is kept on this Mac only and also selects the Dart analysis server."
+            ))
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -117,7 +120,7 @@ struct FlutterProjectPane: View {
     }
 
     private func sdkVersion(_ sdk: FlutterSDK) -> String {
-        var parts = [sdk.version ?? "Unknown"]
+        var parts = [sdk.version ?? String(localized: "Unknown")]
         if let channel = sdk.channel { parts.append(channel) }
         if let dart = sdk.dartVersion { parts.append("Dart \(dart)") }
         return parts.joined(separator: " · ")
@@ -136,9 +139,11 @@ struct FlutterProjectPane: View {
         } header: {
             Text("Native Code")
         } footer: {
-            Text("The first folder with a CMakeLists.txt among the workspace root, src, cpp, native, "
-                 + "linux, windows, macos and packages/*/src is active unless you pick another. "
-                 + "The C++ section and clangd use the active root's presets and compilation database.")
+            Text(LocalizedStringKey(
+                "The first folder with a CMakeLists.txt among the workspace root, src, cpp, native, "
+                + "linux, windows, macos and packages/*/src is active unless you pick another. "
+                + "The C++ section and clangd use the active root's presets and compilation database."
+            ))
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -146,8 +151,11 @@ struct FlutterProjectPane: View {
 
     private func hookSummary(_ hook: NativeAssetsHook) -> String {
         let tools = [hook.runsCMake ? "CMake" : nil, hook.runsCargo ? "Cargo" : nil].compactMap { $0 }
-        let runs = tools.isEmpty ? "" : ", runs \(tools.joined(separator: " and "))"
-        return "\(NativeAssetsHook.relativePath)\(runs)"
+        guard !tools.isEmpty else { return NativeAssetsHook.relativePath }
+        let toolList = tools.count == 2
+            ? String(localized: "\(tools[0]) and \(tools[1])")
+            : tools.joined(separator: " and ")
+        return String(localized: "\(NativeAssetsHook.relativePath), runs \(toolList)")
     }
 
     @ViewBuilder private var nativeRootRows: some View {
@@ -213,7 +221,7 @@ extension FlutterProjectPane {
                 }
             }
             if !pubspec.assets.isEmpty || !pubspec.fontFamilies.isEmpty {
-                LabeledContent("Assets", value: "\(pubspec.assets.count) paths")
+                LabeledContent("Assets", value: String(localized: "\(pubspec.assets.count) paths"))
                 if !pubspec.fontFamilies.isEmpty {
                     LabeledContent("Fonts", value: pubspec.fontFamilies.joined(separator: ", "))
                 }
@@ -241,9 +249,10 @@ extension FlutterProjectPane {
         let normal = pubspec.dependencies(of: .normal).count
         let dev = pubspec.dependencies(of: .development).count
         let overrides = pubspec.dependencies(of: .override).count
-        var text = "\(normal) · \(dev) dev"
-        if overrides > 0 { text += " · \(overrides) overrides" }
-        return text
+        if overrides > 0 {
+            return String(localized: "\(normal) · \(dev) dev · \(overrides) overrides")
+        }
+        return String(localized: "\(normal) · \(dev) dev")
     }
 
     // MARK: - Platforms and analysis
@@ -276,17 +285,20 @@ extension FlutterProjectPane {
                     LabeledContent("Includes", value: options.includes.joined(separator: ", "))
                 }
                 let count = options.excludes.count
-                let excluded = options.excludes.isEmpty ? "None" : (count == 1 ? "1 pattern" : "\(count) patterns")
+                let excluded = switch count {
+                case 0: String(localized: "None")
+                case 1: String(localized: "1 pattern")
+                default: String(localized: "\(count) patterns")
+                }
                 LabeledContent("Excluded", value: excluded)
                     .help(options.excludes.joined(separator: "\n"))
                 if !options.strictModes.isEmpty {
                     LabeledContent("Strict Modes", value: options.strictModes.joined(separator: ", "))
                 }
                 if !options.enabledRules.isEmpty || !options.disabledRules.isEmpty {
-                    LabeledContent(
-                        "Lint Rules",
-                        value: "\(options.enabledRules.count) on · \(options.disabledRules.count) off"
-                    )
+                    let enabled = options.enabledRules.count
+                    let disabled = options.disabledRules.count
+                    LabeledContent("Lint Rules", value: String(localized: "\(enabled) on · \(disabled) off"))
                 }
                 if !options.severityOverrides.isEmpty {
                     LabeledContent("Severity Overrides", value: "\(options.severityOverrides.count)")

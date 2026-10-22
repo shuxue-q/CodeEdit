@@ -118,7 +118,7 @@ struct SettingsView: View {
         for item in pages where item.name == page.name {
             if item.isSetting && item.settingName.lowercased().contains(lowercasedSearchText) {
                 returnedPages.append(item)
-            } else if item.name.rawValue.contains(lowercasedSearchText) && !item.isSetting {
+            } else if item.name.localizedName.lowercased().contains(lowercasedSearchText) && !item.isSetting {
                 foundPage = true
             }
         }
@@ -147,7 +147,7 @@ struct SettingsView: View {
                             .padding(.leading, 22)
                     }
                 }
-            } else if page.name.rawValue.lowercased().contains(searchText.lowercased()) && !page.isSetting {
+            } else if page.name.localizedName.lowercased().contains(searchText.lowercased()) && !page.isSetting {
                 SettingsPageView(page, searchText: searchText)
             }
         } else if !page.isSetting {
@@ -222,7 +222,7 @@ struct SettingsView: View {
             }
         }
         .hideSidebarToggle()
-        .navigationTitle(selectedPage.name.rawValue)
+        .navigationTitle(selectedPage.name.localizedName)
         .toolbar {
             /// macOS 26 automatically adjusts the leading padding for navigationTitle
             if #unavailable(macOS 26.0) {

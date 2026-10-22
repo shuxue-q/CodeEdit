@@ -147,7 +147,7 @@ enum EditorJumpBarPath {
         let items = roots.isEmpty ? syntaxRootFunctions(syntaxSymbols) : roots.map(item(for:))
         return JumpBarPathSegment(
             id: "no-selection",
-            title: "No Selection",
+            title: String(localized: "No Selection"),
             systemImage: "curlybraces",
             role: .placeholder,
             items: items

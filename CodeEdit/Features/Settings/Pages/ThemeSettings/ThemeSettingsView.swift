@@ -28,7 +28,7 @@ struct ThemeSettingsView: View {
             SettingsForm {
                 Section {
                     HStack(spacing: 10) {
-                        SearchField("Search", text: $themeSearchQuery)
+                        SearchField(String(localized: "Search"), text: $themeSearchQuery)
 
                         Button {
                             // As discussed, the expected behavior is to duplicate the selected theme.
