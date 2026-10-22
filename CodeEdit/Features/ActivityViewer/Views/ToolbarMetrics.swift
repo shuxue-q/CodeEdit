@@ -20,8 +20,11 @@ enum ToolbarMetrics {
     static let separatorHeight: CGFloat = 16
     /// Width of the vertical divider between capsule segments.
     static let separatorWidth: CGFloat = 0.75
-    /// Horizontal padding of capsules that contain only icon buttons.
-    static let iconCapsulePadding: CGFloat = 4
+    /// Horizontal padding of capsules that contain only icon buttons. It puts the first and last
+    /// cells' centers on the centers of the capsule's rounded ends, so their feedback circles are
+    /// concentric with those ends. A capsule holding a single icon button becomes a circle as wide
+    /// as it is tall, concentric with the button's feedback circle.
+    static let iconCapsulePadding: CGFloat = (cellHeight - cellWidth) / 2
     /// Horizontal padding of capsules that contain text.
     static let textCapsulePadding: CGFloat = 10
     /// Spacing between sibling capsules inside a toolbar item.
